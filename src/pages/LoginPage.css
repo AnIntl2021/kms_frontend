@@ -1,0 +1,424 @@
+.login-container { 
+  display: flex; 
+  min-height: 100vh; 
+  width: 100%;
+  background: var(--white);
+  font-family: 'DM Sans', sans-serif;
+  overflow: hidden;
+}
+
+.login-card {
+  display: flex;
+  width: 100%;
+  height: 100vh;
+  background: var(--white);
+  border-radius: 0;
+  overflow: hidden;
+  box-shadow: none;
+}
+
+/* Branding Section (Now Left) */
+.panel-branding { 
+  flex: 1;
+  background: var(--primary); 
+  display: flex; 
+  flex-direction: column; 
+  justify-content: center; 
+  align-items: center; 
+  padding: 3rem; 
+  color: var(--secondary);
+  position: relative;
+  overflow: hidden;
+}
+
+.panel-branding::before {
+  content: '';
+  position: absolute;
+  top: 0; right: 0;
+  width: 300px; height: 300px;
+  background-image: radial-gradient(rgba(255,255,255,0.1) 2px, transparent 2px);
+  background-size: 20px 20px;
+}
+
+.panel-branding::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0;
+  width: 200px; height: 200px;
+  background-image: radial-gradient(rgba(255,255,255,0.1) 2px, transparent 2px);
+  background-size: 24px 24px;
+}
+
+/* Form Section (Now Right) */
+.panel-form { 
+  flex: 1;
+  display: flex; 
+  flex-direction: column; 
+  padding: 2rem 5rem 4rem 5rem;
+  background: var(--white);
+  position: relative;
+}
+
+.top-nav {
+  margin-bottom: 1rem; /* Lifted upwards */
+}
+
+.brand-mini {
+  display: flex;
+  align-items: center;
+  justify-content: center; /* Middle placement as requested */
+}
+
+.brand-mini img {
+  height: 80px; 
+  width: auto;
+}
+
+
+.login-content {
+  flex: 1; /* Take up space and center the form */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  max-width: 440px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.login-content h2 { 
+  font-size: 2.25rem; 
+  color: #1a1a1a; 
+  font-weight: 800;
+  margin-bottom: 0.75rem;
+}
+
+.subtitle { 
+  color: var(--gray-500); 
+  font-weight: 500;
+  margin-bottom: 2rem; 
+  font-size: 1rem;
+}
+
+.form-group { 
+  margin-bottom: 1.5rem; 
+}
+
+.form-group label { 
+  display: block; 
+  font-size: 0.85rem; 
+  font-weight: 600; 
+  color: #1a1a1a; 
+  margin-bottom: 0.5rem; 
+}
+
+.form-group input { 
+  width: 100%; 
+  padding: 1rem 1.25rem; 
+  background: var(--white);
+  border: 1px solid var(--primary); 
+  border-radius: 12px; 
+  font-size: 1rem; 
+  font-weight: 500;
+  color: #1a1a1a; /* Changed to black as requested */
+  transition: all 0.2s ease;
+}
+
+.form-group input:focus {
+  border-color: var(--primary);
+  background: var(--white);
+  box-shadow: 0 0 0 4px rgba(1, 86, 44, 0.05);
+  outline: none;
+}
+
+.btn-login { 
+  width: 100%; 
+  background: var(--primary); 
+  color: var(--secondary); 
+  padding: 1rem; 
+  border-radius: 12px; 
+  font-weight: 700; 
+  font-size: 1rem;
+  border: none;
+  cursor: pointer;
+  margin-top: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.btn-login:hover:not(:disabled) {
+  background: #004221;
+  transform: translateY(-1px);
+}
+
+.error-msg { 
+  background: #fff1f2; 
+  color: #e11d48; 
+  padding: 1rem; 
+  border-radius: 10px; 
+  margin-bottom: 2rem; 
+  font-size: 0.85rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid #fecdd3;
+}
+
+/* Floating UI Elements */
+.visual-container {
+  position: relative;
+  width: 100%;
+  max-width: 500px;
+  height: 320px;
+  margin-bottom: 2rem;
+}
+
+.glass-card-main {
+  position: absolute;
+  top: 10%;
+  left: 0;
+  width: 85%;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  padding: 2.5rem;
+  border-radius: 24px;
+  box-shadow: 0 40px 80px rgba(0,0,0,0.2);
+  z-index: 1;
+}
+
+.glass-card-floating {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 50%;
+  background: white;
+  padding: 2rem;
+  border-radius: 24px;
+  box-shadow: 0 30px 60px rgba(0,0,0,0.25);
+  z-index: 2;
+}
+
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  color: #1a1a1a;
+}
+
+.chart-header h4 { font-weight: 800; font-size: 1.25rem; }
+
+.chart-placeholder {
+  height: 140px;
+  background: transparent;
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.chart-bars {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 0 5%;
+  opacity: 0.1;
+  z-index: 0;
+}
+
+.bar {
+  width: 8%;
+  background: #01562c;
+  border-radius: 4px 4px 0 0;
+  transition: all 0.3s ease;
+}
+
+.bar-alt {
+  background: #028a4a; /* A lighter, more vibrant green */
+}
+
+.bar-accent {
+  background: #d4af37; /* A subtle golden/beige accent */
+}
+
+.chart-line {
+  position: absolute;
+  bottom: 20px;
+  left: 0;
+  width: 100%;
+  height: 80px;
+  background: url('data:image/svg+xml;utf8,<svg viewBox="0 0 1000 100" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg"><path d="M0 80 C 100 90, 150 20, 200 40 S 300 90, 400 60 S 500 10, 600 40 S 750 90, 850 30 S 950 50, 1000 20" fill="transparent" stroke="%2301562c" stroke-width="3" stroke-linecap="round"/></svg>');
+  background-size: 100% 100%;
+  z-index: 1;
+  filter: drop-shadow(0 10px 10px rgba(1, 86, 44, 0.1));
+}
+
+.circle-progress {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: conic-gradient(
+    #01562c 0% 15%, 
+    #028a4a 15% 30%, 
+    #01562c 30% 42%, 
+    #f8f9fa 42% 100%
+  );
+  margin: 0 auto 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  box-shadow: inset 0 0 15px rgba(0,0,0,0.05);
+}
+
+.circle-progress::after {
+  content: "";
+  position: absolute;
+  width: 96px;
+  height: 96px;
+  background: white;
+  border-radius: 50%;
+  z-index: 1;
+}
+
+.circle-val {
+  text-align: center;
+  position: relative;
+  z-index: 2;
+}
+
+.circle-val h5 { font-size: 1.25rem; font-weight: 800; color: #1a1a1a; }
+.circle-val p { font-size: 0.7rem; color: var(--gray-500); }
+
+.promo-text {
+  text-align: center;
+  max-width: 400px;
+  z-index: 5;
+  margin-top: 0;
+}
+
+.promo-text h3 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  margin-bottom: 1rem;
+}
+
+.password-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 1rem;
+  background: none;
+  border: none;
+  color: var(--gray-400);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: color 0.2s ease;
+}
+
+.password-toggle:hover {
+  color: var(--primary);
+}
+
+.password-wrapper input {
+  padding-right: 3rem !important;
+}
+
+.form-options {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.remember-me {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: #1a1a1a; /* Changed to black as requested */
+  font-weight: 500;
+  user-select: none;
+}
+
+.remember-me input {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+}
+
+.checkbox-custom {
+  height: 20px;
+  width: 20px;
+  background-color: #ffffff;
+  border: 1.5px solid var(--primary);
+  border-radius: 6px;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.remember-me:hover .checkbox-custom {
+  background-color: rgba(1, 86, 44, 0.05);
+}
+
+.remember-me:hover input ~ .checkbox-custom {
+  border-color: var(--primary);
+}
+
+.remember-me input:checked ~ .checkbox-custom {
+  background-color: var(--primary);
+  border-color: var(--primary);
+}
+
+.checkbox-custom:after {
+  content: "";
+  position: absolute;
+  display: none;
+  left: 6px;
+  top: 2px;
+  width: 6px;
+  height: 11px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.remember-me input:checked ~ .checkbox-custom:after {
+  display: block;
+}
+
+.forgot-password {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #1a1a1a; /* Changed to black as requested */
+  text-decoration: none;
+  transition: opacity 0.2s ease;
+}
+
+.forgot-password:hover {
+  opacity: 0.8;
+}
+
+.login-footer {
+  margin-top: auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.8rem;
+  color: var(--gray-500);
+  padding-top: 1.5rem;
+  padding-bottom: 0.5rem; /* Ensure visibility */
+}

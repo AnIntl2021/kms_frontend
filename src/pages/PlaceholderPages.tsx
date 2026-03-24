@@ -1,0 +1,25 @@
+import Layout from '../components/Layout';
+
+const PlaceholderPage = ({ title }: { title: string }) => (
+  <Layout title={title}>
+    <div style={{ 
+      background: 'white', 
+      padding: '3rem', 
+      borderRadius: '12px', 
+      boxShadow: 'var(--shadow-sm)',
+      textAlign: 'center'
+    }}>
+      <h2 style={{ color: 'var(--primary)', marginBottom: '1rem' }}>{title} Module</h2>
+      <p style={{ color: 'var(--gray-500)' }}>This module is currently being optimized for the fresh 'n' Fast portal.</p>
+    </div>
+  </Layout>
+);
+
+export const MenuPage = () => <PlaceholderPage title="Menu & Premix" />;
+export const VendorsPage = () => <PlaceholderPage title="Vendors & Suppliers" />;
+export const PurchaseOrdersPage = () => <PlaceholderPage title="Purchase Orders" />;
+export const WastagePage = () => <PlaceholderPage title="Wastage & Expiry" />;
+export const SalesPage = () => <PlaceholderPage title="Sales & Dispatch" />;
+export const AccountsPage = () => <PlaceholderPage title="Accounts" />;
+export const AdministrationPage = () => <PlaceholderPage title="Administration" />;
+export const SettingsPage = () => <PlaceholderPage title="Settings" />;
