@@ -51,7 +51,7 @@ const StockAdjustModal = ({ item, onClose, onSuccess }: StockAdjustModalProps) =
 
   return (
     <div className="modal-overlay">
-      <div className="modal-content" style={{maxWidth: '500px'}}>
+      <div className="modal-content" style={{maxWidth: '500px', maxHeight: '90vh', overflowY: 'auto'}}>
         <div className="modal-header">
           <h3>Stock Adjustment</h3>
           <button className="btn-close" onClick={onClose}><X size={20} /></button>

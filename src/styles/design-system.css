@@ -55,3 +55,18 @@ a { text-decoration: none; color: inherit; transition: var(--transition); }
 .btn-primary:hover { background: var(--primary-light); box-shadow: 0 4px 12px rgba(1, 86, 44, 0.2); }
 
 @media (max-width: 768px) { :root { --sidebar-width: 100%; } }
+
+/* 🚫 FORCE HIDE ALL BROWSER PASSWORD ICONS */
+input::-ms-reveal,
+input::-ms-clear,
+input::-webkit-contacts-auto-fill-button,
+input::-webkit-credentials-auto-fill-button {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+    position: absolute !important;
+    right: 0 !important;
+    opacity: 0 !important;
+    width: 0 !important;
+    height: 0 !important;
+}

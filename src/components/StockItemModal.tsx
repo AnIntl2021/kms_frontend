@@ -148,7 +148,7 @@ const StockItemModal = ({ isOpen, item, onClose, onSuccess }: StockItemModalProp
 
   return (
     <div className="modal-overlay">
-      <div className="modal-content" style={{ maxWidth: '900px' }}>
+      <div className="modal-content" style={{ maxWidth: '900px', maxHeight: '90vh', overflowY: 'auto' }}>
         <header className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{ padding: '8px', background: '#01562c', color: 'white', borderRadius: '8px', display: 'flex' }}>
@@ -165,7 +165,7 @@ const StockItemModal = ({ isOpen, item, onClose, onSuccess }: StockItemModalProp
           <div className="form-section" style={{ marginTop: 0, paddingTop: 0, border: 'none' }}>
             <div className="form-grid">
               <div className="form-group">
-                <label>NAME (ENGLISH) *</label>
+                <label>Item Name In English *</label>
                 <input 
                   type="text" 
                   required 
@@ -175,7 +175,7 @@ const StockItemModal = ({ isOpen, item, onClose, onSuccess }: StockItemModalProp
                 />
               </div>
               <div className="form-group">
-                <label style={{ textAlign: 'right' }}>الاسم (بالعربي) *</label>
+                <label style={{ textAlign: 'right' }}>اسم الصنف بالعربي *</label>
                 <input 
                   type="text" 
                   required 

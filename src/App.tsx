@@ -8,10 +8,10 @@ import CategoriesPage from './pages/CategoriesPage';
 import VendorsPage from './pages/VendorsPage';
 import PurchaseOrdersPage from './pages/PurchaseOrdersPage';
 import MenuPage from './pages/MenuPage';
+import SalesPage from './pages/SalesPage';
+import AccountsPage from './pages/AccountsPage';
+import WastagePage from './pages/WastagePage';
 import { 
-  WastagePage, 
-  SalesPage, 
-  AccountsPage, 
   AdministrationPage, 
   SettingsPage
 } from './pages/PlaceholderPages';

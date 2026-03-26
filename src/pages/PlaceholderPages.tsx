@@ -15,11 +15,5 @@ const PlaceholderPage = ({ title }: { title: string }) => (
   </Layout>
 );
 
-export const MenuPage = () => <PlaceholderPage title="Menu & Premix" />;
-export const VendorsPage = () => <PlaceholderPage title="Vendors & Suppliers" />;
-export const PurchaseOrdersPage = () => <PlaceholderPage title="Purchase Orders" />;
-export const WastagePage = () => <PlaceholderPage title="Wastage & Expiry" />;
-export const SalesPage = () => <PlaceholderPage title="Sales & Dispatch" />;
-export const AccountsPage = () => <PlaceholderPage title="Accounts" />;
 export const AdministrationPage = () => <PlaceholderPage title="Administration" />;
 export const SettingsPage = () => <PlaceholderPage title="Settings" />;

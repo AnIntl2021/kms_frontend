@@ -169,7 +169,7 @@ const CategoriesPage = () => {
 
       {isModalOpen && (
         <div className="modal-overlay">
-          <div className="modal-content" style={{maxWidth: '500px'}}>
+          <div className="modal-content" style={{maxWidth: '500px', maxHeight: '90vh', overflowY: 'auto'}}>
             <div className="modal-header">
               <h3>{editingCategory ? 'Edit Category' : 'Create New Category'}</h3>
               <button className="btn-close" onClick={() => setIsModalOpen(false)}><X size={20} /></button>
@@ -189,11 +189,11 @@ const CategoriesPage = () => {
               </div>
               <div className="form-grid">
                 <div className="form-group">
-                  <label>Name (English) *</label>
+                  <label>Category Name In English *</label>
                   <input type="text" required value={formData.name_en} onChange={(e) => setFormData({...formData, name_en: e.target.value})} />
                 </div>
                 <div className="form-group">
-                  <label>Name (Arabic) *</label>
+                  <label>اسم التصنيف بالعربي *</label>
                   <input type="text" required dir="rtl" value={formData.name_ar} onChange={(e) => setFormData({...formData, name_ar: e.target.value})} />
                 </div>
               </div>

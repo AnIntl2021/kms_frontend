@@ -178,7 +178,7 @@ const VendorsPage = () => {
 
       {isModalOpen && (
         <div className="modal-overlay">
-          <div className="modal-content">
+          <div className="modal-content" style={{maxHeight: '90vh', overflowY: 'auto'}}>
             <div className="modal-header">
               <h3>{editingVendor ? 'Edit Vendor' : 'Register New Vendor'}</h3>
               <button className="btn-close" onClick={() => setIsModalOpen(false)}><X size={20} /></button>
@@ -186,11 +186,11 @@ const VendorsPage = () => {
             <form onSubmit={handleSubmit} className="modal-body">
               <div className="form-grid">
                 <div className="form-group">
-                  <label>Name (English) *</label>
+                  <label>Vendor Name In English *</label>
                   <input type="text" required value={formData.name_en} onChange={(e) => setFormData({...formData, name_en: e.target.value})} />
                 </div>
                 <div className="form-group">
-                  <label>Name (Arabic)</label>
+                  <label>اسم المورد بالعربي</label>
                   <input type="text" dir="rtl" value={formData.name_ar} onChange={(e) => setFormData({...formData, name_ar: e.target.value})} />
                 </div>
               </div>

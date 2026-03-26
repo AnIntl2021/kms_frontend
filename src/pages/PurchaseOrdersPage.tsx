@@ -177,7 +177,7 @@ const PurchaseOrdersPage = () => {
 
       {isModalOpen && (
         <div className="po-modal-overlay">
-          <div className="po-modal-card">
+          <div className="po-modal-card" style={{ maxHeight: '95vh', overflowY: 'auto' }}>
             
             <header className="po-header">
               <h2><ShoppingBag /> ADD NEW PURCHASE ORDER</h2>
