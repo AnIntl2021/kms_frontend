@@ -74,7 +74,8 @@ const SalesPage = () => {
     try {
       const response = await api.get('/sales');
       if (response.data.success) {
-        setSales(response.data.data || []);
+        const data = response.data.data;
+        setSales(Array.isArray(data) ? data : []);
       }
     } catch (error) {
       console.error('Failed to fetch sales:', error);
@@ -143,9 +144,11 @@ const SalesPage = () => {
   };
 
   const addItemToOrder = (item: any) => {
+    if (!item || !item.menu_item_id) return;
+    
     const existing = selectedItems.find(i => i.menu_item_id === item.menu_item_id);
     if (existing) {
-      setSelectedItems(selectedItems.map(i => i.menu_item_id === item.menu_item_id ? { ...i, quantity: i.quantity + 1 } : i));
+      setSelectedItems(selectedItems.map(i => i.menu_item_id === item.menu_item_id ? { ...i, quantity: (i.quantity || 0) + 1 } : i));
     } else {
       setSelectedItems([...selectedItems, { ...item, quantity: 1 }]);
     }
@@ -156,7 +159,7 @@ const SalesPage = () => {
   };
 
   const getStatusBadge = (status: string) => {
-    const statusLower = status.toLowerCase();
+    const statusLower = (status || '').toLowerCase();
     if (statusLower === 'delivered' || statusLower === 'paid') return 'status-badge healthy';
     if (statusLower === 'dispatched') return 'status-badge warning';
     if (statusLower === 'pending') return 'status-badge pending';
@@ -164,16 +167,18 @@ const SalesPage = () => {
     return 'status-badge';
   };
 
-  const filteredSales = sales.filter(s => 
-    (s.customer_name.toLowerCase().includes(searchTerm.toLowerCase()) || String(s.sale_id).includes(searchTerm)) &&
-    (statusFilter === 'all' || s.dispatch_status === statusFilter)
-  );
+  const filteredSales = sales.filter(s => {
+    const nameMatch = (s.customer_name || '').toLowerCase().includes(searchTerm.toLowerCase());
+    const idMatch = String(s.sale_id || '').includes(searchTerm);
+    const statusMatch = (statusFilter === 'all' || s.dispatch_status === statusFilter);
+    return (nameMatch || idMatch) && statusMatch;
+  });
 
   const stats = {
-    totalRevenue: sales.reduce((acc, curr) => acc + (curr.payment_status === 'paid' ? curr.total_amount : 0), 0),
-    pendingDispatch: sales.filter(s => s.dispatch_status === 'pending').length,
-    todayOrders: sales.length,
-    completed: sales.filter(s => s.dispatch_status === 'delivered').length
+    totalRevenue: (Array.isArray(sales) ? sales : []).reduce((acc, curr) => acc + (curr.payment_status === 'paid' ? Number(curr.total_amount || 0) : 0), 0),
+    pendingDispatch: (Array.isArray(sales) ? sales : []).filter(s => (s.dispatch_status || '').toLowerCase() === 'pending').length,
+    todayOrders: (Array.isArray(sales) ? sales : []).length,
+    completed: (Array.isArray(sales) ? sales : []).filter(s => (s.dispatch_status || '').toLowerCase() === 'delivered').length
   };
 
   return (
@@ -262,14 +267,12 @@ const SalesPage = () => {
               <tbody>
                 {loading ? (
                   <tr><td colSpan={7} className="text-center py-5">Loading orders...</td></tr>
-                ) : filteredSales.length === 0 ? (
-                  <tr><td colSpan={7} className="text-center py-5">No orders found.</td></tr>
-                ) : filteredSales.map(sale => (
-                  <tr key={sale.sale_id}>
+                ) : (Array.isArray(filteredSales) ? filteredSales : []).map(sale => (
+                  <tr key={sale.sale_id || Math.random()}>
                     <td>
                       <div className="item-info">
-                        <strong>Order #{sale.sale_id}</strong>
-                        <span>{sale.items_count} items included</span>
+                        <strong>Order #{sale.sale_id || 'N/A'}</strong>
+                        <span>{sale.items_count || 0} items included</span>
                       </div>
                     </td>
                     <td>
@@ -413,10 +416,10 @@ const SalesPage = () => {
                           {selectedItems.map(item => (
                             <div key={item.menu_item_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'white', padding: '0.75rem', borderRadius: '10px', border: '1px solid #f1f5f9' }}>
                                <div>
-                                  <p style={{ margin: 0, fontSize: '13px', fontWeight: 700 }}>{item.name_en}</p>
-                                  <p style={{ margin: 0, fontSize: '11px', color: '#64748b' }}>{item.quantity} x {item.price.toFixed(3)}</p>
+                                  <p style={{ margin: 0, fontSize: '13px', fontWeight: 700 }}>{item.name_en || 'Item'}</p>
+                                  <p style={{ margin: 0, fontSize: '11px', color: '#64748b' }}>{item.quantity} x {Number(item.price || 0).toFixed(3)}</p>
                                </div>
-                               <button onClick={() => removeItemFromOrder(item.menu_item_id)} style={{ color: '#ef4444', background: '#fee2e2', border: 'none', borderRadius: '6px', padding: '4px' }}><Trash2 size={14} /></button>
+                               <button onClick={(e) => { e.stopPropagation(); removeItemFromOrder(item.menu_item_id); }} style={{ color: '#ef4444', background: '#fee2e2', border: 'none', borderRadius: '6px', padding: '4px', cursor: 'pointer' }}><Trash2 size={14} /></button>
                             </div>
                           ))}
                           {selectedItems.length === 0 && (
@@ -462,8 +465,8 @@ const SalesPage = () => {
 
                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', overflowY: 'auto', maxHeight: '350px' }}>
                         {menuItems
-                          .filter(item => (activeCategory === 'all' || item.category_id == activeCategory))
-                          .filter(item => item.name_en.toLowerCase().includes(menuSearch.toLowerCase()))
+                          .filter(item => (activeCategory === 'all' || String(item.category_id) === String(activeCategory)))
+                          .filter(item => (item.name_en || '').toLowerCase().includes(menuSearch.toLowerCase()))
                           .map(item => (
                             <div 
                               key={item.menu_item_id} 
@@ -479,15 +482,9 @@ const SalesPage = () => {
                                 position: 'relative',
                                 overflow: 'hidden'
                               }}
-                              className="item-tile-hover"
                             >
-                               <p style={{ fontSize: '12px', fontWeight: 700, margin: '0 0 4px 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name_en}</p>
-                               <p style={{ fontSize: '11px', color: 'var(--primary)', fontWeight: 800, margin: 0 }}>{Number(item.price).toFixed(3)} KWD</p>
-                               
-                               {/* Plus Indicator on Hover */}
-                               <div style={{ position: 'absolute', top: 0, right: 0, padding: '4px', background: 'var(--primary)', color: 'white', borderRadius: '0 0 0 10px', opacity: 0 }} className="plus-hint">
-                                  <Plus size={10} strokeWidth={4} />
-                                </div>
+                               <p style={{ fontSize: '12px', fontWeight: 700, margin: '0 0 4px 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name_en || 'Unnamed'}</p>
+                               <p style={{ fontSize: '11px', color: 'var(--primary)', fontWeight: 800, margin: 0 }}>{Number(item.price || 0).toFixed(3)} KWD</p>
                             </div>
                           ))}
                         
