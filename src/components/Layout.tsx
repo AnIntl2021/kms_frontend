@@ -17,7 +17,8 @@ import {
   Settings,
   FolderTree,
   Store,
-  ShoppingCart
+  ShoppingCart,
+  Zap
 } from 'lucide-react';
 import './Layout.css';
 import logo from '../assets/logo.jpg';
@@ -45,9 +46,10 @@ const Layout: React.FC<LayoutProps> = ({ children, title }) => {
     { name: 'Categories', path: '/categories', icon: <FolderTree size={20} />, section: 'Main' },
     { name: 'Menu & Premix', path: '/menu', icon: <Utensils size={20} />, section: 'Main' },
     { name: 'Wastage & Expiry', path: '/wastage', icon: <AlertTriangle size={20} />, section: 'Main' },
-    { name: 'Vendors', path: '/vendors', icon: <Store size={20} />, section: 'Operations' },
+    { name: 'Vendors & Clients', path: '/vendors', icon: <Store size={20} />, section: 'Operations' },
     { name: 'Purchase Orders', path: '/purchases', icon: <ShoppingCart size={20} />, section: 'Operations' },
-    { name: 'Sales & Dispatch', path: '/sales', icon: <Truck size={20} />, section: 'Operations' },
+    { name: 'Production & Distribution', path: '/factory-dispatch', icon: <Zap size={20} />, section: 'Operations' },
+    { name: 'Direct Sales (POS)', path: '/sales', icon: <Truck size={20} />, section: 'Operations' },
     { name: 'Accounts', path: '/accounts', icon: <Wallet size={20} />, section: 'Operations' },
     { name: 'Administration', path: '/administration', icon: <ShieldCheck size={20} />, section: 'Admin' },
     { name: 'Settings', path: '/settings', icon: <Settings size={20} />, section: 'Admin' },

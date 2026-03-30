@@ -55,8 +55,8 @@ const AccountsPage = () => {
     return 'status-badge critical';
   };
 
-  const incomeTotal = transactions.reduce((acc, curr) => curr.type === 'income' ? acc + curr.amount : acc, 0);
-  const expenseTotal = transactions.reduce((acc, curr) => curr.type === 'expense' ? acc + curr.amount : acc, 0);
+  const incomeTotal = transactions.reduce((acc, curr) => curr.type === 'income' ? acc + Number(curr.amount) : acc, 0);
+  const expenseTotal = transactions.reduce((acc, curr) => curr.type === 'expense' ? acc + Number(curr.amount) : acc, 0);
 
   return (
     <Layout title="Accounts & Finance">
@@ -67,32 +67,32 @@ const AccountsPage = () => {
             <div className="metric-icon bg-green"><Wallet size={24} /></div>
             <div className="metric-details">
               <span>Total Revenue</span>
-              <h3>{incomeTotal.toFixed(3)} KWD</h3>
-              <p className="trend positive"><TrendingUp size={12} /> +8.2% monthly</p>
+              <h3>{Number(incomeTotal).toFixed(3)} KWD</h3>
+              <p className="trend positive" style={{visibility: loading ? 'hidden' : 'visible'}}><TrendingUp size={12} /> Live tracking</p>
             </div>
           </div>
           <div className="metric-card">
             <div className="metric-icon bg-red" style={{ background: '#fee2e2', color: '#dc2626' }}><TrendingDown size={24} /></div>
             <div className="metric-details">
               <span>Total Expenses</span>
-              <h3>{expenseTotal.toFixed(3)} KWD</h3>
-              <p className="trend warning">Within budget</p>
+              <h3>{Number(expenseTotal).toFixed(3)} KWD</h3>
+              <p className="trend warning" style={{visibility: loading ? 'hidden' : 'visible'}}>Expenditures</p>
             </div>
           </div>
           <div className="metric-card">
             <div className="metric-icon bg-blue"><DollarSign size={24} /></div>
             <div className="metric-details">
               <span>Net Profit</span>
-              <h3>{(incomeTotal - expenseTotal).toFixed(3)} KWD</h3>
-              <p className="trend positive">Excellent</p>
+              <h3>{(Number(incomeTotal) - Number(expenseTotal)).toFixed(3)} KWD</h3>
+              <p className="trend positive" style={{visibility: loading ? 'hidden' : 'visible'}}>Current Balance</p>
             </div>
           </div>
           <div className="metric-card">
             <div className="metric-icon bg-orange" style={{ background: '#ffedd5', color: '#ea580c' }}><ArrowUpRight size={24} /></div>
             <div className="metric-details">
-              <span>Pending Taxes</span>
-              <h3>{((incomeTotal - expenseTotal) * 0.05).toFixed(3)} KWD</h3>
-              <p className="trend neutral">Q1 Accruals</p>
+              <span>Estimated Tax</span>
+              <h3>{((Number(incomeTotal) - Number(expenseTotal)) * 0.05).toFixed(3)} KWD</h3>
+              <p className="trend neutral" style={{visibility: loading ? 'hidden' : 'visible'}}>Auto-calculated</p>
             </div>
           </div>
         </div>
@@ -101,7 +101,9 @@ const AccountsPage = () => {
         <div className="inventory-actions">
            <div className="search-group">
             <Calendar size={18} className="search-icon" />
-            <span style={{ marginLeft: '10px', fontSize: '13px', color: '#64748b', fontWeight: 600 }}>March 2026 Fiscal Period</span>
+            <span style={{ marginLeft: '10px', fontSize: '13px', color: '#64748b', fontWeight: 600 }}>
+              {new Date().toLocaleString('default', { month: 'long', year: 'numeric' })} Fiscal Period
+            </span>
            </div>
            <div className="action-buttons">
               <button className="btn-filter"><Filter size={18} /> Financial Filter</button>
@@ -131,7 +133,7 @@ const AccountsPage = () => {
                 ) : transactions.length === 0 ? (
                    <tr><td colSpan={7} className="text-center py-5">No financial records found.</td></tr>
                 ) : transactions.map(t => (
-                  <tr key={t.transaction_id}>
+                  <tr key={`${t.type}-${t.transaction_id}`}>
                     <td>
                       <div className="item-info">
                         <strong>TXN-{String(t.transaction_id).padStart(4, '0')}</strong>
@@ -152,7 +154,7 @@ const AccountsPage = () => {
                     <td>{t.date}</td>
                     <td>
                        <strong style={{ color: t.type === 'income' ? '#054c2d' : '#991b1b', fontSize: '15px' }}>
-                         {t.type === 'income' ? '+' : '-'}{t.amount.toFixed(3)}
+                         {t.type === 'income' ? '+' : '-'}{Number(t.amount).toFixed(3)}
                        </strong>
                     </td>
                     <td>

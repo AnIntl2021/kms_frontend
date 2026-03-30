@@ -11,8 +11,9 @@ import MenuPage from './pages/MenuPage';
 import SalesPage from './pages/SalesPage';
 import AccountsPage from './pages/AccountsPage';
 import WastagePage from './pages/WastagePage';
+import AdministrationPage from './pages/AdministrationPage';
+import FactoryDispatchPage from './pages/FactoryDispatchPage';
 import { 
-  AdministrationPage, 
   SettingsPage
 } from './pages/PlaceholderPages';
 
@@ -42,6 +43,7 @@ function App() {
         <Route path="/sales" element={<ProtectedRoute><SalesPage /></ProtectedRoute>} />
         <Route path="/accounts" element={<ProtectedRoute><AccountsPage /></ProtectedRoute>} />
         <Route path="/administration" element={<ProtectedRoute><AdministrationPage /></ProtectedRoute>} />
+        <Route path="/factory-dispatch" element={<ProtectedRoute><FactoryDispatchPage /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
 
         <Route path="/" element={<Navigate to="/dashboard" />} />
