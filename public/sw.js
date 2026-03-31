@@ -8,5 +8,10 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Basic Fetch Handler for Chrome PWA Criteria
+  event.respondWith(
+    fetch(event.request).catch(() => {
+      // Basic Offline Fallback to satisfy Chrome PWA
+      return new Response("Offline - fresh'n'fastkw ERP");
+    })
+  );
 });

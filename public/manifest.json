@@ -2,7 +2,7 @@
   "name": "fresh'n'fastkw ERP ELITE",
   "short_name": "FNF ERP",
   "description": "Kuwait's Elite Professional ERP",
-  "start_url": "/dashboard",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",
