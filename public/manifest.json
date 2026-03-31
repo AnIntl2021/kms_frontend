@@ -1,7 +1,7 @@
 {
-  "name": "fresh'n'fastkw ERP ELITE",
-  "short_name": "FNF ERP",
-  "description": "Kuwait's Elite Professional ERP",
+  "name": "fresh'n'fastkw",
+  "short_name": "FNF",
+  "description": "Professional ERP",
   "id": "/",
   "start_url": "./",
   "scope": "/",
