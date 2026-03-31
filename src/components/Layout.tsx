@@ -20,7 +20,7 @@ import {
   ShoppingCart,
   Zap,
   BarChart2,
-  Download
+  MonitorDown
 } from 'lucide-react';
 import './Layout.css';
 import logo from '../assets/logo.jpg';
@@ -155,7 +155,7 @@ const Layout: React.FC<LayoutProps> = ({ children, title }) => {
               <input type="text" placeholder="Search operations..." />
             </div>
             <div className="icon-btn download-app" onClick={handleInstallClick} title="Install Desktop App">
-              <Download size={20} />
+              <MonitorDown size={20} />
             </div>
             <div className="icon-btn notification">
               <Bell size={20} />
