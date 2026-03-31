@@ -15,7 +15,8 @@ import {
   RotateCcw,
   BadgeCent,
   ShieldCheck,
-  Zap
+  Zap,
+  Download
 } from 'lucide-react';
 import api from '../api/axios';
 
@@ -42,6 +43,30 @@ const AnalyticsPage = () => {
     } finally {
       setLoading(false);
     }
+  };
+  
+  const handleExport = () => {
+    // Generate a simple CSV export for the user
+    const headers = ["Store Name", "7D Waste (KWD)", "7D Revenue (KWD)", "Priority", "Recommendation"];
+    const rows = forecasting.map(f => [
+      f.vendor_name,
+      parseFloat(f.loss_kwd).toFixed(3),
+      parseFloat(f.recent_sales).toFixed(3),
+      f.priority,
+      f.recommendation
+    ]);
+    
+    let csvContent = "data:text/csv;charset=utf-8," 
+      + headers.join(",") + "\n"
+      + rows.map(e => e.join(",")).join("\n");
+      
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `FNF_Analytics_Report_${new Date().toLocaleDateString()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const getEfficiencyScore = () => {
@@ -87,7 +112,10 @@ const AnalyticsPage = () => {
                     <Activity size={24} />
                     <span>Manufacturing Health Score</span>
                   </div>
-                  <div className="card-stats">
+                  <div className="icon-btn download-app" title="Install Desktop App">
+                    <Download size={20} />
+                  </div>
+                  <div className="icon-btn notification">
                     <div className="big-stat">{getEfficiencyScore()}%</div>
                     <div className="stat-label">System Efficiency Index</div>
                   </div>
@@ -166,9 +194,13 @@ const AnalyticsPage = () => {
                      <Activity size={20} />
                      <h3>Financial Leak & Growth Forecast</h3>
                   </div>
-                  <div className="header-actions">
-                     <span className="intelligence-tag">AI Profit Logic Active</span>
-                  </div>
+                  <div className="header-actions" style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                      <button className="btn-download" onClick={handleExport} title="Download Full Report">
+                         <Download size={16} />
+                         Export BI Report
+                      </button>
+                      <span className="intelligence-tag">AI Profit Logic Active</span>
+                   </div>
                </div>
                
                <div className="forecasting-table-wrapper">
@@ -306,6 +338,10 @@ const AnalyticsPage = () => {
         .recommendation-box.amber { background: #fbbf24; }
 
         .analytics-loading { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 400px; color: var(--primary); }
+        
+        .btn-download { display: flex; align-items: center; gap: 0.6rem; background: #1e293b; color: white; padding: 0.5rem 1rem; border-radius: 8px; border: none; font-weight: 600; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; }
+        .btn-download:hover { background: #334155; transform: translateY(-1px); }
+
         .spin { animation: spin 2s linear infinite; margin-bottom: 1rem; }
         @keyframes spin { from {transform: rotate(0deg)} to {transform: rotate(360deg)}}
         @keyframes slideInUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
