@@ -19,8 +19,7 @@ import {
   Store,
   ShoppingCart,
   Zap,
-  BarChart2,
-  MonitorDown
+  BarChart2
 } from 'lucide-react';
 import './Layout.css';
 import logo from '../assets/logo.jpg';
@@ -33,37 +32,14 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({ children, title }) => {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const { admin, logout } = useAuthStore();
   const location = useLocation();
 
   useEffect(() => {
     const handleUnauthorized = () => logout();
     window.addEventListener('auth-unauthorized', handleUnauthorized);
-    
-    // PWA Install Logic
-    const handleBeforeInstall = (e: any) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-    };
-    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
-    
-    return () => {
-      window.removeEventListener('auth-unauthorized', handleUnauthorized);
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
-    };
+    return () => window.removeEventListener('auth-unauthorized', handleUnauthorized);
   }, [logout]);
-
-  const handleInstallClick = () => {
-    if (deferredPrompt) {
-      deferredPrompt.prompt();
-      deferredPrompt.userChoice.then((choiceResult: any) => {
-        if (choiceResult.outcome === 'accepted') setDeferredPrompt(null);
-      });
-    } else {
-      alert("ERP is already installed or your browser doesn't support PWA installation.");
-    }
-  };
 
   const navItems = [
     { name: 'Dashboard', path: '/dashboard', icon: <LayoutDashboard size={20} />, section: 'Main' },
@@ -153,9 +129,6 @@ const Layout: React.FC<LayoutProps> = ({ children, title }) => {
             <div className="search-bar">
               <Search size={18} />
               <input type="text" placeholder="Search operations..." />
-            </div>
-            <div className="icon-btn download-app" onClick={handleInstallClick} title="Install Desktop App">
-              <MonitorDown size={20} />
             </div>
             <div className="icon-btn notification">
               <Bell size={20} />
