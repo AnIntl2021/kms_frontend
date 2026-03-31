@@ -16,4 +16,3 @@ const PlaceholderPage = ({ title }: { title: string }) => (
 );
 
 export const AdministrationPage = () => <PlaceholderPage title="Administration" />;
-export const SettingsPage = () => <PlaceholderPage title="Settings" />;

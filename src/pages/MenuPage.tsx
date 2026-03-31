@@ -11,7 +11,7 @@ import {
   Package,
   Upload,
   Info,
-  DollarSign,
+  BadgeCent,
   FileText,
   ChefHat,
   TrendingUp,
@@ -35,6 +35,7 @@ const MenuPage = () => {
   const [items, setItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
   const [activeTab, setActiveTab] = useState<'menu' | 'premix'>('menu');
   
   // Data for creation
@@ -122,9 +123,51 @@ const MenuPage = () => {
     setFormData({ ...formData, ingredients: formData.ingredients.filter((_, i) => i !== index) });
   };
 
+  const handleEdit = async (item: MenuItem) => {
+    try {
+      const response = await api.get(`/menu/${item.menu_item_id}`);
+      if (response.data.success) {
+        const details = response.data.data;
+        setEditingItem(item);
+        setFormData({
+          name_en: details.name_en,
+          name_ar: details.name_ar,
+          category_id: String(details.category_id),
+          price: Number(details.price),
+          cost_price: Number(details.cost_price),
+          description_en: details.description_en || '',
+          description_ar: details.description_ar || '',
+          ingredients: details.ingredients.map((ing: any) => ({
+            inventory_item_id: String(ing.inventory_item_id),
+            quantity: String(ing.quantity)
+          }))
+        });
+        if (details.image_url) {
+           setImagePreview(`${import.meta.env.VITE_API_URL.replace('/api', '')}${details.image_url}`);
+        }
+        setIsModalOpen(true);
+      }
+    } catch (error) {
+      console.error('Failed to fetch item details:', error);
+      alert('Failed to load item details');
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!window.confirm('Are you sure you want to delete this menu item?')) return;
+    try {
+      const response = await api.delete(`/menu/${id}`);
+      if (response.data.success) {
+        fetchItems();
+      }
+    } catch (error) {
+      console.error('Failed to delete item:', error);
+      alert('Failed to delete menu item');
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Submitting Menu Form:', formData);
     try {
       const form = new FormData();
       form.append('name_en', formData.name_en);
@@ -141,7 +184,10 @@ const MenuPage = () => {
         form.append('image', imageFile);
       }
 
-      const response = await api.post('/menu', form, {
+      const url = editingItem ? `/menu/${editingItem.menu_item_id}` : '/menu';
+      const method = editingItem ? 'put' : 'post';
+
+      const response = await api[method](url, form, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
@@ -152,21 +198,21 @@ const MenuPage = () => {
         fetchItems();
         resetForm();
       } else {
-        alert(response.data.message || 'Failed to create menu item');
+        alert(response.data.message || 'Failed to save menu item');
       }
     } catch (error: any) {
       console.error('Submit error:', error.response?.data);
-      const msg = error.response?.data?.message || error.response?.data?.error || 'Failed to create menu item. Please check all required fields.';
+      const msg = error.response?.data?.message || 'Failed to save menu item. Please check all required fields.';
       alert(msg);
     }
   };
-
   const resetForm = () => {
     // If we are in the premix tab, try to find the 'Premix' category
     const premixCat = activeTab === 'premix' 
       ? categories.find(c => c.name_en.toLowerCase().includes('premix'))
       : null;
 
+    setEditingItem(null);
     setFormData({
       name_en: '',
       name_ar: '',
@@ -278,13 +324,13 @@ const MenuPage = () => {
                       </div>
                     </td>
                     <td><span className="sku-badge" style={{background: '#f1f5f9', color: '#64748b'}}>{item.category_name || 'General'}</span></td>
-                    <td><strong>{Number(item.price).toFixed(3)} KWD</strong></td>
+                    <td><strong>{Number(item.price).toFixed(3)} د.ك</strong></td>
                     <td><span className={item.status === 'available' ? 'status-badge healthy' : 'status-badge critical'}>{item.status}</span></td>
-                    <td className="text-right">
+                     <td className="text-right">
                        <div className="row-actions">
-                          <button className="btn-icon-sm" title="Edit Item"><Edit3 size={16} /></button>
+                          <button className="btn-icon-sm" onClick={() => handleEdit(item)} title="Edit Item"><Edit3 size={16} /></button>
                           {activeTab === 'premix' && <button className="btn-icon-sm" style={{ color: 'var(--primary)' }} title="Production Log"><TrendingUp size={16} /></button>}
-                          <button className="btn-icon-sm" title="Delete"><Trash2 size={16} /></button>
+                          <button className="btn-icon-sm" onClick={() => handleDelete(item.menu_item_id)} title="Delete"><Trash2 size={16} /></button>
                        </div>
                     </td>
                   </tr>
@@ -372,10 +418,10 @@ const MenuPage = () => {
                      <div style={{ display: 'grid', gridTemplateColumns: activeTab === 'menu' ? '1fr 1fr' : '1fr', gap: '0.8rem' }}>
                         {activeTab === 'menu' && (
                           <div className="form-group">
-                            <label style={{ fontWeight: 800, fontSize: '11px', color: 'var(--primary)' }}>SELLING PRICE (KWD)</label>
+                            <label style={{ fontWeight: 800, fontSize: '11px', color: 'var(--primary)' }}>SELLING PRICE (د.ك)</label>
                             <div style={{ position: 'relative' }}>
                               <input type="number" step="0.001" style={{ padding: '0.8rem 0.8rem 0.8rem 2rem', width: '100%', borderRadius: '12px', border: '2px solid #e2e8f0', fontWeight: 'bold' }} required value={formData.price} onChange={(e) => setFormData({...formData, price: Number(e.target.value)})} />
-                              <DollarSign size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--primary)' }} />
+                              <BadgeCent size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--primary)' }} />
                             </div>
                           </div>
                         )}

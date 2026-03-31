@@ -10,7 +10,7 @@ import {
   Filter, 
   Eye, 
   FileText,
-  DollarSign,
+  BadgeCent,
   Package,
   Calendar,
   MoreVertical,
@@ -187,10 +187,10 @@ const SalesPage = () => {
         {/* Sales Performance Metrics */}
         <div className="inventory-metrics">
           <div className="metric-card">
-            <div className="metric-icon bg-green"><DollarSign size={24} /></div>
+            <div className="metric-icon bg-green"><BadgeCent size={24} /></div>
             <div className="metric-details">
-              <span>Today's Revenue</span>
-              <h3>{stats.totalRevenue.toFixed(3)} KWD</h3>
+               <span>Today's Revenue</span>
+               <h3>{stats.totalRevenue.toFixed(3)} د.ك</h3>
               <p className="trend positive"><TrendingUp size={12} /> +12.5% vs yesterday</p>
             </div>
           </div>
@@ -300,7 +300,7 @@ const SalesPage = () => {
                       </div>
                     </td>
                     <td>
-                      <strong>{Number(sale.total_amount).toFixed(3)} KWD</strong>
+                      <strong>{Number(sale.total_amount).toFixed(3)} د.ك</strong>
                     </td>
                     <td>
                       <span className={getStatusBadge(sale.payment_status)}>{sale.payment_status}</span>
@@ -350,7 +350,7 @@ const SalesPage = () => {
                     <span style={{ fontWeight: 800, color: '#941c1c' }}>Order #{order.sale_id}</span>
                     <span style={{ fontSize: '12px', background: '#fef2f2', color: '#991b1b', padding: '2px 8px', borderRadius: '12px', fontWeight: 600 }}>SHIP NOW</span>
                   </div>
-                  <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '1.25rem' }}>Customer: <b>{order.customer_name}</b><br/>Value: {Number(order.total_amount).toFixed(3)} KWD</p>
+                  <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '1.25rem' }}>Customer: <b>{order.customer_name}</b><br/>Value: {Number(order.total_amount).toFixed(3)} د.ك</p>
                   <button 
                     onClick={() => handleUpdateStatus(order.sale_id, 'dispatched')}
                     style={{ 
@@ -484,7 +484,7 @@ const SalesPage = () => {
                               }}
                             >
                                <p style={{ fontSize: '12px', fontWeight: 700, margin: '0 0 4px 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name_en || 'Unnamed'}</p>
-                               <p style={{ fontSize: '11px', color: 'var(--primary)', fontWeight: 800, margin: 0 }}>{Number(item.price || 0).toFixed(3)} KWD</p>
+                               <p style={{ fontSize: '11px', color: 'var(--primary)', fontWeight: 800, margin: 0 }}>{Number(item.price || 0).toFixed(3)} د.ك</p>
                             </div>
                           ))}
                         
@@ -502,7 +502,7 @@ const SalesPage = () => {
                 <div style={{ marginTop: '2rem', background: '#054c2d', color: 'white', padding: '1.5rem', borderRadius: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                    <div>
                       <p style={{ margin: 0, opacity: 0.8, fontSize: '12px' }}>Total Amount</p>
-                      <h3 style={{ margin: 0 }}>{selectedItems.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0).toFixed(3)} KWD</h3>
+                      <h3 style={{ margin: 0 }}>{selectedItems.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0).toFixed(3)} د.ك</h3>
                    </div>
                    <button 
                       onClick={handleCreateOrder}

@@ -31,6 +31,7 @@ const VendorsPage = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [editingVendor, setEditingVendor] = useState<Vendor | null>(null);
   const [formData, setFormData] = useState({
     name_en: '',
     name_ar: '',
@@ -58,12 +59,52 @@ const VendorsPage = () => {
     }
   };
 
+  const handleEdit = (v: Vendor) => {
+    setEditingVendor(v);
+    setFormData({
+      name_en: v.name_en,
+      name_ar: v.name_ar,
+      contact_person: v.contact_person,
+      email: v.email,
+      phone: v.phone,
+      address: v.address,
+      type: v.type,
+      status: v.status
+    });
+    setShowModal(true);
+  };
+
+  const handleDelete = async (id: number) => {
+    const confirm = await Swal.fire({
+      title: 'Remove Partner?',
+      text: 'Are you sure you want to remove this vendor/client?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444'
+    });
+    if (confirm.isConfirmed) {
+      try {
+        await api.delete(`/vendors/${id}`);
+        Swal.fire('Removed', 'Partner has been removed', 'success');
+        fetchVendors();
+      } catch (e) {
+        Swal.fire('Error', 'Failed to remove partner', 'error');
+      }
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await api.post('/vendors', formData);
-      Swal.fire('Success', 'Partner registered successfully', 'success');
+      if (editingVendor) {
+        await api.put(`/vendors/${editingVendor.vendor_id}`, formData);
+        Swal.fire('Success', 'Partner updated successfully', 'success');
+      } else {
+        await api.post('/vendors', formData);
+        Swal.fire('Success', 'Partner registered successfully', 'success');
+      }
       setShowModal(false);
+      setEditingVendor(null);
       setFormData({ name_en: '', name_ar: '', contact_person: '', email: '', phone: '', address: '', type: 'supplier', status: 'active' });
       fetchVendors();
     } catch (error: any) {
@@ -127,8 +168,8 @@ const VendorsPage = () => {
                     <td><span className={`status-badge ${v.status === 'active' ? 'healthy' : 'low'}`}>{v.status}</span></td>
                     <td className="text-right">
                        <div className="row-actions">
-                          <button className="btn-icon-sm" style={{color: 'var(--primary)'}}><Edit3 size={16}/></button>
-                          <button className="btn-icon-sm" style={{color: '#ef4444'}}><Trash2 size={16}/></button>
+                          <button className="btn-icon-sm" onClick={() => handleEdit(v)} style={{color: 'var(--primary)'}}><Edit3 size={16}/></button>
+                          <button className="btn-icon-sm" onClick={() => handleDelete(v.vendor_id)} style={{color: '#ef4444'}}><Trash2 size={16}/></button>
                        </div>
                     </td>
                   </tr>
@@ -143,8 +184,8 @@ const VendorsPage = () => {
         <div className="modal-overlay">
           <div className="modal-content" style={{ maxWidth: '600px' }}>
             <div className="modal-header">
-              <h3><Store size={22} style={{ color: 'var(--primary)', marginRight: '10px' }} /> Register Partner</h3>
-              <button className="btn-close" onClick={() => setShowModal(false)}><X /></button>
+              <h3><Store size={22} style={{ color: 'var(--primary)', marginRight: '10px' }} /> {editingVendor ? 'Update Partner' : 'Register Partner'}</h3>
+              <button className="btn-close" onClick={() => { setShowModal(false); setEditingVendor(null); setFormData({ name_en: '', name_ar: '', contact_person: '', email: '', phone: '', address: '', type: 'supplier', status: 'active' }); }}><X /></button>
             </div>
             <form onSubmit={handleSubmit}>
               <div className="modal-body">

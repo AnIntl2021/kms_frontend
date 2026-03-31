@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import api from '../api/axios';
-import { Plus, X, Trash2, PlusCircle, Package, Truck, Calendar, CreditCard, StickyNote, Hash, MoreHorizontal, ShoppingBag, ArrowRight } from 'lucide-react';
+import { Plus, X, Trash2, PlusCircle, Package, Truck, Calendar, CreditCard, StickyNote, Hash, MoreHorizontal, ShoppingBag, ArrowRight, PackageCheck } from 'lucide-react';
 import Swal from 'sweetalert2';
 import './PurchaseOrdersPage.css';
 
@@ -106,20 +106,62 @@ const PurchaseOrdersPage = () => {
       Swal.fire('Error', 'Failed to save purchase order', 'error'); 
     }
   };
+  
+  const handleReceive = async (purchaseId: number) => {
+    try {
+      const confirm = await Swal.fire({
+        title: 'Receive Goods?',
+        text: 'This will confirm the delivery and INCREMENT your inventory stock!',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#01562c',
+        cancelButtonColor: '#ff4444',
+        confirmButtonText: 'Yes, Receive & Stock'
+      });
+
+      if (confirm.isConfirmed) {
+        await api.post(`/purchases/${purchaseId}/receive`);
+        Swal.fire('Received!', 'Inventory levels have been updated successfully.', 'success');
+        fetchOrders();
+      }
+    } catch (error: any) {
+      Swal.fire('Process Error', error.response?.data?.message || 'Failed to receive stock. Please try again.', 'error');
+    }
+  };
 
   return (
     <Layout title="Purchase Management">
       <div className="inventory-container">
         
         {/* Main List Section */}
-        <div className="flex justify-between items-center mb-8 bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center', 
+          marginBottom: '2rem', 
+          background: 'white', 
+          padding: '1.5rem', 
+          borderRadius: '16px', 
+          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+          border: '1px solid #f1f5f9'
+        }}>
           <div>
-            <h2 className="text-3xl font-extrabold text-[#01562c]">Purchase Orders</h2>
-            <p className="text-slate-500 font-medium">Track and manage your procurement operations.</p>
+            <h2 className="text-3xl font-extrabold text-[#01562c]" style={{ margin: 0 }}>Purchase Orders</h2>
+            <p className="text-slate-500 font-medium" style={{ margin: 0 }}>Track and manage your procurement operations.</p>
           </div>
           <button 
             className="btn-add hover:scale-105 transition-all" 
-            style={{ borderRadius: '10px', padding: '0.6rem 1.4rem', background: '#01562c', color: 'white', fontWeight: '700', cursor: 'pointer', fontSize: '0.85rem' }}
+            style={{ 
+              borderRadius: '10px', 
+              padding: '0.6rem 1.4rem', 
+              background: '#01562c', 
+              color: 'white', 
+              fontWeight: '700', 
+              cursor: 'pointer', 
+              fontSize: '0.85rem',
+              border: 'none',
+              whiteSpace: 'nowrap'
+            }}
             onClick={() => { 
               setFormData({...formData, items: [{...initialItem}]}); 
               setIsModalOpen(true); 
@@ -154,7 +196,7 @@ const PurchaseOrdersPage = () => {
                       <td className="px-8 py-5 font-bold text-[#01562c]"><Hash size={12} className="inline mr-1 opacity-50"/>{o.po_number}</td>
                       <td className="px-8 py-5 font-bold text-slate-800">{o.vendor_name}</td>
                       <td className="px-8 py-5 text-slate-500 font-medium">{o.branch_name}</td>
-                      <td className="px-8 py-5 text-slate-500">{new Date(o.date).toLocaleDateString()}</td>
+                      <td className="px-8 py-5 text-slate-500">{new Date(o.date || o.created_at).toLocaleDateString()}</td>
                       <td className="px-8 py-5 font-black text-[#01562c] text-lg">{Number(o.final_amount).toFixed(3)}</td>
                       <td className="px-8 py-5 text-center">
                         <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase ${o.status === 'received' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
@@ -162,9 +204,20 @@ const PurchaseOrdersPage = () => {
                         </span>
                       </td>
                       <td className="px-8 py-5 text-center">
-                        <button className="p-3 bg-slate-100 hover:bg-[#01562c] hover:text-white rounded-xl transition-all">
-                          <MoreHorizontal size={18} />
-                        </button>
+                        <div className="flex justify-center gap-2">
+                           {o.status === 'pending' && (
+                              <button 
+                                 className="p-3 bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white rounded-xl transition-all"
+                                 title="Receive Stock"
+                                 onClick={() => handleReceive(o.purchase_id)}
+                              >
+                                 <PackageCheck size={18} />
+                              </button>
+                           )}
+                           <button className="p-3 bg-slate-100 hover:bg-[#01562c] hover:text-white rounded-xl transition-all">
+                             <MoreHorizontal size={18} />
+                           </button>
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -287,18 +340,18 @@ const PurchaseOrdersPage = () => {
                 <div className="po-totals-card">
                   <div className="po-total-row">
                     <span>Sub-Total Summary</span>
-                    <span>{totals.subtotal.toFixed(3)} KWD</span>
+                    <span>{totals.subtotal.toFixed(3)} د.ك</span>
                   </div>
                   <div className="po-total-row">
                     <span>Overall Discount</span>
                     <div className="flex items-center gap-2">
                       <input type="number" className="w-24 text-right p-1 rounded-lg border border-slate-200" value={formData.discount_amount} onChange={e => setFormData({...formData, discount_amount: Number(e.target.value)})} />
-                      <span className="text-xs font-bold text-[#01562c]">KWD</span>
+                      <span className="text-xs font-bold text-[#01562c]">د.ك</span>
                     </div>
                   </div>
                   <div className="po-total-row grand">
                     <span>Grand Total Due</span>
-                    <span>{totals.final.toFixed(3)} <small className="text-xs font-bold">KWD</small></span>
+                    <span>{totals.final.toFixed(3)} <small className="text-xs font-bold">د.ك</small></span>
                   </div>
 
                   <div className="po-actions">

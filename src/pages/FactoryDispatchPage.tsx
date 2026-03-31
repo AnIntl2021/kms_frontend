@@ -230,9 +230,9 @@ const FactoryDispatchPage = () => {
                       productionLogs.filter(p => p.batch_number).map(p => (
                         <tr key={p.production_id}>
                           <td>
-                            <strong>{p.batch_number}</strong>
-                            <div style={{fontSize: '11px', color: '#64748b', marginTop: '4px', maxWidth: '250px'}} title={p.product_summary}>
-                               {p.product_summary}
+                            <div style={{fontWeight: 700, color: 'var(--primary)', fontSize: '14px'}}>{p.batch_number}</div>
+                            <div style={{fontSize: '11px', color: '#64748b', marginTop: '4px', lineHeight: '1.4', maxWidth: '300px'}}>
+                               {p.product_summary ? p.product_summary : 'Loading details...'}
                             </div>
                           </td>
                           <td>{new Date(p.production_date).toLocaleDateString()}</td>

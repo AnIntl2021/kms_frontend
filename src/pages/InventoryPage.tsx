@@ -96,7 +96,7 @@ const InventoryPage = () => {
           <div className="metric-card">
             <div className="metric-icon bg-blue"><TrendingUp size={24} /></div>
             <div className="metric-details">
-              <span>Total Value (KWD)</span>
+              <span>Total Value (د.ك)</span>
               <h3>{totalValue.toFixed(3)}</h3>
             </div>
           </div>
@@ -152,7 +152,7 @@ const InventoryPage = () => {
                     <td>{item.category_name_en || 'Uncategorized'}</td>
                     <td>{item.current_stock} {item.unit_en}</td>
                     <td>{item.min_stock_level} {item.unit_en}</td>
-                    <td>{Number(item.cost_price).toFixed(3)} KWD</td>
+                    <td>{Number(item.cost_price).toFixed(3)} د.ك</td>
                     <td>
                       <span className={`status-badge ${Number(item.current_stock) <= Number(item.min_stock_level) ? 'low' : 'healthy'}`}>
                         {Number(item.current_stock) <= Number(item.min_stock_level) ? 'Low Stock' : 'Healthy'}

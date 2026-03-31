@@ -74,7 +74,7 @@ const DashboardPage = () => {
     { 
       label: 'Inventory Value', 
       value: data.inventoryValue.toFixed(3), 
-      unit: 'KWD', 
+      unit: 'د.ك', 
       icon: <Layers size={24} />, 
       color: '#004d40', 
       trend: 'Real-time', 
@@ -92,7 +92,7 @@ const DashboardPage = () => {
     { 
       label: 'Daily Revenue', 
       value: data.dailyRevenue.toFixed(3), 
-      unit: 'KWD', 
+      unit: 'د.ك', 
       icon: <Wallet size={24} />, 
       color: '#6a1b9a', 
       trend: 'Today', 

@@ -18,7 +18,8 @@ import {
   FolderTree,
   Store,
   ShoppingCart,
-  Zap
+  Zap,
+  BarChart2
 } from 'lucide-react';
 import './Layout.css';
 import logo from '../assets/logo.jpg';
@@ -50,6 +51,7 @@ const Layout: React.FC<LayoutProps> = ({ children, title }) => {
     { name: 'Purchase Orders', path: '/purchases', icon: <ShoppingCart size={20} />, section: 'Operations' },
     { name: 'Production & Distribution', path: '/factory-dispatch', icon: <Zap size={20} />, section: 'Operations' },
     { name: 'Direct Sales (POS)', path: '/sales', icon: <Truck size={20} />, section: 'Operations' },
+    { name: 'Analytics & Forecasts', path: '/analytics', icon: <BarChart2 size={20} />, section: 'Operations' },
     { name: 'Accounts', path: '/accounts', icon: <Wallet size={20} />, section: 'Operations' },
     { name: 'Administration', path: '/administration', icon: <ShieldCheck size={20} />, section: 'Admin' },
     { name: 'Settings', path: '/settings', icon: <Settings size={20} />, section: 'Admin' },

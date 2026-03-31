@@ -7,7 +7,7 @@ import {
   Wallet, 
   ArrowUpRight, 
   ArrowDownLeft, 
-  DollarSign, 
+  BadgeCent, 
   Calendar, 
   Download,
   Filter,
@@ -80,10 +80,10 @@ const AccountsPage = () => {
             </div>
           </div>
           <div className="metric-card">
-            <div className="metric-icon bg-blue"><DollarSign size={24} /></div>
+            <div className="metric-icon bg-blue"><BadgeCent size={24} /></div>
             <div className="metric-details">
               <span>Net Profit</span>
-              <h3>{(Number(incomeTotal) - Number(expenseTotal)).toFixed(3)} KWD</h3>
+              <h3>{(Number(incomeTotal) - Number(expenseTotal)).toFixed(3)} د.ك</h3>
               <p className="trend positive" style={{visibility: loading ? 'hidden' : 'visible'}}>Current Balance</p>
             </div>
           </div>
@@ -91,7 +91,7 @@ const AccountsPage = () => {
             <div className="metric-icon bg-orange" style={{ background: '#ffedd5', color: '#ea580c' }}><ArrowUpRight size={24} /></div>
             <div className="metric-details">
               <span>Estimated Tax</span>
-              <h3>{((Number(incomeTotal) - Number(expenseTotal)) * 0.05).toFixed(3)} KWD</h3>
+              <h3>{((Number(incomeTotal) - Number(expenseTotal)) * 0.05).toFixed(3)} د.ك</h3>
               <p className="trend neutral" style={{visibility: loading ? 'hidden' : 'visible'}}>Auto-calculated</p>
             </div>
           </div>
@@ -122,7 +122,7 @@ const AccountsPage = () => {
                   <th>Category / Purpose</th>
                   <th>Reference</th>
                   <th>Date</th>
-                  <th>Amount (KWD)</th>
+                  <th>Amount (د.ك)</th>
                   <th>Status</th>
                   <th className="text-right">Action</th>
                 </tr>
