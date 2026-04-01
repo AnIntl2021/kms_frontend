@@ -12,6 +12,7 @@ import {
   X
 } from 'lucide-react';
 import './InventoryPage.css'; 
+import { toast } from 'react-toastify';
 import Swal from 'sweetalert2';
 
 interface Vendor {
@@ -85,10 +86,10 @@ const VendorsPage = () => {
     if (confirm.isConfirmed) {
       try {
         await api.delete(`/vendors/${id}`);
-        Swal.fire('Removed', 'Partner has been removed', 'success');
+        toast.success('Partner removed successfully! 🚮');
         fetchVendors();
       } catch (e) {
-        Swal.fire('Error', 'Failed to remove partner', 'error');
+        toast.error('Failed to remove partner.');
       }
     }
   };
@@ -98,17 +99,17 @@ const VendorsPage = () => {
     try {
       if (editingVendor) {
         await api.put(`/vendors/${editingVendor.vendor_id}`, formData);
-        Swal.fire('Success', 'Partner updated successfully', 'success');
+        toast.success('Partner Updated Successfully! 🤝');
       } else {
         await api.post('/vendors', formData);
-        Swal.fire('Success', 'Partner registered successfully', 'success');
+        toast.success('New Partner Registered! 🏢');
       }
       setShowModal(false);
       setEditingVendor(null);
       setFormData({ name_en: '', name_ar: '', contact_person: '', email: '', phone: '', address: '', type: 'supplier', status: 'active' });
       fetchVendors();
     } catch (error: any) {
-      Swal.fire('Error', error.response?.data?.message || 'Failed to save', 'error');
+      toast.error(error.response?.data?.message || 'Failed to save partner data.');
     }
   };
 

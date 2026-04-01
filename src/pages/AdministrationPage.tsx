@@ -19,7 +19,7 @@ import {
   LayoutGrid
 } from 'lucide-react';
 import './InventoryPage.css'; 
-import Swal from 'sweetalert2';
+import { toast } from 'react-toastify';
 
 interface AdminUser {
   admin_id: number;
@@ -122,18 +122,9 @@ const AdministrationPage = () => {
       setShowUserModal(false);
       setUserForm({ username: '', email: '', password: '', first_name: '', last_name: '', role_id: '', status: 'active' });
       fetchData();
-      Swal.fire({
-        icon: 'success',
-        title: 'Staff Created',
-        text: 'The new staff account is now active.',
-        confirmButtonColor: 'var(--primary)'
-      });
+      toast.success('Staff Account Registered Successfully! 👤');
     } catch (error: any) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Registration Failed',
-        text: error.response?.data?.message || error.message
-      });
+      toast.error(error.response?.data?.message || 'Failed to create staff account.');
     }
   };
 
@@ -144,18 +135,9 @@ const AdministrationPage = () => {
       setShowBranchModal(false);
       setBranchForm({ name_en: '', name_ar: '', phone: '', location_en: '', status: 'active' });
       fetchData();
-      Swal.fire({
-        icon: 'success',
-        title: 'Branch Added',
-        text: 'New location has been recorded.',
-        confirmButtonColor: 'var(--primary)'
-      });
+      toast.success('New Branch Network Added! 🏢');
     } catch (error: any) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Form Error',
-        text: error.response?.data?.message || error.message
-      });
+      toast.error(error.response?.data?.message || 'Failed to add branch.');
     }
   };
 

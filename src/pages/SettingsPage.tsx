@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import { Settings, Save, Building2, Calculator, Factory, CheckCircle2 } from 'lucide-react';
+import { toast } from 'react-toastify';
 import api from '../api/axios';
 
 const SettingsPage = () => {
@@ -8,7 +9,6 @@ const SettingsPage = () => {
   const [settings, setSettings] = useState<any>({});
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [message, setMessage] = useState('');
 
   useEffect(() => {
     fetchSettings();
@@ -32,15 +32,11 @@ const SettingsPage = () => {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
-    setMessage('');
-
     try {
       await api.post('/settings/update', settings);
-      setMessage('Settings updated successfully!');
-      setTimeout(() => setMessage(''), 3000);
+      toast.success('System Settings Updated Successfully! ⚙️');
     } catch (error) {
-      console.error('Failed to update settings:', error);
-      alert('Failed to update settings. Please try again.');
+      toast.error('Failed to update system configurations.');
     } finally {
       setIsSaving(false);
     }
@@ -172,12 +168,6 @@ const SettingsPage = () => {
             {isSaving ? 'Saving...' : <><Save size={18} /> Update Settings</>}
           </button>
         </header>
-
-        {message && (
-          <div className="settings-success-alert">
-            <CheckCircle2 size={18} /> {message}
-          </div>
-        )}
 
         <div className="settings-tabs">
           <button 

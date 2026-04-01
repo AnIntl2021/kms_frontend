@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X, Save, Loader2, PlusCircle, MinusCircle } from 'lucide-react';
+import { toast } from 'react-toastify';
 import api from '../api/axios';
 
 interface InventoryItem {
@@ -41,9 +42,10 @@ const StockAdjustModal = ({ item, onClose, onSuccess }: StockAdjustModalProps) =
         onClose();
         setQuantity('');
         setReason('');
+        toast.success(`Stock ${type === 'add' ? 'Incremented' : 'Decremented'} Successfully! 📊`);
       }
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Failed to adjust stock');
+      toast.error(error.response?.data?.message || 'Failed to adjust stock levels.');
     } finally {
       setSubmitting(false);
     }

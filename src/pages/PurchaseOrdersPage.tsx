@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import api from '../api/axios';
 import { Plus, X, Trash2, PlusCircle, Package, Truck, Calendar, CreditCard, StickyNote, Hash, MoreHorizontal, ShoppingBag, ArrowRight, PackageCheck } from 'lucide-react';
+import { toast } from 'react-toastify';
 import Swal from 'sweetalert2';
 import './PurchaseOrdersPage.css';
 
@@ -96,14 +97,9 @@ const PurchaseOrdersPage = () => {
       await api.post('/purchases', { ...formData, po_number: poNum, final_amount: totals.final });
       setIsModalOpen(false); 
       fetchOrders(); 
-      Swal.fire({
-        icon: 'success',
-        title: 'Success!',
-        text: 'Purchase order created successfully',
-        confirmButtonColor: '#01562c'
-      });
+      toast.success('Purchase Order Created Successfully! 🧾');
     } catch (err) { 
-      Swal.fire('Error', 'Failed to save purchase order', 'error'); 
+      toast.error('Failed to save purchase order.'); 
     }
   };
   
@@ -121,11 +117,11 @@ const PurchaseOrdersPage = () => {
 
       if (confirm.isConfirmed) {
         await api.post(`/purchases/${purchaseId}/receive`);
-        Swal.fire('Received!', 'Inventory levels have been updated successfully.', 'success');
+        toast.success('Inventory Updated Successfully! 🚛');
         fetchOrders();
       }
     } catch (error: any) {
-      Swal.fire('Process Error', error.response?.data?.message || 'Failed to receive stock. Please try again.', 'error');
+      toast.error(error.response?.data?.message || 'Failed to receive stock.');
     }
   };
 
@@ -299,16 +295,22 @@ const PurchaseOrdersPage = () => {
                       {formData.items.map((it, idx) => (
                         <tr key={idx}>
                           <td>
-                            <select className="po-table-input font-bold" value={it.inventory_item_id} onChange={e => updateItem(idx, 'inventory_item_id', e.target.value)}>
+                            <select className="po-table-input font-bold" value={it.inventory_item_id} onChange={e => {
+                               updateItem(idx, 'inventory_item_id', e.target.value);
+                               // Reset package when item changes
+                               updateItem(idx, 'package_id', '');
+                            }}>
                               <option value="">Choose item...</option>
-                              {inventoryItems.map(i => <option key={i.inventory_item_id} value={i.inventory_item_id}>{i.name_en}</option>)}
+                              {inventoryItems.map(i => <option key={i.inventory_item_id} value={i.inventory_item_id}>{i.name_en} ({i.unit_en})</option>)}
                             </select>
                           </td>
                           <td><select disabled className="po-table-input opacity-40"><option>N/A</option></select></td>
                           <td>
                             <select className="po-table-input" value={it.package_id} onChange={e => updateItem(idx, 'package_id', e.target.value)}>
-                              <option value="">Base Unit</option>
-                              {allPackages.map(p => <option key={p.package_id} value={p.package_id}>{p.name_en}</option>)}
+                              <option value="">Base Unit ({inventoryItems.find(i => String(i.inventory_item_id) === String(it.inventory_item_id))?.unit_en || '...' })</option>
+                              {allPackages.filter((p: any) => String(p.inventory_item_id) === String(it.inventory_item_id)).map((p: any) => (
+                                <option key={p.package_id} value={p.package_id}>{p.name_en} (x{Number(p.multiplier)})</option>
+                              ))}
                             </select>
                           </td>
                           <td><input type="number" step="0.001" className="po-table-input text-right font-bold" value={it.unit_price} onChange={e => updateItem(idx, 'unit_price', e.target.value)} /></td>

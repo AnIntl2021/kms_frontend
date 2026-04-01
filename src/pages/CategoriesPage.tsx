@@ -10,6 +10,8 @@ import {
   X
 } from 'lucide-react';
 import './InventoryPage.css'; // Reuse table/modal styles
+import { toast } from 'react-toastify';
+import Swal from 'sweetalert2';
 
 interface Category {
   category_id: number;
@@ -62,8 +64,9 @@ const CategoriesPage = () => {
       setEditingCategory(null);
       setFormData({ name_en: '', name_ar: '', parent_id: '', sort_order: '0' });
       fetchCategories();
+      toast.success('Category Updated Successfully! 📂');
     } catch (error) {
-      alert('Action failed. Check console.');
+      toast.error('Failed to save category.');
     }
   };
 
@@ -79,12 +82,21 @@ const CategoriesPage = () => {
   };
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm('Are you sure? This will hide the category from the menu.')) return;
-    try {
-      await api.delete(`/business/categories/${id}`);
-      fetchCategories();
-    } catch (error) {
-      alert('Delete failed.');
+    const confirm = await Swal.fire({
+      title: 'Remove Category?',
+      text: 'This will hide linked menu items. Are you sure?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444'
+    });
+    if (confirm.isConfirmed) {
+      try {
+        await api.delete(`/business/categories/${id}`);
+        toast.success('Category Removed! 🗑️');
+        fetchCategories();
+      } catch (error) {
+        toast.error('Failed to remove category.');
+      }
     }
   };
 

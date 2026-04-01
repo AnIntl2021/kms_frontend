@@ -18,6 +18,8 @@ import {
   Percent
 } from 'lucide-react';
 import './InventoryPage.css'; // Reuse themes
+import { toast } from 'react-toastify';
+import Swal from 'sweetalert2';
 
 interface MenuItem {
   menu_item_id: number;
@@ -41,6 +43,7 @@ const MenuPage = () => {
   // Data for creation
   const [categories, setCategories] = useState<any[]>([]);
   const [inventoryItems, setInventoryItems] = useState<any[]>([]);
+  const [allPackages, setAllPackages] = useState<any[]>([]);
   
   const [formData, setFormData] = useState({
     name_en: '',
@@ -50,7 +53,7 @@ const MenuPage = () => {
     cost_price: 0,
     description_en: '',
     description_ar: '',
-    ingredients: [] as any[]
+    ingredients: [] as { inventory_item_id: string, package_id: string, quantity: string }[]
   });
 
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -69,11 +72,19 @@ const MenuPage = () => {
     formData.ingredients.forEach(ing => {
       const invItem = inventoryItems.find(i => String(i.inventory_item_id) === String(ing.inventory_item_id));
       if (invItem && ing.quantity) {
-        totalCost += (Number(invItem.cost_price) * Number(ing.quantity));
+        let multiplier = 1;
+        if (ing.package_id === 'virtual_gram') multiplier = 0.001;
+        else if (ing.package_id === 'virtual_ml') multiplier = 0.001;
+        else if (ing.package_id) {
+           const pkg = allPackages.find(p => String(p.package_id) === String(ing.package_id));
+           if (pkg) multiplier = Number(pkg.multiplier);
+        }
+        
+        totalCost += (Number(invItem.cost_price) * Number(ing.quantity) * multiplier);
       }
     });
     setFormData(prev => ({ ...prev, cost_price: Number(totalCost.toFixed(3)) }));
-  }, [formData.ingredients, inventoryItems]);
+  }, [formData.ingredients, inventoryItems, allPackages]);
 
   const fetchItems = async () => {
     setLoading(true);
@@ -99,8 +110,10 @@ const MenuPage = () => {
         catRes = await api.get('/business/categories');
       }
       const invRes = await api.get('/inventory');
+      const pkgRes = await api.get('/inventory/packages');
       setCategories(catRes.data.data || []);
       setInventoryItems(invRes.data.data || []);
+      setAllPackages(pkgRes.data.data || []);
     } catch (error) {
       console.error('Failed to fetch support data:', error);
     }
@@ -139,30 +152,40 @@ const MenuPage = () => {
           description_ar: details.description_ar || '',
           ingredients: details.ingredients.map((ing: any) => ({
             inventory_item_id: String(ing.inventory_item_id),
+            package_id: String(ing.package_id || ''),
             quantity: String(ing.quantity)
           }))
         });
         if (details.image_url) {
-           setImagePreview(`${import.meta.env.VITE_API_URL.replace('/api', '')}${details.image_url}`);
+           const baseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5001/api').replace('/api', '');
+           const cleanPath = details.image_url.startsWith('/') ? details.image_url.slice(1) : details.image_url;
+           setImagePreview(`${baseUrl}/${cleanPath}`);
         }
         setIsModalOpen(true);
       }
     } catch (error) {
-      console.error('Failed to fetch item details:', error);
-      alert('Failed to load item details');
+      toast.error('Failed to load menu item details.');
     }
   };
 
   const handleDelete = async (id: number) => {
-    if (!window.confirm('Are you sure you want to delete this menu item?')) return;
-    try {
-      const response = await api.delete(`/menu/${id}`);
-      if (response.data.success) {
-        fetchItems();
+    const confirm = await Swal.fire({
+      title: 'Delete Menu Item?',
+      text: 'This will permanently remove this item from your catalog. Are you sure?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444'
+    });
+    if (confirm.isConfirmed) {
+      try {
+        const response = await api.delete(`/menu/${id}`);
+        if (response.data.success) {
+          toast.success('Menu Item Deleted Successfully! 🗑️');
+          fetchItems();
+        }
+      } catch (error) {
+        toast.error('Failed to delete menu item.');
       }
-    } catch (error) {
-      console.error('Failed to delete item:', error);
-      alert('Failed to delete menu item');
     }
   };
 
@@ -197,13 +220,13 @@ const MenuPage = () => {
         setIsModalOpen(false);
         fetchItems();
         resetForm();
+        toast.success(editingItem ? 'Menu Item Updated! ✨' : 'New Item Added to Catalog! 🍽️');
       } else {
-        alert(response.data.message || 'Failed to save menu item');
+        toast.error(response.data.message || 'Operation failed.');
       }
     } catch (error: any) {
-      console.error('Submit error:', error.response?.data);
       const msg = error.response?.data?.message || 'Failed to save menu item. Please check all required fields.';
-      alert(msg);
+      toast.error(msg);
     }
   };
   const resetForm = () => {
@@ -312,7 +335,13 @@ const MenuPage = () => {
                       <div style={{display: 'flex', alignItems: 'center', gap: '1rem'}}>
                          <div style={{width: 50, height: 50, borderRadius: 12, overflow: 'hidden', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
                             {item.image_url ? (
-                               <img src={`${import.meta.env.VITE_API_URL.replace('/api', '')}${item.image_url}`} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+                               <img 
+                                 src={`${(import.meta.env.VITE_API_URL || 'http://localhost:5001/api').replace('/api', '')}/${item.image_url.startsWith('/') ? item.image_url.slice(1) : item.image_url}`} 
+                                 style={{width: '100%', height: '100%', objectFit: 'cover'}} 
+                                 onError={(e) => {
+                                   console.error("FAILED TO LOAD IMAGE FROM BACKEND:", e.currentTarget.src);
+                                 }}
+                               />
                             ) : (
                                activeTab === 'menu' ? <Coffee size={22} color="var(--primary)" /> : <Package size={22} color="var(--primary)" />
                             )}
@@ -496,22 +525,43 @@ const MenuPage = () => {
                  </div>
                  
                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-                    {formData.ingredients.map((ing, idx) => (
-                      <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr 140px 45px', gap: '1rem', background: '#f8fafc', padding: '1rem', borderRadius: '14px', alignItems: 'end', border: '1px solid #f1f5f9' }}>
-                        <div className="form-group">
-                           <label style={{ fontSize: '11px', fontWeight: 700, color: '#94a3b8' }}>RAW MATERIAL</label>
-                           <select required value={ing.inventory_item_id} style={{ padding: '0.75rem', borderRadius: '10px', border: '1px solid #e2e8f0' }} onChange={(e) => updateIngredient(idx, 'inventory_item_id', e.target.value)}>
-                              <option value="">-- Select Material --</option>
-                              {inventoryItems.map(ii => <option key={ii.inventory_item_id} value={ii.inventory_item_id}>{ii.name_en} ({ii.unit_en})</option>)}
-                           </select>
+                    {formData.ingredients.map((ing, idx) => {
+                       const currentItem = inventoryItems.find(ii => String(ii.inventory_item_id) === String(ing.inventory_item_id));
+                       return (
+                        <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1.2fr 1.2fr 1fr 45px', gap: '1rem', background: '#f8fafc', padding: '1rem', borderRadius: '14px', alignItems: 'end', border: '1px solid #f1f5f9' }}>
+                          <div className="form-group">
+                             <label style={{ fontSize: '11px', fontWeight: 700, color: '#94a3b8' }}>RAW MATERIAL</label>
+                             <select required value={ing.inventory_item_id} style={{ padding: '0.75rem', borderRadius: '10px', border: '1px solid #e2e8f0' }} onChange={(e) => updateIngredient(idx, 'inventory_item_id', e.target.value)}>
+                                <option value="">-- Select Material --</option>
+                                {inventoryItems.map(ii => <option key={ii.inventory_item_id} value={ii.inventory_item_id}>{ii.name_en} ({ii.unit_en})</option>)}
+                             </select>
+                          </div>
+                          <div className="form-group">
+                             <label style={{ fontSize: '11px', fontWeight: 700, color: '#94a3b8' }}>MEASUREMENT UNIT</label>
+                             <select className="po-table-input" style={{ padding: '0.75rem', borderRadius: '10px', border: '1px solid #e2e8f0' }} value={ing.package_id} onChange={e => {
+                                updateIngredient(idx, 'package_id', e.target.value);
+                             }}>
+                                <option value="">Base Unit ({currentItem?.unit_en || '...' })</option>
+                                {/* SMART VIRTUAL UNITS */}
+                                {(currentItem?.unit_en?.toLowerCase() === 'kg' || currentItem?.unit_en?.toLowerCase() === 'kilogram') && (
+                                   <option value="virtual_gram">Grams (0.001 Kg)</option>
+                                )}
+                                {(currentItem?.unit_en?.toLowerCase() === 'liter' || currentItem?.unit_en?.toLowerCase() === 'litre') && (
+                                   <option value="virtual_ml">ML (0.001 L)</option>
+                                )}
+                                {allPackages.filter((p: any) => String(p.inventory_item_id) === String(ing.inventory_item_id)).map((p: any) => (
+                                  <option key={p.package_id} value={p.package_id}>{p.name_en} (x{Number(p.multiplier)})</option>
+                                ))}
+                             </select>
+                          </div>
+                          <div className="form-group">
+                             <label style={{ fontSize: '11px', fontWeight: 700, color: '#94a3b8' }}>AMOUNT USED</label>
+                             <input type="number" step="any" required style={{ padding: '0.75rem', borderRadius: '10px', border: '1px solid #e2e8f0', fontWeight: 'bold' }} placeholder="0.00" value={ing.quantity} onChange={(e) => updateIngredient(idx, 'quantity', e.target.value)} />
+                          </div>
+                          <button type="button" className="btn-icon-sm" onClick={() => removeIngredient(idx)} style={{ color: '#ef4444', height: '42px', width: '42px', borderRadius: '10px', border: '1px solid #fee2e2', background: '#fff' }}><Trash2 size={16} /></button>
                         </div>
-                        <div className="form-group">
-                           <label style={{ fontSize: '11px', fontWeight: 700, color: '#94a3b8' }}>QTY PER SALE</label>
-                           <input type="number" step="any" required style={{ padding: '0.75rem', borderRadius: '10px', border: '1px solid #e2e8f0' }} placeholder="0.00" value={ing.quantity} onChange={(e) => updateIngredient(idx, 'quantity', e.target.value)} />
-                        </div>
-                        <button type="button" className="btn-icon-sm" onClick={() => removeIngredient(idx)} style={{ color: '#ef4444', height: '42px', width: '42px', borderRadius: '10px', border: '1px solid #fee2e2', background: '#fff' }}><Trash2 size={16} /></button>
-                      </div>
-                    ))}
+                       );
+                     })}
                     {formData.ingredients.length === 0 && (
                       <div style={{ textAlign: 'center', padding: '2.5rem', background: '#f8fafc', border: '2px dashed #f1f5f9', borderRadius: '16px', color: '#94a3b8' }}>
                          <ChefHat size={32} style={{ opacity: 0.3, marginBottom: '10px' }} />

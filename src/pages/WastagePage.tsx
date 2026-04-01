@@ -14,6 +14,7 @@ import {
   FileText
 } from 'lucide-react';
 import './InventoryPage.css';
+import { toast } from 'react-toastify';
 
 interface WastageRecord {
   wastage_id: number;
@@ -81,8 +82,9 @@ const WastagePage = () => {
       setIsModalOpen(false);
       fetchWastage();
       setFormData({ inventory_item_id: '', quantity: '', reason: '', notes: '' });
+      toast.success('Wastage Report Submitted! 📉');
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Report submission failed.');
+      toast.error(error.response?.data?.message || 'Report submission failed.');
     }
   };
 

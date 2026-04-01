@@ -16,7 +16,7 @@ import {
   ClipboardList
 } from 'lucide-react';
 import './InventoryPage.css'; 
-import Swal from 'sweetalert2';
+import { toast } from 'react-toastify';
 
 interface Vendor {
   vendor_id: number;
@@ -108,17 +108,17 @@ const FactoryDispatchPage = () => {
 
   const handleProduceSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (produceForm.items.length === 0) return Swal.fire('Error', 'Please add items to the batch', 'error');
-    if (!produceForm.expiry_date) return Swal.fire('Error', 'Please set an expiry date', 'error');
+    if (produceForm.items.length === 0) return toast.warning('Please add items to the production batch.');
+    if (!produceForm.expiry_date) return toast.warning('Missing expiry date for the batch.');
 
     try {
       await api.post('/factory/production/batch', produceForm);
-      Swal.fire('Success', 'Production batch recorded.', 'success');
+      toast.success('Production Batch Recorded Successfully! 🏭');
       setShowProduceModal(false);
       setProduceForm({ production_date: new Date().toISOString().split('T')[0], expiry_date: '', items: [] });
       fetchBaseData();
     } catch (error: any) {
-      Swal.fire('Error', error.response?.data?.message || 'Production failed', 'error');
+      toast.error(error.response?.data?.message || 'Failed to record production.');
     }
   };
 
@@ -133,12 +133,12 @@ const FactoryDispatchPage = () => {
     e.preventDefault();
     try {
       await api.post('/factory/sales', dispatchForm);
-      Swal.fire('Success', 'Order dispatched and traced back to batch.', 'success');
+      toast.success('Goods Dispatched & Linked to Batch! 🚛');
       setShowDispatchModal(false);
       setDispatchForm({ vendor_id: '', batch_number: '', expiry_date: '', items: [], payment_method: 'credit' });
       fetchBaseData();
     } catch (error: any) {
-      Swal.fire('Error', error.response?.data?.message || 'Dispatch failed', 'error');
+      toast.error(error.response?.data?.message || 'Dispatch operation failed.');
     }
   };
 

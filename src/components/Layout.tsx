@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import './Layout.css';
 import logo from '../assets/logo.jpg';
+import AIAssistant from './AIAssistant';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -144,6 +145,7 @@ const Layout: React.FC<LayoutProps> = ({ children, title }) => {
           {children}
         </section>
       </main>
+      <AIAssistant />
     </div>
   );
 };

@@ -15,15 +15,27 @@ import AdministrationPage from './pages/AdministrationPage';
 import FactoryDispatchPage from './pages/FactoryDispatchPage';
 import SettingsPage from './pages/SettingsPage';
 import AnalyticsPage from './pages/AnalyticsPage';
-import { 
-  // No placeholders needed here
-} from './pages/PlaceholderPages';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 function App() {
   const { isAuthenticated } = useAuthStore();
 
   return (
-    <Router>
+    <>
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
+      <Router>
       <Routes>
         <Route path="/login" element={!isAuthenticated ? <LoginPage /> : <Navigate to="/dashboard" />} />
         
@@ -51,7 +63,8 @@ function App() {
 
         <Route path="/" element={<Navigate to="/dashboard" />} />
       </Routes>
-    </Router>
+      </Router>
+    </>
   );
 }
 

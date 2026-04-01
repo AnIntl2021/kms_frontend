@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Loader2, Plus, Trash2, Package as PackageIcon } from 'lucide-react';
+import { toast } from 'react-toastify';
 import api from '../api/axios';
 
 interface Category {
@@ -21,6 +22,7 @@ interface StockItemModalProps {
   onSuccess: () => void;
 }
 
+const UNIT_OPTIONS = ['Piece', 'Kg', 'Gram', 'Liter', 'ML', 'Box', 'Pouch', 'Bottle', 'Carton', 'Packet'];
 const StockItemModal = ({ isOpen, item, onClose, onSuccess }: StockItemModalProps) => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [submitting, setSubmitting] = useState(false);
@@ -136,9 +138,10 @@ const StockItemModal = ({ isOpen, item, onClose, onSuccess }: StockItemModalProp
       if (response.data.success) {
         onSuccess();
         onClose();
+        toast.success(item ? 'Stock Item Updated! 📦' : 'New Stock Item Registered! ✅');
       }
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Failed to save item');
+      toast.error(error.response?.data?.message || 'Failed to save stock item details.');
     } finally {
       setSubmitting(false);
     }
@@ -297,13 +300,23 @@ const StockItemModal = ({ isOpen, item, onClose, onSuccess }: StockItemModalProp
                         )}
                       </td>
                       <td>
-                        <input 
-                          type="text" 
-                          style={{ color: '#01562c', fontWeight: 800 }}
-                          placeholder={pkg.is_base ? "Base Unit (e.g. Gram)" : "Package (e.g. Box)"}
-                          value={pkg.name_en} 
-                          onChange={(e) => updatePackage(idx, 'name_en', e.target.value)}
-                        />
+                        {pkg.is_base ? (
+                           <select 
+                             style={{ color: '#01562c', fontWeight: 800, border: '1px solid #01562c' }}
+                             value={pkg.name_en}
+                             onChange={(e) => updatePackage(idx, 'name_en', e.target.value)}
+                           >
+                             {UNIT_OPTIONS.map(u => <option key={u} value={u}>{u}</option>)}
+                           </select>
+                        ) : (
+                          <input 
+                            type="text" 
+                            style={{ color: '#01562c', fontWeight: 800 }}
+                            placeholder="Package (e.g. Box)"
+                            value={pkg.name_en} 
+                            onChange={(e) => updatePackage(idx, 'name_en', e.target.value)}
+                          />
+                        )}
                       </td>
                       <td className="text-center">
                         {!pkg.is_base ? (

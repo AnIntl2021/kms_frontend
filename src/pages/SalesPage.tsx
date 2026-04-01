@@ -1,4 +1,8 @@
-import { useState, useEffect } from 'react';
+/* 
+   SALES & DISPATCH DASHBOARD - HARD RECOVERY VERSION 
+   SYNC TIMESTAMP: 2026-04-01-1805 
+*/
+import { useState, useEffect, useRef } from 'react';
 import Layout from '../components/Layout';
 import api from '../api/axios';
 import { 
@@ -20,10 +24,14 @@ import {
   User,
   ShoppingCart,
   Trash2,
-  AlertTriangle
+  AlertTriangle,
+  Printer,
+  RotateCcw
 } from 'lucide-react';
+import { useReactToPrint } from 'react-to-print';
+import FullInvoicePrint from '../components/FullInvoicePrint';
 import './InventoryPage.css';
-import Swal from 'sweetalert2';
+import { toast } from 'react-toastify';
 
 interface SaleOrder {
   sale_id: number;
@@ -46,11 +54,19 @@ const SalesPage = () => {
   const [customerName, setCustomerName] = useState('');
   const [menuItems, setMenuItems] = useState<any[]>([]);
   const [selectedItems, setSelectedItems] = useState<any[]>([]);
-  const [isAddingItem, setIsAddingItem] = useState(false);
-
+  
   const [categories, setCategories] = useState<any[]>([]);
   const [activeCategory, setActiveCategory] = useState('all');
   const [menuSearch, setMenuSearch] = useState('');
+
+  // Print State
+  const printRef = useRef<HTMLDivElement>(null);
+  const [printOrder, setPrintOrder] = useState<any>(null);
+  const [printItems, setPrintItems] = useState<any[]>([]);
+
+  // Detail Modal State
+  const [detailOrder, setDetailOrder] = useState<any>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   useEffect(() => {
     fetchSales();
@@ -60,7 +76,7 @@ const SalesPage = () => {
 
   const fetchCategories = async () => {
     try {
-      const response = await api.get('/categories');
+      const response = await api.get('/business/categories');
       if (response.data.success) {
         setCategories(response.data.data);
       }
@@ -98,29 +114,39 @@ const SalesPage = () => {
 
   const handleUpdateStatus = async (saleId: number, nextStatus: string) => {
     try {
-      const result = await Swal.fire({
-        title: 'Confirm Status Change',
-        text: `Update Order #${saleId} to ${nextStatus.toUpperCase()}?`,
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonColor: 'var(--primary)',
-        cancelButtonColor: '#d33',
-        confirmButtonText: 'Yes, update it!'
-      });
-
-      if (result.isConfirmed) {
-        await api.put(`/sales/${saleId}/status`, { dispatch_status: nextStatus });
-        Swal.fire('Updated!', `Order status is now ${nextStatus}.`, 'success');
-        fetchSales();
-      }
+      await api.put(`/sales/${saleId}/status`, { dispatch_status: nextStatus });
+      toast.success(`Order #${saleId} is now ${nextStatus.toUpperCase()}! 📦`);
+      fetchSales();
     } catch (error) {
-      Swal.fire('Error', 'Failed to update status.', 'error');
+      toast.error('Failed to update order status.');
+    }
+  };
+
+  const handleReturnOrder = async (saleId: number) => {
+    console.warn('--- 🔄 INITIATING RETURN FOR ORDER #:', saleId);
+    if (!saleId) {
+       toast.error('Invalid Sale ID detected.');
+       return;
+    }
+
+    if (!window.confirm(`Are you sure you want to RETURN Order #${saleId}? This will RESTORE the ingredient stock to the inventory. 🔄`)) return;
+    
+    try {
+      console.warn('📡 SENDING RETURN SIGNAL TO BACKEND...');
+      const response = await api.post(`/sales/${saleId}/return`);
+      console.warn('✅ BACKEND RESPONSE:', response.data);
+      
+      toast.info(`Order #${saleId} has been returned. Stock levels restored! 🔄`);
+      fetchSales();
+    } catch (error: any) {
+      console.error('❌ RETURN ERROR TRACE:', error);
+      toast.error('Failed to process order return: ' + (error.response?.data?.message || error.message));
     }
   };
 
   const handleCreateOrder = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (selectedItems.length === 0) return alert('Please add at least one item.');
+    if (e) e.preventDefault();
+    if (selectedItems.length === 0) return toast.warning('Your cart is empty! Please add items to the order. 🛒');
 
     try {
       const total = selectedItems.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0);
@@ -128,7 +154,7 @@ const SalesPage = () => {
         customer_name: customerName,
         items: selectedItems.map(i => ({ menu_item_id: i.menu_item_id, quantity: i.quantity, price: i.price })),
         total_amount: total,
-        payment_status: 'paid', // Default for now
+        payment_status: 'paid',
         dispatch_status: 'pending'
       };
 
@@ -137,10 +163,40 @@ const SalesPage = () => {
       setCustomerName('');
       setSelectedItems([]);
       fetchSales();
-      Swal.fire('Success', 'Order created successfully!', 'success');
+      toast.success('Sale Recorded Successfully! 💹');
     } catch (error) {
-      Swal.fire('Error', 'Failed to create order.', 'error');
+      toast.error('Failed to record sale.');
     }
+  };
+
+  const handleViewOrder = async (sale: any) => {
+     try {
+        const res = await api.get(`/sales/${sale.sale_id}`);
+        if (res.data.success) {
+           setDetailOrder(res.data.data);
+           setIsDetailModalOpen(true);
+        }
+     } catch (e) {
+        toast.error('Failed to fetch order details.');
+     }
+  };
+
+  const handlePrint = useReactToPrint({
+    contentRef: printRef,
+    documentTitle: `Invoice-${printOrder?.sale_id || 'Order'}`
+  });
+
+  const preparePrint = async (sale: any) => {
+     try {
+        const res = await api.get(`/sales/${sale.sale_id}`);
+        if (res.data.success) {
+           setPrintOrder(res.data.data);
+           setPrintItems(res.data.data.items || []);
+           setTimeout(() => handlePrint(), 500); 
+        }
+     } catch (e) {
+        toast.error('Failed to fetch invoice details.');
+     }
   };
 
   const addItemToOrder = (item: any) => {
@@ -167,7 +223,7 @@ const SalesPage = () => {
     return 'status-badge';
   };
 
-  const filteredSales = sales.filter(s => {
+  const filteredSales = (sales || []).filter(s => {
     const nameMatch = (s.customer_name || '').toLowerCase().includes(searchTerm.toLowerCase());
     const idMatch = String(s.sale_id || '').includes(searchTerm);
     const statusMatch = (statusFilter === 'all' || s.dispatch_status === statusFilter);
@@ -315,19 +371,52 @@ const SalesPage = () => {
                       </div>
                     </td>
                     <td className="text-right">
-                      <div className="row-actions">
+                      <div className="row-actions" style={{ position: 'relative', zIndex: 100, display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                         <button 
+                            className="btn-icon-sm" 
+                            style={{color: '#054c2d'}} 
+                            title="Print 1:1 Invoice" 
+                            onClick={(e) => { e.stopPropagation(); preparePrint(sale); }}
+                         >
+                           <Printer size={16} />
+                         </button>
                         {sale.dispatch_status === 'pending' && (
-                           <button className="btn-icon-sm" style={{color: '#f59e0b'}} title="Dispatch Order" onClick={() => handleUpdateStatus(sale.sale_id, 'dispatched')}>
+                           <button 
+                              className="btn-icon-sm" 
+                              style={{color: '#f59e0b'}} 
+                              title="Dispatch Order" 
+                              onClick={(e) => { e.stopPropagation(); handleUpdateStatus(sale.sale_id, 'dispatched'); }}
+                           >
                              <Truck size={16} />
                            </button>
                         )}
                         {sale.dispatch_status === 'dispatched' && (
-                           <button className="btn-icon-sm" style={{color: '#10b981'}} title="Confirm Delivery" onClick={() => handleUpdateStatus(sale.sale_id, 'delivered')}>
+                           <button 
+                              className="btn-icon-sm" 
+                              style={{color: '#10b981'}} 
+                              title="Confirm Delivery" 
+                              onClick={(e) => { e.stopPropagation(); handleUpdateStatus(sale.sale_id, 'delivered'); }}
+                           >
                              <CheckCircle2 size={16} />
                            </button>
                         )}
-                        <button className="btn-icon-sm" title="View Details"><Eye size={16} /></button>
-                        <button className="btn-more"><MoreVertical size={18} /></button>
+                        <button 
+                           className="btn-icon-sm" 
+                           style={{color: '#ef4444', background: 'none', border: 'none', padding: '5px', cursor: 'pointer' }} 
+                           title="Return Order & Restore Stock" 
+                           onClick={(e) => { e.stopPropagation(); handleReturnOrder(sale.sale_id); }}
+                        >
+                           <RotateCcw size={16} />
+                        </button>
+                        <button 
+                           className="btn-icon-sm" 
+                           style={{color: '#64748b'}}
+                           title="View Details" 
+                           onClick={(e) => { e.stopPropagation(); handleViewOrder(sale); }}
+                        >
+                           <Eye size={16} />
+                        </button>
+                        <button className="btn-more" onClick={(e) => e.stopPropagation()}><MoreVertical size={18} /></button>
                       </div>
                     </td>
                   </tr>
@@ -337,41 +426,40 @@ const SalesPage = () => {
           </div>
         </div>
 
-        {/* Dispatch Management Cards */}
-        {stats.pendingDispatch > 0 && (
-          <div style={{ marginTop: '2rem' }}>
-            <h4 style={{ marginBottom: '1.25rem', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-               <AlertTriangle size={20} color="#f59e0b" /> Orders Awaiting Dispatch
-            </h4>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1.5rem' }}>
-              {sales.filter(s => s.dispatch_status === 'pending').slice(0, 3).map(order => (
-                <div key={order.sale_id} style={{ background: 'white', padding: '1.5rem', borderRadius: '16px', border: '1px solid #fee2e2', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
-                    <span style={{ fontWeight: 800, color: '#941c1c' }}>Order #{order.sale_id}</span>
-                    <span style={{ fontSize: '12px', background: '#fef2f2', color: '#991b1b', padding: '2px 8px', borderRadius: '12px', fontWeight: 600 }}>SHIP NOW</span>
-                  </div>
-                  <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '1.25rem' }}>Customer: <b>{order.customer_name}</b><br/>Value: {Number(order.total_amount).toFixed(3)} د.ك</p>
-                  <button 
-                    onClick={() => handleUpdateStatus(order.sale_id, 'dispatched')}
-                    style={{ 
-                      width: '100%', 
-                      padding: '0.75rem', 
-                      borderRadius: '12px', 
-                      background: '#054c2d', 
-                      color: 'white', 
-                      border: 'none', 
-                      fontWeight: 600,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '0.5rem',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    <Truck size={18} /> Mark as Dispatched <ChevronRight size={16} />
-                  </button>
+        {/* ORDER DETAIL MODAL */}
+        {isDetailModalOpen && detailOrder && (
+          <div className="modal-overlay">
+            <div className="modal-content" style={{ maxWidth: '600px', borderRadius: '24px' }}>
+              <div className="modal-header">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <Eye size={24} color="var(--primary)" />
+                  <h3 style={{ margin: 0 }}>Order Details #{detailOrder.sale_id}</h3>
                 </div>
-              ))}
+                <button className="btn-close" onClick={() => setIsDetailModalOpen(false)}><X size={20} /></button>
+              </div>
+              <div className="modal-body" style={{ padding: '2rem' }}>
+                 <div style={{ background: '#f8fafc', padding: '1.5rem', borderRadius: '16px', marginBottom: '1.5rem', border: '1px solid #e2e8f0' }}>
+                    <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>Customer: <b>{detailOrder.customer_name}</b></p>
+                    <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#64748b' }}>Date: {detailOrder.order_date}</p>
+                 </div>
+                 
+                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    {detailOrder.items?.map((item: any) => (
+                       <div key={item.sale_item_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'white', padding: '1rem', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
+                          <div>
+                             <p style={{ margin: 0, fontWeight: 700 }}>{item.name_en}</p>
+                             <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>Quantity: {item.quantity}</p>
+                          </div>
+                          <p style={{ margin: 0, fontWeight: 800, color: 'var(--primary)' }}>{Number(item.price * item.quantity).toFixed(3)} د.ك</p>
+                       </div>
+                    ))}
+                 </div>
+
+                 <div style={{ marginTop: '2rem', borderTop: '2px dashed #e2e8f0', paddingTop: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h3 style={{ margin: 0 }}>Total Amount</h3>
+                    <h2 style={{ margin: 0, color: 'var(--primary)', fontWeight: 900 }}>{Number(detailOrder.total_amount).toFixed(3)} د.ك</h2>
+                 </div>
+              </div>
             </div>
           </div>
         )}
@@ -383,138 +471,51 @@ const SalesPage = () => {
           <div className="modal-content" style={{ maxWidth: '800px', borderRadius: '24px' }}>
              <div className="modal-header">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <ShoppingCart size={24} color="var(--primary)" />
-                  <h3 style={{ margin: 0 }}>Record New Wholesale Sale</h3>
+                   <ShoppingCart size={24} color="var(--primary)" />
+                   <h3 style={{ margin: 0 }}>Record New Wholesale Sale</h3>
                 </div>
                 <button className="btn-close" onClick={() => setIsModalOpen(false)}><X size={20} /></button>
              </div>
              
              <div className="modal-body" style={{ padding: '2rem' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
-                  {/* LEFT: Customer and Items List */}
-                  <div>
-                    <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-                      <label style={{ fontWeight: 700, fontSize: '11px', color: '#64748b' }}>CUSTOMER NAME *</label>
-                      <div style={{ position: 'relative' }}>
-                        <User size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                   <div style={{ background: '#f8fafc', padding: '1.25rem', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
+                      <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                        <label style={{ fontWeight: 700, fontSize: '11px', color: '#64748b' }}>CUSTOMER NAME *</label>
+                        <User size={16} />
                         <input 
-                          style={{ padding: '0.8rem 0.8rem 0.8rem 2.5rem', borderRadius: '12px', border: '1px solid #e2e8f0', width: '100%' }}
+                          style={{ padding: '0.8rem', borderRadius: '12px', border: '1px solid #e2e8f0', width: '100%' }}
                           placeholder="e.g. Dana Catering"
                           value={customerName}
                           onChange={(e) => setCustomerName(e.target.value)}
                         />
                       </div>
-                    </div>
-
-                    <div style={{ background: '#f8fafc', padding: '1.25rem', borderRadius: '16px', border: '1px solid #e2e8f0', minHeight: '250px', display: 'flex', flexDirection: 'column' }}>
-                       <h5 style={{ margin: '0 0 1rem 0', display: 'flex', justifyContent: 'space-between' }}>
-                          Current Cart
-                          <span style={{ color: 'var(--primary)', fontWeight: 800 }}>{selectedItems.length} Items</span>
-                       </h5>
-                       
-                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', overflowY: 'auto', maxHeight: '200px' }}>
-                          {selectedItems.map(item => (
-                            <div key={item.menu_item_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'white', padding: '0.75rem', borderRadius: '10px', border: '1px solid #f1f5f9' }}>
-                               <div>
-                                  <p style={{ margin: 0, fontSize: '13px', fontWeight: 700 }}>{item.name_en || 'Item'}</p>
-                                  <p style={{ margin: 0, fontSize: '11px', color: '#64748b' }}>{item.quantity} x {Number(item.price || 0).toFixed(3)}</p>
-                               </div>
-                               <button onClick={(e) => { e.stopPropagation(); removeItemFromOrder(item.menu_item_id); }} style={{ color: '#ef4444', background: '#fee2e2', border: 'none', borderRadius: '6px', padding: '4px', cursor: 'pointer' }}><Trash2 size={14} /></button>
-                            </div>
-                          ))}
-                          {selectedItems.length === 0 && (
-                             <p style={{ textAlign: 'center', marginTop: '3rem', color: '#94a3b8', fontSize: '13px' }}>Cart is empty. Add items from the right.</p>
-                          )}
-                       </div>
-                    </div>
-                  </div>
-
-                  {/* RIGHT: Menu Item Selection */}
-                  <div style={{ borderLeft: '1px solid #f1f5f9', paddingLeft: '1.5rem', display: 'flex', flexDirection: 'column' }}>
-                     <h5 style={{ margin: '0 0 1rem 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        Choose Items
-                        <div style={{ position: 'relative', width: '200px' }}>
-                          <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
-                          <input 
-                            style={{ padding: '0.4rem 0.4rem 0.4rem 1.8rem', borderRadius: '8px', border: '1px solid #e2e8f0', width: '100%', fontSize: '12px' }}
-                            placeholder="Search menu..."
-                            value={menuSearch}
-                            onChange={(e) => setMenuSearch(e.target.value)}
-                          />
-                        </div>
-                     </h5>
-
-                     {/* Modal Category Pills */}
-                     <div style={{ display: 'flex', gap: '8px', marginBottom: '1rem', overflowX: 'auto', paddingBottom: '5px' }}>
-                        <button 
-                          onClick={() => setActiveCategory('all')}
-                          style={{ padding: '6px 12px', borderRadius: '8px', border: 'none', background: activeCategory === 'all' ? 'var(--primary)' : '#f1f5f9', color: activeCategory === 'all' ? 'white' : '#64748b', fontSize: '11px', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}
-                        >
-                          All Items
-                        </button>
-                        {categories.map(cat => (
-                          <button 
-                            key={cat.category_id}
-                            onClick={() => setActiveCategory(cat.category_id)}
-                            style={{ padding: '6px 12px', borderRadius: '8px', border: 'none', background: activeCategory == cat.category_id ? 'var(--primary)' : '#f1f5f9', color: activeCategory == cat.category_id ? 'white' : '#64748b', fontSize: '11px', fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}
-                          >
-                            {cat.name_en}
-                          </button>
-                        ))}
-                     </div>
-
-                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', overflowY: 'auto', maxHeight: '350px' }}>
-                        {menuItems
-                          .filter(item => (activeCategory === 'all' || String(item.category_id) === String(activeCategory)))
-                          .filter(item => (item.name_en || '').toLowerCase().includes(menuSearch.toLowerCase()))
-                          .map(item => (
-                            <div 
-                              key={item.menu_item_id} 
-                              onClick={() => addItemToOrder(item)} 
-                              style={{ 
-                                cursor: 'pointer', 
-                                background: 'white', 
-                                padding: '0.75rem', 
-                                borderRadius: '12px', 
-                                border: '1px solid #e2e8f0', 
-                                textAlign: 'center', 
-                                transition: 'all 0.2s',
-                                position: 'relative',
-                                overflow: 'hidden'
-                              }}
-                            >
-                               <p style={{ fontSize: '12px', fontWeight: 700, margin: '0 0 4px 0', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name_en || 'Unnamed'}</p>
-                               <p style={{ fontSize: '11px', color: 'var(--primary)', fontWeight: 800, margin: 0 }}>{Number(item.price || 0).toFixed(3)} د.ك</p>
-                            </div>
-                          ))}
-                        
-                        {menuItems.length === 0 && (
-                          <div style={{ gridColumn: '1/3', textAlign: 'center', padding: '3rem 1rem' }}>
-                             <div style={{ color: 'var(--primary)', opacity: 0.3, marginBottom: '0.5rem' }}><ShoppingCart size={40} style={{ margin: '0 auto' }} /></div>
-                             <p style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>No menu items available.</p>
-                             <p style={{ fontSize: '10px', color: '#94a3b8' }}>Go to the Menu page to create your catalog first.</p>
-                          </div>
-                        )}
-                     </div>
-                  </div>
-                </div>
-
-                <div style={{ marginTop: '2rem', background: '#054c2d', color: 'white', padding: '1.5rem', borderRadius: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                   <div>
-                      <p style={{ margin: 0, opacity: 0.8, fontSize: '12px' }}>Total Amount</p>
-                      <h3 style={{ margin: 0 }}>{selectedItems.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0).toFixed(3)} د.ك</h3>
+                      <h5 style={{ margin: '0 0 1rem 0' }}>Cart: {selectedItems.length} Items</h5>
+                      <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                         {selectedItems.map(item => (
+                           <div key={item.menu_item_id}>{item.name_en} x {item.quantity}</div>
+                         ))}
+                      </div>
                    </div>
-                   <button 
-                      onClick={handleCreateOrder}
-                      style={{ background: 'white', color: '#054c2d', border: 'none', padding: '0.8rem 2rem', borderRadius: '12px', fontWeight: 800, cursor: 'pointer' }}
-                   >
-                     FINALIZE & SELL
-                   </button>
+                   <div>
+                      <h5>Menu Items</h5>
+                      {menuItems.map(item => (
+                        <div key={item.menu_item_id} onClick={() => addItemToOrder(item)} style={{ cursor: 'pointer', padding: '0.5rem', border: '1px solid #eee' }}>
+                           {item.name_en}
+                        </div>
+                      ))}
+                   </div>
                 </div>
+                <button onClick={handleCreateOrder} style={{ marginTop: '2rem', width: '100%', padding: '1rem', background: '#054c2d', color: 'white', borderRadius: '12px' }}>FINALIZE SALE</button>
              </div>
           </div>
         </div>
       )}
+
+      {/* HIDDEN PRINT COMPONENT */}
+      <div style={{ display: 'none' }}>
+        <FullInvoicePrint ref={printRef} order={printOrder} items={printItems} />
+      </div>
     </Layout>
   );
 };
