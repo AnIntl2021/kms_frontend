@@ -144,7 +144,7 @@ const SalesPage = () => {
     }
   };
 
-  const handleCreateOrder = async (e: React.FormEvent) => {
+  const handleCreateOrder = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (selectedItems.length === 0) return toast.warning('Your cart is empty! Please add items to the order. 🛒');
 
@@ -276,7 +276,6 @@ const SalesPage = () => {
           </div>
         </div>
 
-        {/* Search and Filters */}
         <div className="inventory-actions">
           <div className="search-group">
             <Search size={18} className="search-icon" />
@@ -305,7 +304,6 @@ const SalesPage = () => {
           </div>
         </div>
 
-        {/* Sales Table */}
         <div className="stock-table-card">
           <div className="table-wrapper">
             <table>
@@ -351,71 +349,28 @@ const SalesPage = () => {
                       </div>
                     </td>
                     <td>
-                      <div style={{ fontSize: '13px', color: '#64748b' }}>
-                        {sale.order_date}
-                      </div>
+                      <div style={{ fontSize: '13px', color: '#64748b' }}>{sale.order_date}</div>
                     </td>
-                    <td>
-                      <strong>{Number(sale.total_amount).toFixed(3)} د.ك</strong>
-                    </td>
-                    <td>
-                      <span className={getStatusBadge(sale.payment_status)}>{sale.payment_status}</span>
-                    </td>
+                    <td><strong>{Number(sale.total_amount).toFixed(3)} د.ك</strong></td>
+                    <td><span className={getStatusBadge(sale.payment_status)}>{sale.payment_status}</span></td>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <span className={getStatusBadge(sale.dispatch_status)}>
-                          {sale.dispatch_status}
-                        </span>
+                        <span className={getStatusBadge(sale.dispatch_status)}>{sale.dispatch_status}</span>
                         {sale.dispatch_status === 'dispatched' && <Truck size={14} color="#f59e0b" />}
                         {sale.dispatch_status === 'delivered' && <CheckCircle2 size={14} color="#10b981" />}
                       </div>
                     </td>
                     <td className="text-right">
                       <div className="row-actions" style={{ position: 'relative', zIndex: 100, display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                         <button 
-                            className="btn-icon-sm" 
-                            style={{color: '#054c2d'}} 
-                            title="Print 1:1 Invoice" 
-                            onClick={(e) => { e.stopPropagation(); preparePrint(sale); }}
-                         >
-                           <Printer size={16} />
-                         </button>
+                         <button className="btn-icon-sm" style={{color: '#054c2d'}} title="Print 1:1 Invoice" onClick={(e) => { e.stopPropagation(); preparePrint(sale); }}><Printer size={16} /></button>
                         {sale.dispatch_status === 'pending' && (
-                           <button 
-                              className="btn-icon-sm" 
-                              style={{color: '#f59e0b'}} 
-                              title="Dispatch Order" 
-                              onClick={(e) => { e.stopPropagation(); handleUpdateStatus(sale.sale_id, 'dispatched'); }}
-                           >
-                             <Truck size={16} />
-                           </button>
+                           <button className="btn-icon-sm" style={{color: '#f59e0b'}} title="Dispatch Order" onClick={(e) => { e.stopPropagation(); handleUpdateStatus(sale.sale_id, 'dispatched'); }}><Truck size={16} /></button>
                         )}
                         {sale.dispatch_status === 'dispatched' && (
-                           <button 
-                              className="btn-icon-sm" 
-                              style={{color: '#10b981'}} 
-                              title="Confirm Delivery" 
-                              onClick={(e) => { e.stopPropagation(); handleUpdateStatus(sale.sale_id, 'delivered'); }}
-                           >
-                             <CheckCircle2 size={16} />
-                           </button>
+                           <button className="btn-icon-sm" style={{color: '#10b981'}} title="Confirm Delivery" onClick={(e) => { e.stopPropagation(); handleUpdateStatus(sale.sale_id, 'delivered'); }}><CheckCircle2 size={16} /></button>
                         )}
-                        <button 
-                           className="btn-icon-sm" 
-                           style={{color: '#ef4444', background: 'none', border: 'none', padding: '5px', cursor: 'pointer' }} 
-                           title="Return Order & Restore Stock" 
-                           onClick={(e) => { e.stopPropagation(); handleReturnOrder(sale.sale_id); }}
-                        >
-                           <RotateCcw size={16} />
-                        </button>
-                        <button 
-                           className="btn-icon-sm" 
-                           style={{color: '#64748b'}}
-                           title="View Details" 
-                           onClick={(e) => { e.stopPropagation(); handleViewOrder(sale); }}
-                        >
-                           <Eye size={16} />
-                        </button>
+                        <button className="btn-icon-sm" style={{color: '#ef4444', background: 'none', border: 'none', padding: '5px', cursor: 'pointer' }} title="Return Order & Restore Stock" onClick={(e) => { e.stopPropagation(); handleReturnOrder(sale.sale_id); }}><RotateCcw size={16} /></button>
+                        <button className="btn-icon-sm" style={{color: '#64748b'}} title="View Details" onClick={(e) => { e.stopPropagation(); handleViewOrder(sale); }}><Eye size={16} /></button>
                         <button className="btn-more" onClick={(e) => e.stopPropagation()}><MoreVertical size={18} /></button>
                       </div>
                     </td>
@@ -442,19 +397,14 @@ const SalesPage = () => {
                     <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>Customer: <b>{detailOrder.customer_name}</b></p>
                     <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#64748b' }}>Date: {detailOrder.order_date}</p>
                  </div>
-                 
                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                     {detailOrder.items?.map((item: any) => (
                        <div key={item.sale_item_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'white', padding: '1rem', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
-                          <div>
-                             <p style={{ margin: 0, fontWeight: 700 }}>{item.name_en}</p>
-                             <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>Quantity: {item.quantity}</p>
-                          </div>
+                          <div><p style={{ margin: 0, fontWeight: 700 }}>{item.name_en}</p><p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>Quantity: {item.quantity}</p></div>
                           <p style={{ margin: 0, fontWeight: 800, color: 'var(--primary)' }}>{Number(item.price * item.quantity).toFixed(3)} د.ك</p>
                        </div>
                     ))}
                  </div>
-
                  <div style={{ marginTop: '2rem', borderTop: '2px dashed #e2e8f0', paddingTop: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <h3 style={{ margin: 0 }}>Total Amount</h3>
                     <h2 style={{ margin: 0, color: 'var(--primary)', fontWeight: 900 }}>{Number(detailOrder.total_amount).toFixed(3)} د.ك</h2>
@@ -470,52 +420,34 @@ const SalesPage = () => {
         <div className="modal-overlay">
           <div className="modal-content" style={{ maxWidth: '800px', borderRadius: '24px' }}>
              <div className="modal-header">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                   <ShoppingCart size={24} color="var(--primary)" />
-                   <h3 style={{ margin: 0 }}>Record New Wholesale Sale</h3>
-                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}><ShoppingCart size={24} color="var(--primary)" /><h3 style={{ margin: 0 }}>Record New Wholesale Sale</h3></div>
                 <button className="btn-close" onClick={() => setIsModalOpen(false)}><X size={20} /></button>
              </div>
-             
              <div className="modal-body" style={{ padding: '2rem' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
                    <div style={{ background: '#f8fafc', padding: '1.25rem', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
                       <div className="form-group" style={{ marginBottom: '1.5rem' }}>
                         <label style={{ fontWeight: 700, fontSize: '11px', color: '#64748b' }}>CUSTOMER NAME *</label>
                         <User size={16} />
-                        <input 
-                          style={{ padding: '0.8rem', borderRadius: '12px', border: '1px solid #e2e8f0', width: '100%' }}
-                          placeholder="e.g. Dana Catering"
-                          value={customerName}
-                          onChange={(e) => setCustomerName(e.target.value)}
-                        />
+                        <input style={{ padding: '0.8rem', borderRadius: '12px', border: '1px solid #e2e8f0', width: '100%' }} placeholder="e.g. Dana Catering" value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
                       </div>
                       <h5 style={{ margin: '0 0 1rem 0' }}>Cart: {selectedItems.length} Items</h5>
                       <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
-                         {selectedItems.map(item => (
-                           <div key={item.menu_item_id}>{item.name_en} x {item.quantity}</div>
-                         ))}
+                         {selectedItems.map(item => (<div key={item.menu_item_id}>{item.name_en} x {item.quantity}</div>))}
                       </div>
                    </div>
                    <div>
                       <h5>Menu Items</h5>
-                      {menuItems.map(item => (
-                        <div key={item.menu_item_id} onClick={() => addItemToOrder(item)} style={{ cursor: 'pointer', padding: '0.5rem', border: '1px solid #eee' }}>
-                           {item.name_en}
-                        </div>
-                      ))}
+                      {menuItems.map(item => (<div key={item.menu_item_id} onClick={() => addItemToOrder(item)} style={{ cursor: 'pointer', padding: '0.5rem', border: '1px solid #eee' }}>{item.name_en}</div>))}
                    </div>
                 </div>
-                <button onClick={handleCreateOrder} style={{ marginTop: '2rem', width: '100%', padding: '1rem', background: '#054c2d', color: 'white', borderRadius: '12px' }}>FINALIZE SALE</button>
+                <button onClick={() => handleCreateOrder()} style={{ marginTop: '2rem', width: '100%', padding: '1rem', background: '#054c2d', color: 'white', borderRadius: '12px' }}>FINALIZE SALE</button>
              </div>
           </div>
         </div>
       )}
 
-      {/* HIDDEN PRINT COMPONENT */}
-      <div style={{ display: 'none' }}>
-        <FullInvoicePrint ref={printRef} order={printOrder} items={printItems} />
-      </div>
+      <div style={{ display: 'none' }}><FullInvoicePrint ref={printRef} order={printOrder} items={printItems} /></div>
     </Layout>
   );
 };
