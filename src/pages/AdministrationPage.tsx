@@ -14,7 +14,6 @@ import {
   X,
   User,
   Hash,
-  MapPin,
   Phone,
   LayoutGrid
 } from 'lucide-react';

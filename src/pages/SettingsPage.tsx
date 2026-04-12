@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
-import { Settings, Save, Building2, Calculator, Factory, CheckCircle2 } from 'lucide-react';
+import { Settings, Save, Building2, Calculator, Factory } from 'lucide-react';
 import { toast } from 'react-toastify';
 import api from '../api/axios';
 

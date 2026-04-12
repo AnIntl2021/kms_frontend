@@ -12,7 +12,6 @@ import {
   Upload,
   Info,
   BadgeCent,
-  FileText,
   ChefHat,
   TrendingUp,
   Percent
@@ -122,13 +121,13 @@ const MenuPage = () => {
   const addIngredient = () => {
     setFormData({
       ...formData,
-      ingredients: [...formData.ingredients, { inventory_item_id: '', quantity: '' }]
+      ingredients: [...formData.ingredients, { inventory_item_id: '', package_id: '', quantity: '' }]
     });
   };
 
   const updateIngredient = (index: number, field: string, value: any) => {
     const list = [...formData.ingredients];
-    list[index][field] = value;
+    (list[index] as any)[field] = value;
     setFormData({ ...formData, ingredients: list });
   };
 

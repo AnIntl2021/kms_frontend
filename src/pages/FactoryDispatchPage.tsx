@@ -34,7 +34,6 @@ const FactoryDispatchPage = () => {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [dispatches, setDispatches] = useState<any[]>([]);
   const [productionLogs, setProductionLogs] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
 
   const [showProduceModal, setShowProduceModal] = useState(false);
@@ -59,7 +58,6 @@ const FactoryDispatchPage = () => {
   }, [activeTab]);
 
   const fetchBaseData = async () => {
-    setLoading(true);
     try {
       const results: any = await Promise.all([
         api.get('/vendors').catch(() => ({ data: { data: [] } })),
@@ -80,7 +78,7 @@ const FactoryDispatchPage = () => {
     } catch (e) {
       console.error('Fetch Error:', e);
     } finally {
-      setLoading(false);
+    }
     }
   };
 

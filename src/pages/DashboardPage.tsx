@@ -6,11 +6,8 @@ import {
   Wallet, 
   Trash2, 
   Plus, 
-  ArrowUpRight, 
-  ArrowDownRight, 
   Layers,
   ChevronRight,
-  Search,
   ArrowRight,
   AlertCircle
 } from 'lucide-react';

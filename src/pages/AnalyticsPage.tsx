@@ -1,20 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import { 
   TrendingUp, 
   TrendingDown, 
   BarChart2, 
-  Target, 
-  AlertCircle, 
-  Info, 
-  ArrowUpRight, 
-  ArrowDownRight,
+  Info,
   Activity,
-  Box,
-  Truck,
-  RotateCcw,
   BadgeCent,
-  ShieldCheck,
   Zap,
   Download
 } from 'lucide-react';

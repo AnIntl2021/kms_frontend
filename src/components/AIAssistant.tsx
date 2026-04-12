@@ -5,13 +5,9 @@ import {
   Send, 
   HelpCircle, 
   AlertCircle, 
-  Info,
   TrendingUp,
-  Globe,
-  MessageCircle,
-  FileText
+  Globe
 } from 'lucide-react';
-import { toast } from 'react-toastify';
 import api from '../api/axios';
 
 const AIAssistant = () => {
