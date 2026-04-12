@@ -126,8 +126,9 @@ const StockItemModal = ({ isOpen, item, onClose, onSuccess }: StockItemModalProp
       const baseUnitName = packages[0]?.name_en || 'Piece';
       const payload = { 
         ...formData, 
+        cost_price: formData.cost_price || 0, // 🛡️ Safety Default
         unit_en: baseUnitName, 
-        unit_ar: baseUnitName, // Simple sync for now
+        unit_ar: baseUnitName, 
         packages 
       };
       
@@ -191,7 +192,7 @@ const StockItemModal = ({ isOpen, item, onClose, onSuccess }: StockItemModalProp
               </div>
             </div>
 
-            <div className="form-grid-3">
+            <div className="form-grid">
               <div className="form-group">
                 <label>SKU / BARCODE *</label>
                 <input 
@@ -215,17 +216,6 @@ const StockItemModal = ({ isOpen, item, onClose, onSuccess }: StockItemModalProp
                     </option>
                   ))}
                 </select>
-              </div>
-              <div className="form-group">
-                <label>COST PRICE (KWD) *</label>
-                <input 
-                  type="number" 
-                  step="0.001" 
-                  required 
-                  style={{ fontWeight: 'bold', color: '#01562c' }}
-                  value={formData.cost_price}
-                  onChange={(e) => setFormData({...formData, cost_price: e.target.value})}
-                />
               </div>
             </div>
 

@@ -22,7 +22,7 @@ import {
   BarChart2
 } from 'lucide-react';
 import './Layout.css';
-import logo from '../assets/logo.jpg';
+import logo from '../assets/logo.jpeg';
 import AIAssistant from './AIAssistant';
 
 interface LayoutProps {

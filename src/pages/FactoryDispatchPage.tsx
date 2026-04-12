@@ -3,12 +3,9 @@ import Layout from '../components/Layout';
 import api from '../api/axios';
 import { 
   Truck, 
-  Package, 
   Zap, 
   Plus, 
   Search, 
-  AlertCircle,
-  Calendar,
   Building2,
   X,
   TrendingDown,
@@ -213,7 +210,10 @@ const FactoryDispatchPage = () => {
                       dispatches.map(d => (
                         <tr key={d.sale_id}>
                           <td><strong>{d.order_number}</strong></td>
-                          <td>{d.client_name}</td>
+                          <td>
+                            <div style={{fontWeight: 700}}>{d.client_name}</div>
+                            {d.branch_name && <div style={{fontSize: '11px', color: 'var(--primary)'}}>{d.branch_name} Branch</div>}
+                          </td>
                           <td><span className={`status-badge ${d.dispatch_status === 'pending' ? 'low' : d.dispatch_status === 'in_transit' ? 'warning' : 'healthy'}`}>{d.dispatch_status}</span></td>
                           <td>{new Date(d.created_at).toLocaleDateString()}</td>
                           <td className="text-right">
@@ -325,16 +325,26 @@ const FactoryDispatchPage = () => {
             </div>
             <form onSubmit={handleDispatch}>
               <div className="modal-body">
-                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '2rem', marginBottom: '20px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.2fr', gap: '1rem', marginBottom: '20px' }}>
                    <div className="form-group">
-                      <label><Building2 size={14} /> Select Distribution Partner</label>
-                      <select value={dispatchForm.vendor_id} onChange={e => setDispatchForm({...dispatchForm, vendor_id: e.target.value})} required>
+                      <label><Building2 size={14} /> Client / Partner</label>
+                      <select value={dispatchForm.vendor_id} onChange={e => setDispatchForm({...dispatchForm, vendor_id: e.target.value, branch_id: ''} as any)} required>
                         <option value="">-- Choose Client --</option>
-                        {vendors.filter(v => v.type === 'client' || vendors.length < 5).map(v => <option key={v.vendor_id} value={v.vendor_id}>{v.name_en}</option>)}
+                        {vendors.filter(v => v.type === 'client' || vendors.length < 5).map((v: any) => <option key={v.vendor_id} value={v.vendor_id}>{v.name_en}</option>)}
                       </select>
                    </div>
                    <div className="form-group">
-                      <label><Zap size={14} /> Link to Production Batch</label>
+                      <label><ArrowRight size={14} /> Target Branch</label>
+                      <select value={(dispatchForm as any).branch_id} onChange={e => setDispatchForm({...dispatchForm, branch_id: e.target.value} as any)} required>
+                        <option value="">-- Choose Branch --</option>
+                        <option value="main">Main / Corporate Office</option>
+                        {(vendors.find((v: any) => v.vendor_id === Number(dispatchForm.vendor_id)) as any)?.branches?.map((br: any) => (
+                          <option key={br.branch_id} value={br.branch_id}>{br.name_en}</option>
+                        ))}
+                      </select>
+                   </div>
+                   <div className="form-group">
+                      <label><Zap size={14} /> Production Batch</label>
                       <select value={dispatchForm.batch_number} onChange={e => handleBatchSelect(e.target.value)} required>
                         <option value="">-- Choose Batch --</option>
                         {productionLogs.map(p => <option key={p.production_id} value={p.batch_number}>{p.batch_number} (Exp: {new Date(p.expiry_date).toLocaleDateString()})</option>)}

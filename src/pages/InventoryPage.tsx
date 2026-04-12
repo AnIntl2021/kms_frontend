@@ -27,6 +27,7 @@ interface InventoryItem {
   unit_en: string;
   unit_ar: string;
   cost_price: number;
+  dynamic_cost_price?: number;
 }
 
 const InventoryPage = () => {
@@ -68,9 +69,9 @@ const InventoryPage = () => {
     Number(i.current_stock) <= Number(i.min_stock_level)
   ).length;
   
-  const totalValue = safeItems.reduce((acc, curr) => {
+  const totalValue = safeItems.reduce((acc, curr: any) => {
     const qty = Number(curr?.current_stock) || 0;
-    const price = Number(curr?.cost_price) || 0;
+    const price = Number(curr?.dynamic_cost_price || curr?.cost_price || 0);
     return acc + (qty * price);
   }, 0);
 
@@ -152,7 +153,7 @@ const InventoryPage = () => {
                     <td>{item.category_name_en || 'Uncategorized'}</td>
                     <td>{item.current_stock} {item.unit_en}</td>
                     <td>{item.min_stock_level} {item.unit_en}</td>
-                    <td>{Number(item.cost_price).toFixed(3)} د.ك</td>
+                    <td>{Number(item.dynamic_cost_price || item.cost_price || 0).toFixed(3)} د.ك</td>
                     <td>
                       <span className={`status-badge ${Number(item.current_stock) <= Number(item.min_stock_level) ? 'low' : 'healthy'}`}>
                         {Number(item.current_stock) <= Number(item.min_stock_level) ? 'Low Stock' : 'Healthy'}

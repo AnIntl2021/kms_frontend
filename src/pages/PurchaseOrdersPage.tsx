@@ -241,10 +241,20 @@ const PurchaseOrdersPage = () => {
               <div className="po-section-card">
                 <div className="po-fields-grid">
                   <div className="po-field-group">
-                    <label><Truck size={14} className="inline mr-2" /> Vendor Name</label>
-                    <select required className="po-select" value={formData.vendor_id} onChange={e => setFormData({...formData, vendor_id: e.target.value})}>
+                    <label><Truck size={14} className="inline mr-2" /> Vendor Account</label>
+                    <select required className="po-select" value={formData.vendor_id} onChange={e => setFormData({...formData, vendor_id: e.target.value, branch_id: ''})}>
                       <option value="">Select Vendor Account</option>
                       {vendors.map(v => <option key={v.vendor_id} value={v.vendor_id}>{v.name_en}</option>)}
+                    </select>
+                  </div>
+                  <div className="po-field-group">
+                    <label><ArrowRight size={14} className="inline mr-2" /> Target Branch / Node</label>
+                    <select required className="po-select font-bold" value={formData.branch_id} onChange={e => setFormData({...formData, branch_id: e.target.value})}>
+                      <option value="">Select Delivery Node</option>
+                      <option value="main">Main / Central Node</option>
+                      {vendors.find(v => String(v.vendor_id) === String(formData.vendor_id))?.branches?.map((br: any) => (
+                        <option key={br.branch_id} value={br.branch_id}>{br.name_en}</option>
+                      ))}
                     </select>
                   </div>
                   <div className="po-field-group">

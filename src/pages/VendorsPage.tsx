@@ -25,6 +25,7 @@ interface Vendor {
   address: string;
   type: 'supplier' | 'client';
   status: 'active' | 'inactive';
+  branches?: any[];
 }
 
 const VendorsPage = () => {
@@ -33,7 +34,7 @@ const VendorsPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingVendor, setEditingVendor] = useState<Vendor | null>(null);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<any>({
     name_en: '',
     name_ar: '',
     contact_person: '',
@@ -41,7 +42,8 @@ const VendorsPage = () => {
     phone: '',
     address: '',
     type: 'supplier',
-    status: 'active'
+    status: 'active',
+    branches: []
   });
 
   useEffect(() => {
@@ -70,7 +72,8 @@ const VendorsPage = () => {
       phone: v.phone,
       address: v.address,
       type: v.type,
-      status: v.status
+      status: v.status,
+      branches: v.branches || []
     });
     setShowModal(true);
   };
@@ -106,7 +109,7 @@ const VendorsPage = () => {
       }
       setShowModal(false);
       setEditingVendor(null);
-      setFormData({ name_en: '', name_ar: '', contact_person: '', email: '', phone: '', address: '', type: 'supplier', status: 'active' });
+      setFormData({ name_en: '', name_ar: '', contact_person: '', email: '', phone: '', address: '', type: 'supplier', status: 'active', branches: [] });
       fetchVendors();
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to save partner data.');
@@ -218,15 +221,88 @@ const VendorsPage = () => {
                     <label>Email</label>
                     <input type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
                   </div>
-                  <div className="form-group">
+                  <div className="form-group" style={{ flex: 2 }}>
                     <label>Phone</label>
                     <input type="text" required value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} />
                   </div>
                 </div>
+
+                {/* 🛡️ ELITE BRANCH SEGREGATION HUB (Hierarchical Distribution) */}
+                <div style={{ marginTop: '20px', borderTop: '1px dashed #e2e8f0', paddingTop: '15px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                    <h4 style={{ margin: 0, fontSize: '14px', color: '#64748b', display: 'flex', alignItems: 'center' }}>
+                      <Store size={14} style={{ marginRight: '5px' }} /> Branches & Delivery Locations
+                    </h4>
+                    <button 
+                      type="button" 
+                      className="btn-add" 
+                      style={{ padding: '4px 10px', fontSize: '11px', background: '#3b82f6' }}
+                      onClick={() => setFormData((prev: any) => ({ 
+                        ...prev, 
+                        branches: [...(prev.branches || []), { name_en: '', address: '', phone: '' }] 
+                      }))}
+                    >
+                      + Add New Branch
+                    </button>
+                  </div>
+
+                  <div style={{ maxHeight: '180px', overflowY: 'auto', padding: '5px' }}>
+                    {(formData.branches || []).map((br: any, idx: number) => (
+                      <div key={idx} style={{ 
+                        display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 30px', gap: '8px', 
+                        marginBottom: '8px', padding: '10px', background: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' 
+                      }}>
+                        <input 
+                          placeholder="Branch Name" 
+                          value={br.name_en} 
+                          style={{ fontSize: '12px', padding: '6px' }}
+                          onChange={(e) => {
+                            const newBranches = [...formData.branches];
+                            newBranches[idx].name_en = e.target.value;
+                            setFormData({...formData, branches: newBranches});
+                          }}
+                        />
+                        <input 
+                          placeholder="Address" 
+                          value={br.address} 
+                          style={{ fontSize: '12px', padding: '6px' }}
+                          onChange={(e) => {
+                            const newBranches = [...formData.branches];
+                            newBranches[idx].address = e.target.value;
+                            setFormData({...formData, branches: newBranches});
+                          }}
+                        />
+                        <input 
+                          placeholder="Phone" 
+                          value={br.phone} 
+                          style={{ fontSize: '12px', padding: '6px' }}
+                          onChange={(e) => {
+                            const newBranches = [...formData.branches];
+                            newBranches[idx].phone = e.target.value;
+                            setFormData({...formData, branches: newBranches});
+                          }}
+                        />
+                        <button 
+                          type="button" 
+                          style={{ border: 'none', background: 'none', color: '#ef4444', cursor: 'pointer' }}
+                          onClick={() => {
+                            const newBranches = formData.branches.filter((_: any, i: number) => i !== idx);
+                            setFormData({...formData, branches: newBranches});
+                          }}
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    ))}
+                    {(!formData.branches || formData.branches.length === 0) && (
+                      <p style={{ fontSize: '12px', color: '#94a3b8', textAlign: 'center', margin: '10px 0' }}>No branches defined yet. Click '+ Add New Branch' to start segregating locations.</p>
+                    )}
+                  </div>
+                </div>
               </div>
               <div className="modal-footer">
-                <button type="button" className="btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
-                <button type="submit" className="btn-primary">Save Partner</button>
+                <button type="button" className="btn-secondary" onClick={() => { setShowModal(false); setEditingVendor(null); setFormData({ name_en: '', name_ar: '', contact_person: '', email: '', phone: '', address: '', type: 'supplier', status: 'active', branches: [] }); }}>Cancel</button>
+                <button type="submit" className="btn-primary">Save Partner & Network</button>
               </div>
             </form>
           </div>

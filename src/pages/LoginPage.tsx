@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import api from '../api/axios';
 import './LoginPage.css';
-import logo from '../assets/logo.jpg';
+import logo from '../assets/logo.jpeg';
 
 const LoginPage = () => {
   const [username, setUsername] = useState('');

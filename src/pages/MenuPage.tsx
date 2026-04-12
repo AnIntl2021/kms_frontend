@@ -80,7 +80,7 @@ const MenuPage = () => {
            if (pkg) multiplier = Number(pkg.multiplier);
         }
         
-        totalCost += (Number(invItem.cost_price) * Number(ing.quantity) * multiplier);
+        totalCost += (Number(invItem.dynamic_cost_price || invItem.cost_price || 0) * Number(ing.quantity) * multiplier);
       }
     });
     setFormData(prev => ({ ...prev, cost_price: Number(totalCost.toFixed(3)) }));

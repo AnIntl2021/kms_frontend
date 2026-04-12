@@ -11,22 +11,14 @@ import {
   CheckCircle2, 
   Clock, 
   Search, 
-  Filter, 
   Eye, 
-  FileText,
   BadgeCent,
   Package,
-  Calendar,
   MoreVertical,
-  ChevronRight,
-  Plus,
-  X,
-  User,
   ShoppingCart,
-  Trash2,
-  AlertTriangle,
-  Printer,
-  RotateCcw
+  X,
+  RotateCcw,
+  Printer
 } from 'lucide-react';
 import { useReactToPrint } from 'react-to-print';
 import FullInvoicePrint from '../components/FullInvoicePrint';
@@ -50,14 +42,17 @@ const SalesPage = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
   
-  // New Order Form State
-  const [customerName, setCustomerName] = useState('');
+  // 🛡️ DYNAMIC SEGREGATION HUD
+  const [vendors, setVendors] = useState<any[]>([]);
+  const [formData, setFormData] = useState({
+    customer_name: '',
+    vendor_id: '',
+    branch_id: '',
+    payment_status: 'paid',
+    dispatch_status: 'pending'
+  });
   const [menuItems, setMenuItems] = useState<any[]>([]);
   const [selectedItems, setSelectedItems] = useState<any[]>([]);
-  
-  const [categories, setCategories] = useState<any[]>([]);
-  const [activeCategory, setActiveCategory] = useState('all');
-  const [menuSearch, setMenuSearch] = useState('');
 
   // Print State
   const printRef = useRef<HTMLDivElement>(null);
@@ -72,13 +67,23 @@ const SalesPage = () => {
     fetchSales();
     fetchMenuItems();
     fetchCategories();
+    fetchVendors();
   }, []);
+
+  const fetchVendors = async () => {
+    try {
+      const res = await api.get('/vendors');
+      setVendors(res.data.data || []);
+    } catch (e) {
+      console.error('Failed to fetch vendors for sales segregation:', e);
+    }
+  };
 
   const fetchCategories = async () => {
     try {
       const response = await api.get('/business/categories');
       if (response.data.success) {
-        setCategories(response.data.data);
+        // Categories fetched but set state removed if not used in primary UI flow
       }
     } catch (e) {
       console.error('Failed to fetch categories:', e);
@@ -151,19 +156,17 @@ const SalesPage = () => {
     try {
       const total = selectedItems.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0);
       const orderPayload = {
-        customer_name: customerName,
+        ...formData,
         items: selectedItems.map(i => ({ menu_item_id: i.menu_item_id, quantity: i.quantity, price: i.price })),
-        total_amount: total,
-        payment_status: 'paid',
-        dispatch_status: 'pending'
+        total_amount: total
       };
 
       await api.post('/sales', orderPayload);
       setIsModalOpen(false);
-      setCustomerName('');
+      setFormData({ customer_name: '', vendor_id: '', branch_id: '', payment_status: 'paid', dispatch_status: 'pending' });
       setSelectedItems([]);
       fetchSales();
-      toast.success('Sale Recorded Successfully! 💹');
+      toast.success('Sale & Branch Segregation Recorded! 💹');
     } catch (error) {
       toast.error('Failed to record sale.');
     }
@@ -208,10 +211,6 @@ const SalesPage = () => {
     } else {
       setSelectedItems([...selectedItems, { ...item, quantity: 1 }]);
     }
-  };
-
-  const removeItemFromOrder = (id: number) => {
-    setSelectedItems(selectedItems.filter(i => i.menu_item_id !== id));
   };
 
   const getStatusBadge = (status: string) => {
@@ -415,33 +414,71 @@ const SalesPage = () => {
         )}
       </div>
 
-      {/* NEW ORDER MODAL */}
+      {/* 🛡️ DYNAMIC DISTRIBUTION MODAL */}
       {isModalOpen && (
         <div className="modal-overlay">
           <div className="modal-content" style={{ maxWidth: '800px', borderRadius: '24px' }}>
              <div className="modal-header">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}><ShoppingCart size={24} color="var(--primary)" /><h3 style={{ margin: 0 }}>Record New Wholesale Sale</h3></div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <ShoppingCart size={24} color="var(--primary)" />
+                  <h3 style={{ margin: 0 }}>Record Distribution Sale</h3>
+                </div>
                 <button className="btn-close" onClick={() => setIsModalOpen(false)}><X size={20} /></button>
              </div>
              <div className="modal-body" style={{ padding: '2rem' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
                    <div style={{ background: '#f8fafc', padding: '1.25rem', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
                       <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-                        <label style={{ fontWeight: 700, fontSize: '11px', color: '#64748b' }}>CUSTOMER NAME *</label>
-                        <User size={16} />
-                        <input style={{ padding: '0.8rem', borderRadius: '12px', border: '1px solid #e2e8f0', width: '100%' }} placeholder="e.g. Dana Catering" value={customerName} onChange={(e) => setCustomerName(e.target.value)} />
+                        <label style={{ fontWeight: 700, fontSize: '11px', color: '#64748b' }}>DISTRIBUTION PARTNER *</label>
+                        <select 
+                          style={{ padding: '0.8rem', borderRadius: '12px', border: '1px solid #e2e8f0', width: '100%', marginTop: '5px' }} 
+                          value={formData.vendor_id} 
+                          onChange={(e) => {
+                            const v = vendors.find(v => String(v.vendor_id) === e.target.value);
+                            setFormData({...formData, vendor_id: e.target.value, branch_id: '', customer_name: v?.name_en || ''});
+                          }}
+                          required
+                        >
+                          <option value="">-- Choose Client Profile --</option>
+                          {vendors.filter(v => v.type === 'client').map(v => <option key={v.vendor_id} value={v.vendor_id}>{v.name_en}</option>)}
+                        </select>
                       </div>
-                      <h5 style={{ margin: '0 0 1rem 0' }}>Cart: {selectedItems.length} Items</h5>
-                      <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
-                         {selectedItems.map(item => (<div key={item.menu_item_id}>{item.name_en} x {item.quantity}</div>))}
+
+                      <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                        <label style={{ fontWeight: 700, fontSize: '11px', color: '#64748b' }}>DELIVERY BRANCH NODE *</label>
+                        <select 
+                          style={{ padding: '0.8rem', borderRadius: '12px', border: '1px solid #e2e8f0', width: '100%', marginTop: '5px', fontWeight: 800 }} 
+                          value={formData.branch_id} 
+                           onChange={(e) => setFormData({...formData, branch_id: e.target.value})}
+                          required
+                        >
+                          <option value="">-- Select Destination --</option>
+                          <option value="main">Main Corporate Hub</option>
+                          {vendors.find(v => String(v.vendor_id) === String(formData.vendor_id))?.branches?.map((br: any) => (
+                            <option key={br.branch_id} value={br.branch_id}>{br.name_en}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <h5 style={{ margin: '1rem 0 0.5rem 0' }}>Cart: {selectedItems.length} Products</h5>
+                      <div style={{ maxHeight: '150px', overflowY: 'auto' }}>
+                         {selectedItems.map(item => (<div key={item.menu_item_id} style={{ fontSize: '11px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' }}>{item.name_en} x {item.quantity}</div>))}
                       </div>
                    </div>
                    <div>
-                      <h5>Menu Items</h5>
-                      {menuItems.map(item => (<div key={item.menu_item_id} onClick={() => addItemToOrder(item)} style={{ cursor: 'pointer', padding: '0.5rem', border: '1px solid #eee' }}>{item.name_en}</div>))}
+                      <h5 style={{ fontSize: '13px', color: '#64748b', marginBottom: '1rem' }}>Selection Menu</h5>
+                      <div style={{ maxHeight: '300px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {menuItems.map(item => (
+                          <div key={item.menu_item_id} onClick={() => addItemToOrder(item)} style={{ cursor: 'pointer', padding: '10px 15px', background: 'white', border: '1px solid #eee', borderRadius: '10px', fontSize: '13px', fontWeight: 600 }}>
+                            {item.name_en}
+                          </div>
+                        ))}
+                      </div>
                    </div>
                 </div>
-                <button onClick={() => handleCreateOrder()} style={{ marginTop: '2rem', width: '100%', padding: '1rem', background: '#054c2d', color: 'white', borderRadius: '12px' }}>FINALIZE SALE</button>
+                <button onClick={() => handleCreateOrder()} style={{ marginTop: '2rem', width: '100%', padding: '1rem', background: '#054c2d', color: 'white', borderRadius: '14px', fontWeight: 800, fontSize: '15px' }}>
+                  FINALIZE DISTRIBUTION & RECORD SALE
+                </button>
              </div>
           </div>
         </div>
