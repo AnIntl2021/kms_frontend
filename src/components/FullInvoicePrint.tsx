@@ -11,8 +11,8 @@ const FullInvoicePrint = React.forwardRef<HTMLDivElement, InvoiceProps>(({ order
 
   // ELITE CALCULATION ORACLE
   const subTotal = (items || []).reduce((acc, curr) => acc + (Number(curr.price || 0) * Number(curr.quantity || 0)), 0);
-  const discount = Number(order?.discount || 0);
-  const netAmount = subTotal - discount;
+  const discount = Number(order?.discount_amount || 0);
+  const netAmount = Number(order?.final_amount || subTotal - discount);
 
   return (
     <div ref={ref} className="invoice-print-container" style={{
