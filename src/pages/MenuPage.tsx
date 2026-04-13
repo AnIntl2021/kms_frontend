@@ -14,7 +14,8 @@ import {
   BadgeCent,
   ChefHat,
   TrendingUp,
-  Percent
+  Percent,
+  FileText
 } from 'lucide-react';
 import './InventoryPage.css'; // Reuse themes
 import { toast } from 'react-toastify';
@@ -68,8 +69,8 @@ const MenuPage = () => {
   // AUTO COST CALCULATION
   useEffect(() => {
     let totalCost = 0;
-    formData.ingredients.forEach(ing => {
-      const invItem = inventoryItems.find(i => String(i.inventory_item_id) === String(ing.inventory_item_id));
+    formData.ingredients?.forEach(ing => {
+      const invItem = (inventoryItems || []).find(i => String(i.inventory_item_id) === String(ing.inventory_item_id));
       if (invItem && ing.quantity) {
         let multiplier = 1;
         if (ing.package_id === 'virtual_gram') multiplier = 0.001;
@@ -78,8 +79,8 @@ const MenuPage = () => {
            const pkg = allPackages.find(p => String(p.package_id) === String(ing.package_id));
            if (pkg) multiplier = Number(pkg.multiplier);
         }
-        
-        totalCost += (Number(invItem.dynamic_cost_price || invItem.cost_price || 0) * Number(ing.quantity) * multiplier);
+        const calcMultiplier = Number(multiplier || 1) === 0 ? 1 : Number(multiplier || 1);
+        totalCost += (Number(invItem.dynamic_cost_price || invItem.cost_price || 0) * Number(ing.quantity) / calcMultiplier);
       }
     });
     setFormData(prev => ({ ...prev, cost_price: Number(totalCost.toFixed(3)) }));
@@ -149,10 +150,10 @@ const MenuPage = () => {
           cost_price: Number(details.cost_price),
           description_en: details.description_en || '',
           description_ar: details.description_ar || '',
-          ingredients: details.ingredients.map((ing: any) => ({
-            inventory_item_id: String(ing.inventory_item_id),
+          ingredients: (details.ingredients || []).map((ing: any) => ({
+            inventory_item_id: String(ing.inventory_item_id || ''),
             package_id: String(ing.package_id || ''),
-            quantity: String(ing.quantity)
+            quantity: String(ing.quantity || '')
           }))
         });
         if (details.image_url) {
@@ -230,8 +231,8 @@ const MenuPage = () => {
   };
   const resetForm = () => {
     // If we are in the premix tab, try to find the 'Premix' category
-    const premixCat = activeTab === 'premix' 
-      ? categories.find(c => c.name_en.toLowerCase().includes('premix'))
+    const premixCat = (activeTab === 'premix' && Array.isArray(categories))
+      ? categories.find(c => c.name_en?.toLowerCase().includes('premix'))
       : null;
 
     setEditingItem(null);
@@ -324,10 +325,12 @@ const MenuPage = () => {
               <tbody>
                 {loading ? (
                   <tr><td colSpan={5} className="text-center py-5">Loading data...</td></tr>
-                ) : filteredItems.length === 0 ? (
-                  <tr><td colSpan={5} className="text-center py-5">No items found in this category.</td></tr>
-                ) : filteredItems
-                    .filter(i => activeTab === 'premix' ? i.category_name?.toLowerCase().includes('premix') : !i.category_name?.toLowerCase().includes('premix'))
+                ) : (filteredItems || [])
+                    .filter(i => {
+                      if (!i) return false;
+                      const catName = (i.category_name || '').toLowerCase();
+                      return activeTab === 'premix' ? catName.includes('premix') : !catName.includes('premix');
+                    })
                     .map(item => (
                   <tr key={item.menu_item_id}>
                     <td>

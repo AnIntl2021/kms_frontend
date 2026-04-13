@@ -286,7 +286,7 @@ const StockItemModal = ({ isOpen, item, onClose, onSuccess }: StockItemModalProp
                         {pkg.is_base ? (
                           <span style={{ color: '#01562c', fontWeight: 800 }}>PRIMARY BASE UNIT</span>
                         ) : (
-                          `1 ${pkg.name_en || '...'} = ${pkg.multiplier} ${packages[0].name_en}`
+                          `1 ${packages[0].name_en} = ${pkg.multiplier} ${pkg.name_en || '...'}`
                         )}
                       </td>
                       <td>

@@ -99,10 +99,10 @@ const Layout: React.FC<LayoutProps> = ({ children, title }) => {
 
         <div className="sidebar-footer">
           <div className="user-meta">
-            <div className="user-avatar">{admin?.username?.[0].toUpperCase()}</div>
+            <div className="user-avatar">{(admin?.username?.[0] || 'A').toUpperCase()}</div>
             <div className="user-details">
-              <div className="user-name">{admin?.firstName || admin?.username}</div>
-              <div className="user-role">{getRoleDisplayName(admin?.role || '')}</div>
+              <div className="user-name">{admin?.firstName || admin?.username || 'Admin'}</div>
+              <div className="user-role">{getRoleDisplayName(admin?.role || 'staff')}</div>
             </div>
             <button className="logout-btn" onClick={logout} title="Logout">
               <LogOut size={18} />
@@ -136,7 +136,7 @@ const Layout: React.FC<LayoutProps> = ({ children, title }) => {
               <span className="badge">3</span>
             </div>
             <div className="user-initial" onClick={logout} title="Logout">
-              {admin?.username?.[0].toUpperCase()}
+              {(admin?.username?.[0] || 'A').toUpperCase()}
             </div>
           </div>
         </header>
