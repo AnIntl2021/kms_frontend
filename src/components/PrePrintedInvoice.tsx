@@ -5,87 +5,185 @@ interface InvoiceProps {
   items: any[];
 }
 
+// 1cm = 37.795px (96dpi standard)
+const CM = 37.795;
+
 const PrePrintedInvoice = React.forwardRef<HTMLDivElement, InvoiceProps>(({ order, items }, ref) => {
   const today = new Date().toLocaleDateString('en-GB');
 
-  const subTotal = (items || []).reduce((acc, curr) => acc + (Number(curr.price || 0) * Number(curr.quantity || 0)), 0);
+  const subTotal = (items || []).reduce(
+    (acc, curr) => acc + Number(curr.price || 0) * Number(curr.quantity || 0),
+    0
+  );
   const discount = Number(order?.discount_amount || 0);
   const netAmount = Number(order?.final_amount || subTotal - discount);
 
+  // ── Exact column widths from the diagram (cm) ──────────────────────────────
+  // 3.1 | 9.0 | 1.2 | 1.2 | 1.2 | 1.9 | 2.6   → total ≈ 20.2 cm
+  const cols = {
+    code: `${3.1 * CM}px`,
+    desc: `${9.0 * CM}px`,
+    unit: `${1.2 * CM}px`,
+    pack: `${1.2 * CM}px`,
+    qty: `${1.2 * CM}px`,
+    unitPrice: `${1.9 * CM}px`,
+    total: `${2.6 * CM}px`,
+  };
+
+  const TOTAL_W = 20.02 * CM; // px
+
   return (
-    <div ref={ref} className="invoice-print-container" style={{
-      padding: '30px 40px',
-      fontFamily: "'Courier New', Courier, monospace", // Better for Dot Matrix
-      color: '#000',
-      backgroundColor: '#fff',
-      width: '1000px',
-      margin: '0 auto',
-      position: 'relative',
-      minHeight: '1120px',
-      display: 'flex',
-      flexDirection: 'column',
-      boxSizing: 'border-box'
-    }}>
-      {/* HEADER SPACE - Hidden for pre-printed paper */}
-      <div style={{ height: '180px' }} />
+    <div
+      ref={ref}
+      className="invoice-print-container"
+      style={{
+        width: `${TOTAL_W}px`,
+        margin: '0 auto',
+        fontFamily: "'Courier New', Courier, monospace",
+        color: '#000',
+        backgroundColor: '#fff',
+        boxSizing: 'border-box',
+        position: 'relative',
+      }}
+    >
+      {/* ── HEADER SPACER (space above pre-printed header area) ── */}
+      {/* Increased by 1cm (4.5 -> 5.5) to move WHOLE page down as requested */}
+      <div style={{ height: `${5.5 * CM}px` }} />
 
-      {/* Metadata - Only values, no boxes */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '40px', paddingLeft: '50px' }}>
-         <div style={{ flex: 1.5 }}>
-            <h3 style={{ margin: 0, fontSize: '18px', textTransform: 'uppercase' }}>{order?.customer_name || 'Counter Customer'}</h3>
-         </div>
-         <div style={{ flex: 1, textAlign: 'right', paddingRight: '50px' }}>
-            <p style={{ margin: '2px 0', fontSize: '14px' }}>#{order?.sale_id || order?.order_number}</p>
-            <p style={{ margin: '2px 0', fontSize: '14px' }}>{order?.order_date || today}</p>
-            <p style={{ margin: '2px 0', fontSize: '14px' }}>Admin</p>
-         </div>
+      {/* ── HEADER ROW: Customer Name (left) + Metadata block (right) ── */}
+      {/*
+          From diagram:
+            8 cm   → Customer Name box
+            4.2 cm → gap
+            2.6 cm → label column  (Invoice No / Date / Sales Man / LPO No)
+            5.0 cm → value column
+          Total = 19.8 cm ≈ inside 20.02 cm total width
+      */}
+      <div style={{
+        display: 'flex',
+        width: `${TOTAL_W}px`,
+        height: `${2.4 * CM}px`,   // header block height from diagram
+        alignItems: 'stretch',
+      }}>
+        {/* Customer Name – 8 cm wide */}
+        <div style={{
+          width: `${8 * CM}px`,
+          display: 'flex',
+          alignItems: 'center',
+          paddingLeft: `${0.3 * CM}px`,
+          fontSize: '13px',
+          fontWeight: 900,
+          textTransform: 'uppercase',
+          flexShrink: 0,
+        }}>
+          {order?.customer_name || 'Counter Customer'}
+        </div>
+
+        {/* 5.2 cm gap (Increased to align above Unit Price) */}
+        <div style={{ width: `${5.2 * CM}px`, flexShrink: 0 }} />
+
+        {/* Spacer – 2.6 cm (REMOVED LABELS, KEPT SPACER) */}
+        <div style={{
+          width: `${2.6 * CM}px`,
+          flexShrink: 0,
+        }} />
+
+        {/* Values column – 5 cm (Shifted to land in boxes) */}
+        <div style={{
+          width: `${5 * CM}px`,
+          flexShrink: 0,
+          fontSize: '13px',
+          fontWeight: 900,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-around',
+          paddingLeft: `${1.2 * CM}px`, // Adjusted to center value in box
+        }}>
+          <div>{order?.sale_id || order?.order_number || ''}</div>
+          <div>{order?.order_date || today}</div>
+          <div>Admin</div>
+          <div>N/A</div>
+        </div>
       </div>
 
-      {/* Items List - No lines, just aligned columns */}
-      <div style={{ flex: 1, marginTop: '20px' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ height: '40px' }}>
-                <th style={{ width: '80px' }}></th>
-                <th style={{ textAlign: 'left' }}></th>
-                <th style={{ width: '80px' }}></th>
-                <th style={{ width: '80px' }}></th>
-                <th style={{ width: '100px' }}></th>
-                <th style={{ width: '120px' }}></th>
-                <th style={{ width: '150px' }}></th>
-              </tr>
-            </thead>
-            <tbody>
-              {(items || []).map((item, idx) => (
-                <tr key={idx} style={{ height: '35px' }}>
-                  <td style={{ textAlign: 'center', fontSize: '14px' }}>{String(idx + 1).padStart(3, '0')}</td>
-                  <td style={{ fontWeight: 700, fontSize: '14px' }}>{item.name_en}</td>
-                  <td style={{ textAlign: 'center', fontSize: '14px' }}>PCS</td>
-                  <td style={{ textAlign: 'center', fontSize: '14px' }}>1</td>
-                  <td style={{ textAlign: 'center', fontSize: '14px' }}>{Number(item.quantity).toFixed(0)}</td>
-                  <td style={{ textAlign: 'right', fontSize: '14px' }}>{Number(item.price).toFixed(3)} د.ك</td>
-                  <td style={{ textAlign: 'right', fontWeight: 800, fontSize: '14px' }}>{(item.price * item.quantity).toFixed(3)} د.ك</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-      </div>
+      {/* ── TABLE ── */}
+      <table style={{
+        width: '100%',
+        borderCollapse: 'collapse',
+        tableLayout: 'fixed',
+      }}>
+        <colgroup>
+          <col style={{ width: cols.code }} />
+          <col style={{ width: cols.desc }} />
+          <col style={{ width: cols.unit }} />
+          <col style={{ width: cols.pack }} />
+          <col style={{ width: cols.qty }} />
+          <col style={{ width: cols.unitPrice }} />
+          <col style={{ width: cols.total }} />
+        </colgroup>
 
-      {/* Totals - No boxes */}
-      <div style={{ marginTop: 'auto', paddingRight: '15px' }}>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '8px' }}>
-             <div style={{ width: '200px', textAlign: 'right', fontWeight: 900, fontSize: '16px' }}>{subTotal.toFixed(3)} د.ك</div>
+        <thead>
+          <tr style={{ height: `${2 * CM}px` }}>
+            <th colSpan={7} />
+          </tr>
+        </thead>
+
+        <tbody>
+          {(items || []).map((item, idx) => (
+            <tr key={idx} style={{ height: `${0.5 * CM}px`, verticalAlign: 'middle' }}>
+              <td style={{ textAlign: 'center', fontSize: '13px', padding: 0, lineHeight: 1 }}>{String(idx + 1).padStart(3, '0')}</td>
+
+              {/* All columns below shifted left by 1.5cm from previous state */}
+              <td style={{ textAlign: 'left', fontWeight: 700, fontSize: '13px', padding: 0, paddingLeft: `${0.8 * CM}px`, lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden' }}>{item.name_en}</td>
+              <td style={{ textAlign: 'center', fontSize: '12px', padding: 0, paddingLeft: `${0.5 * CM}px`, lineHeight: 1 }}>PCS</td>
+              <td style={{ textAlign: 'center', fontSize: '12px', padding: 0, paddingLeft: `${0.5 * CM}px`, lineHeight: 1 }}>1</td>
+              <td style={{ textAlign: 'center', fontSize: '12px', padding: 0, paddingLeft: `${0.5 * CM}px`, lineHeight: 1 }}>{Number(item.quantity).toFixed(0)}</td>
+              <td style={{ textAlign: 'right', fontSize: '12px', padding: 0, paddingLeft: `${0.5 * CM}px`, lineHeight: 1 }}>{Number(item.price).toFixed(3)}</td>
+              <td style={{ textAlign: 'right', fontWeight: 900, fontSize: '13px', padding: 0, paddingRight: `${0.5 * CM}px`, lineHeight: 1 }}>{(item.price * item.quantity).toFixed(3)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      {/* 9.8cm Spacer to drop totals to the bottom boxes (increased by 2.8cm) */}
+      <div style={{ height: `${9.8 * CM}px` }} />
+
+      {/* ── FOOTER ROWS (3 × 1 cm) ── */}
+      {/*
+          Diagram: value box is 2.6 cm wide, right-aligned.
+          Each footer row is 1 cm tall.
+      */}
+      {[
+        { label: 'Total Amount', value: subTotal.toFixed(3) },
+        { label: 'Discount', value: discount.toFixed(3) },
+        { label: 'Net Amount', value: netAmount.toFixed(3) },
+      ].map(({ label, value }, i) => (
+        <div
+          key={i}
+          style={{
+            width: `${TOTAL_W}px`,
+            height: `${1 * CM}px`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'flex-end',
+            boxSizing: 'border-box',
+          }}
+        >
+          {/* value sits inside the rightmost 2.6 cm column, shifted 0.5cm left */}
+          <div style={{
+            width: `${2.6 * CM}px`,
+            textAlign: 'right',
+            fontWeight: i === 2 ? 900 : 800,
+            fontSize: i === 2 ? '14px' : '13px',
+            paddingRight: `${0.8 * CM}px`,
+          }}>
+            {value}
           </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '8px' }}>
-             <div style={{ width: '200px', textAlign: 'right', fontWeight: 900, fontSize: '16px' }}>{discount.toFixed(3)} د.ك</div>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '10px' }}>
-             <div style={{ width: '200px', textAlign: 'right', fontWeight: 900, fontSize: '20px' }}>{netAmount.toFixed(3)} د.ك</div>
-          </div>
-      </div>
-      
-      {/* Bottom Padding for signatures */}
-      <div style={{ height: '120px' }} />
+        </div>
+      ))}
+
+      {/* Signature / bottom padding */}
+      <div style={{ height: `${3 * CM}px` }} />
     </div>
   );
 });
