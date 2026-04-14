@@ -18,10 +18,15 @@ import {
   ShoppingCart,
   X,
   RotateCcw,
-  Printer
+  Printer,
+  Receipt,
+  Edit,
+  Settings,
+  Zap
 } from 'lucide-react';
 import { useReactToPrint } from 'react-to-print';
 import FullInvoicePrint from '../components/FullInvoicePrint';
+import PrePrintedInvoice from '../components/PrePrintedInvoice';
 import './InventoryPage.css';
 import { toast } from 'react-toastify';
 
@@ -48,26 +53,44 @@ const SalesPage = () => {
     customer_name: '',
     vendor_id: '',
     branch_id: '',
+    batch_number: '',
+    expiry_date: '',
     payment_status: 'paid',
     dispatch_status: 'pending'
   });
+  const [productionLogs, setProductionLogs] = useState<any[]>([]);
   const [menuItems, setMenuItems] = useState<any[]>([]);
   const [selectedItems, setSelectedItems] = useState<any[]>([]);
 
   // Print State
   const printRef = useRef<HTMLDivElement>(null);
+  const dotMatrixPrintRef = useRef<HTMLDivElement>(null);
   const [printOrder, setPrintOrder] = useState<any>(null);
   const [printItems, setPrintItems] = useState<any[]>([]);
+  const [isPrePrintedMode, setIsPrePrintedMode] = useState(false);
 
   // Detail Modal State
   const [detailOrder, setDetailOrder] = useState<any>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+
+  // Edit State
+  const [editingOrder, setEditingOrder] = useState<any>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+  // Menu State
+  const [activeMenuId, setActiveMenuId] = useState<number | null>(null);
 
   useEffect(() => {
     fetchSales();
     fetchMenuItems();
     fetchCategories();
     fetchVendors();
+    fetchProductionHistory();
+
+    // Close menu when clicking outside
+    const handleClick = () => setActiveMenuId(null);
+    window.addEventListener('click', handleClick);
+    return () => window.removeEventListener('click', handleClick);
   }, []);
 
   const fetchVendors = async () => {
@@ -76,6 +99,15 @@ const SalesPage = () => {
       setVendors(res.data.data || []);
     } catch (e) {
       console.error('Failed to fetch vendors for sales segregation:', e);
+    }
+  };
+
+  const fetchProductionHistory = async () => {
+    try {
+      const res = await api.get('/factory/production/logs');
+      setProductionLogs((res.data.data || []).filter((p: any) => p.batch_number));
+    } catch (e) {
+      console.error('Failed to fetch production history:', e);
     }
   };
 
@@ -149,21 +181,19 @@ const SalesPage = () => {
     }
   };
 
-  const handleCreateOrder = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (selectedItems.length === 0) return toast.warning('Your cart is empty! Please add items to the order. 🛒');
+  const handleCreateOrder = async () => {
+    if (selectedItems.length === 0) return toast.warning('Cart is empty.');
+    if (formData.vendor_id && !formData.branch_id) return toast.warning('Please select a target branch.');
+    if (formData.vendor_id && !formData.batch_number) return toast.warning('Please select a production batch for distribution.');
 
     try {
-      const total = selectedItems.reduce((acc, curr) => acc + (curr.price * curr.quantity), 0);
-      const orderPayload = {
+      setLoading(true);
+      const res = await api.post('/sales', {
         ...formData,
-        items: selectedItems.map(i => ({ menu_item_id: i.menu_item_id, quantity: i.quantity, price: i.price })),
-        total_amount: total
-      };
-
-      await api.post('/sales', orderPayload);
+        items: selectedItems.map(i => ({ menu_item_id: i.menu_item_id, quantity: i.quantity, price: i.price }))
+      });
       setIsModalOpen(false);
-      setFormData({ customer_name: '', vendor_id: '', branch_id: '', payment_status: 'paid', dispatch_status: 'pending' });
+      setFormData({ customer_name: '', vendor_id: '', branch_id: '', batch_number: '', expiry_date: '', payment_status: 'paid', dispatch_status: 'pending' });
       setSelectedItems([]);
       fetchSales();
       toast.success('Sale & Branch Segregation Recorded! 💹');
@@ -184,18 +214,55 @@ const SalesPage = () => {
      }
   };
 
+  const handleEditOrder = async (sale: any) => {
+    try {
+      const res = await api.get(`/sales/${sale.sale_id}`);
+      if (res.data.success) {
+        setEditingOrder(res.data.data);
+        setIsEditModalOpen(true);
+      }
+    } catch (e) {
+      toast.error('Failed to prepare edit mode.');
+    }
+  };
+
+  const handleUpdateOrder = async () => {
+    if (!editingOrder) return;
+    try {
+      await api.put(`/factory/sales/${editingOrder.sale_id}`, {
+        customer_name: editingOrder.customer_name,
+        discount_percentage: editingOrder.discount_percentage
+      });
+      toast.success('Order Successfully Updated! ✏️');
+      setIsEditModalOpen(false);
+      fetchSales();
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || 'Update failed.');
+    }
+  };
+
   const handlePrint = useReactToPrint({
     contentRef: printRef,
     documentTitle: `Invoice-${printOrder?.sale_id || 'Order'}`
   });
 
-  const preparePrint = async (sale: any) => {
+  const handleDotMatrixPrint = useReactToPrint({
+    contentRef: dotMatrixPrintRef,
+    documentTitle: `LQ350-Invoice-${printOrder?.sale_id || 'Order'}`
+  });
+
+  const preparePrint = async (sale: any, isPrePrinted: boolean = false) => {
      try {
         const res = await api.get(`/sales/${sale.sale_id}`);
         if (res.data.success) {
            setPrintOrder(res.data.data);
            setPrintItems(res.data.data.items || []);
-           setTimeout(() => handlePrint(), 500); 
+           setIsPrePrintedMode(isPrePrinted);
+           
+           setTimeout(() => {
+              if (isPrePrinted) handleDotMatrixPrint();
+              else handlePrint();
+           }, 500); 
         }
      } catch (e) {
         toast.error('Failed to fetch invoice details.');
@@ -360,17 +427,59 @@ const SalesPage = () => {
                       </div>
                     </td>
                     <td className="text-right">
-                      <div className="row-actions" style={{ position: 'relative', zIndex: 100, display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                         <button className="btn-icon-sm" style={{color: '#054c2d'}} title="Print 1:1 Invoice" onClick={(e) => { e.stopPropagation(); preparePrint(sale); }}><Printer size={16} /></button>
-                        {sale.dispatch_status === 'pending' && (
-                           <button className="btn-icon-sm" style={{color: '#f59e0b'}} title="Dispatch Order" onClick={(e) => { e.stopPropagation(); handleUpdateStatus(sale.sale_id, 'dispatched'); }}><Truck size={16} /></button>
-                        )}
-                        {sale.dispatch_status === 'dispatched' && (
-                           <button className="btn-icon-sm" style={{color: '#10b981'}} title="Confirm Delivery" onClick={(e) => { e.stopPropagation(); handleUpdateStatus(sale.sale_id, 'delivered'); }}><CheckCircle2 size={16} /></button>
-                        )}
-                        <button className="btn-icon-sm" style={{color: '#ef4444', background: 'none', border: 'none', padding: '5px', cursor: 'pointer' }} title="Return Order & Restore Stock" onClick={(e) => { e.stopPropagation(); handleReturnOrder(sale.sale_id); }}><RotateCcw size={16} /></button>
-                        <button className="btn-icon-sm" style={{color: '#64748b'}} title="View Details" onClick={(e) => { e.stopPropagation(); handleViewOrder(sale); }}><Eye size={16} /></button>
-                        <button className="btn-more" onClick={(e) => e.stopPropagation()}><MoreVertical size={18} /></button>
+                      <div className="row-actions" style={{ position: 'relative', display: 'flex', gap: '8px', justifyContent: 'flex-end', alignItems: 'center' }}>
+                         {/* Core Quick Actions (Visible) */}
+                         <button className="btn-icon-sm" style={{color: '#64748b'}} title="View Details" onClick={(e) => { e.stopPropagation(); handleViewOrder(sale); }}><Eye size={16} /></button>
+                         
+                         {sale.dispatch_status === 'pending' && (
+                            <button className="btn-icon-sm" style={{color: '#f59e0b'}} title="Dispatch Order" onClick={(e) => { e.stopPropagation(); handleUpdateStatus(sale.sale_id, 'dispatched'); }}><Truck size={16} /></button>
+                         )}
+                         {sale.dispatch_status === 'dispatched' && (
+                            <button className="btn-icon-sm" style={{color: '#10b981'}} title="Confirm Delivery" onClick={(e) => { e.stopPropagation(); handleUpdateStatus(sale.sale_id, 'delivered'); }}><CheckCircle2 size={16} /></button>
+                         )}
+
+                         {/* More Options Dropdown */}
+                         <div style={{ position: 'relative' }}>
+                            <button 
+                              className="btn-more" 
+                              onClick={(e) => { e.stopPropagation(); setActiveMenuId(activeMenuId === sale.sale_id ? null : sale.sale_id); }}
+                              style={{ background: activeMenuId === sale.sale_id ? '#f1f5f9' : 'transparent', borderRadius: '8px', padding: '5px' }}
+                            >
+                              <MoreVertical size={18} />
+                            </button>
+
+                            {activeMenuId === sale.sale_id && (
+                              <div className="dropdown-menu-custom" style={{
+                                position: 'absolute',
+                                right: 0,
+                                top: '100%',
+                                width: '180px',
+                                background: 'white',
+                                borderRadius: '12px',
+                                boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1)',
+                                border: '1px solid #e2e8f0',
+                                zIndex: 1000,
+                                overflow: 'hidden',
+                                marginTop: '5px'
+                              }}>
+                                <button className="dropdown-item" onClick={() => preparePrint(sale, false)} style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '10px 15px', border: 'none', background: 'none', textAlign: 'left', fontSize: '13px', cursor: 'pointer' }}>
+                                  <Printer size={14} color="#054c2d" /> Standard PDF Print
+                                </button>
+                                <button className="dropdown-item" onClick={() => preparePrint(sale, true)} style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '10px 15px', border: 'none', background: 'none', textAlign: 'left', fontSize: '13px', cursor: 'pointer' }}>
+                                  <Receipt size={14} color="#f59e0b" /> Dot Matrix (LQ350)
+                                </button>
+                                {(sale.dispatch_status || '').toLowerCase() !== 'delivered' && (
+                                  <button className="dropdown-item" onClick={() => handleEditOrder(sale)} style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '10px 15px', border: 'none', background: 'none', textAlign: 'left', fontSize: '13px', cursor: 'pointer' }}>
+                                    <Edit size={14} color="#0369a1" /> Edit Order
+                                  </button>
+                                )}
+                                <div style={{ height: '1px', background: '#f1f5f9' }} />
+                                <button className="dropdown-item" onClick={() => handleReturnOrder(sale.sale_id)} style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '10px 15px', border: 'none', background: 'none', textAlign: 'left', fontSize: '13px', cursor: 'pointer', color: '#ef4444' }}>
+                                  <RotateCcw size={14} /> Return Order
+                                </button>
+                              </div>
+                            )}
+                         </div>
                       </div>
                     </td>
                   </tr>
@@ -394,6 +503,7 @@ const SalesPage = () => {
               <div className="modal-body" style={{ padding: '2rem' }}>
                  <div style={{ background: '#f8fafc', padding: '1.5rem', borderRadius: '16px', marginBottom: '1.5rem', border: '1px solid #e2e8f0' }}>
                     <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>Customer: <b>{detailOrder.customer_name}</b></p>
+                    <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#64748b' }}>Dispatch Batch: <b style={{ color: 'var(--primary)' }}>{detailOrder.batch_number || 'N/A'}</b></p>
                     <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#64748b' }}>Date: {detailOrder.order_date}</p>
                  </div>
                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -460,6 +570,26 @@ const SalesPage = () => {
                         </select>
                       </div>
 
+                      <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                        <label style={{ fontWeight: 700, fontSize: '11px', color: '#64748b' }}>PRODUCTION BATCH *</label>
+                        <select 
+                          style={{ padding: '0.8rem', borderRadius: '12px', border: '1px solid #e2e8f0', width: '100%', marginTop: '5px' }} 
+                          value={formData.batch_number} 
+                          onChange={(e) => {
+                            const b = productionLogs.find(p => p.batch_number === e.target.value);
+                            setFormData({...formData, batch_number: e.target.value, expiry_date: b?.expiry_date || ''});
+                          }}
+                          required
+                        >
+                          <option value="">-- Choose Batch --</option>
+                          {productionLogs.map(p => (
+                            <option key={p.production_id} value={p.batch_number}>
+                              {p.batch_number} (Exp: {new Date(p.expiry_date).toLocaleDateString()})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
                       <h5 style={{ margin: '1rem 0 0.5rem 0' }}>Cart: {selectedItems.length} Products</h5>
                       <div style={{ maxHeight: '150px', overflowY: 'auto' }}>
                          {selectedItems.map(item => (<div key={item.menu_item_id} style={{ fontSize: '11px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' }}>{item.name_en} x {item.quantity}</div>))}
@@ -483,8 +613,61 @@ const SalesPage = () => {
           </div>
         </div>
       )}
+      
+      {/* EDIT ORDER MODAL */}
+      {isEditModalOpen && editingOrder && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '500px', borderRadius: '24px' }}>
+            <div className="modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <Edit size={24} color="#0369a1" />
+                <h3 style={{ margin: 0 }}>Edit Order #{editingOrder.sale_id}</h3>
+              </div>
+              <button className="btn-close" onClick={() => setIsEditModalOpen(false)}><X size={20} /></button>
+            </div>
+            <div className="modal-body" style={{ padding: '2rem' }}>
+               <div style={{ background: '#f0f9ff', padding: '1rem', borderRadius: '12px', marginBottom: '1.5rem', border: '1px solid #bae6fd' }}>
+                  <p style={{ margin: 0, fontSize: '12px', color: '#0369a1' }}>Total Amount: <b>{Number(editingOrder.total_amount).toFixed(3)} KWD</b></p>
+                  <p style={{ margin: 0, fontSize: '12px', color: '#0369a1' }}>Status: {editingOrder.dispatch_status}</p>
+               </div>
+               
+               <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                  <label style={{ fontWeight: 700, fontSize: '11px', color: '#64748b' }}>CUSTOMER NAME / PARTNER</label>
+                  <select 
+                    style={{ padding: '0.8rem', borderRadius: '12px', border: '1px solid #e2e8f0', width: '100%', marginTop: '5px', fontWeight: 700 }}
+                    value={editingOrder.customer_name}
+                    onChange={(e) => setEditingOrder({...editingOrder, customer_name: e.target.value})}
+                  >
+                    <option value="Counter Customer">Counter Customer</option>
+                    {vendors.map(v => (
+                      <option key={v.vendor_id} value={v.name_en}>{v.name_en} ({v.type})</option>
+                    ))}
+                  </select>
+               </div>
 
-      <div style={{ display: 'none' }}><FullInvoicePrint ref={printRef} order={printOrder} items={printItems} /></div>
+               <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                  <label style={{ fontWeight: 700, fontSize: '11px', color: '#64748b' }}>DISCOUNT PERCENTAGE (%)</label>
+                  <input 
+                    type="number"
+                    style={{ padding: '0.8rem', borderRadius: '12px', border: '1px solid #e2e8f0', width: '100%', marginTop: '5px' }}
+                    value={editingOrder.discount_percentage}
+                    onChange={(e) => setEditingOrder({...editingOrder, discount_percentage: e.target.value})}
+                  />
+               </div>
+
+               <div style={{ marginTop: '2rem', display: 'flex', gap: '1rem' }}>
+                  <button onClick={() => setIsEditModalOpen(false)} style={{ flex: 1, padding: '0.8rem', border: '1px solid #e2e8f0', borderRadius: '12px', fontWeight: 600 }}>Cancel</button>
+                  <button onClick={handleUpdateOrder} style={{ flex: 2, padding: '0.8rem', background: '#0369a1', color: 'white', borderRadius: '12px', fontWeight: 700 }}>Save Changes</button>
+               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div style={{ display: 'none' }}>
+        <FullInvoicePrint ref={printRef} order={printOrder} items={printItems} />
+        <PrePrintedInvoice ref={dotMatrixPrintRef} order={printOrder} items={printItems} />
+      </div>
     </Layout>
   );
 };

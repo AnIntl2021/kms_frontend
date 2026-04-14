@@ -11,6 +11,8 @@ import {
   TrendingDown,
   ArrowRight,
   ClipboardList,
+  RotateCcw,
+  Trash2,
 } from "lucide-react";
 import "./InventoryPage.css";
 import { toast } from "react-toastify";
@@ -36,10 +38,12 @@ const FactoryDispatchPage = () => {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [dispatches, setDispatches] = useState<any[]>([]);
   const [productionLogs, setProductionLogs] = useState<any[]>([]);
+  const [returnsHistory, setReturnsHistory] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
 
   const [showProduceModal, setShowProduceModal] = useState(false);
   const [showDispatchModal, setShowDispatchModal] = useState(false);
+  const [showReturnModal, setShowReturnModal] = useState(false);
 
   const [produceForm, setProduceForm] = useState({
     production_date: new Date().toISOString().split("T")[0],
@@ -47,12 +51,51 @@ const FactoryDispatchPage = () => {
     items: [] as any[],
   });
 
+  const [returnForm, setReturnForm] = useState({
+    vendor_id: "",
+    sale_id: "",
+    reason: "Expired / Unsold",
+    items: [] as any[],
+  });
+
+  const selectedVendor = vendors.find(v => String(v.vendor_id) === String(returnForm.vendor_id));
+  
+  const vendorDispatches = dispatches
+    .filter(d => {
+      const idMatch = returnForm.vendor_id && String(d.vendor_id) === String(returnForm.vendor_id);
+      const nameMatch = selectedVendor && d.customer_name === selectedVendor.name_en;
+      return idMatch || nameMatch;
+    })
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+  const handleReturnSaleSelect = async (saleId: string) => {
+    if (!saleId) return;
+    try {
+      const res = await api.get(`/sales/${saleId}`);
+      if (res.data.success) {
+        const saleItems = res.data.data.items || [];
+        setReturnForm({
+          ...returnForm,
+          sale_id: saleId,
+          items: saleItems.map((i: any) => ({
+             ...i,
+             original_quantity: i.quantity_delivered || i.quantity,
+             quantity: 0 
+          }))
+        });
+      }
+    } catch (e) {
+      toast.error("Failed to load items from this dispatch.");
+    }
+  };
+
   const [dispatchForm, setDispatchForm] = useState({
     vendor_id: "",
     batch_number: "",
     expiry_date: "",
     items: [] as any[],
     payment_method: "credit",
+    discount_percentage: 0,
   });
 
   useEffect(() => {
@@ -65,9 +108,8 @@ const FactoryDispatchPage = () => {
         api.get("/vendors").catch(() => ({ data: { data: [] } })),
         api.get("/menu").catch(() => ({ data: { data: [] } })),
         api.get("/factory/dispatches").catch(() => ({ data: { data: [] } })),
-        api
-          .get("/factory/production/logs")
-          .catch(() => ({ data: { data: [] } })),
+        api.get("/factory/production/logs").catch(() => ({ data: { data: [] } })),
+        api.get("/factory/returns").catch(() => ({ data: { data: [] } })),
       ]);
 
       const vArr = results[0].data.data || results[0].data;
@@ -76,11 +118,13 @@ const FactoryDispatchPage = () => {
       const pArr = (results[3].data.data || results[3].data).filter(
         (p: any) => p.batch_number,
       );
+      const rArr = results[4].data.data || results[4].data;
 
       setVendors(Array.isArray(vArr) ? vArr : []);
       setMenuItems(Array.isArray(mArr) ? mArr : []);
       setDispatches(Array.isArray(dArr) ? dArr : []);
       setProductionLogs(Array.isArray(pArr) ? pArr : []);
+      setReturnsHistory(Array.isArray(rArr) ? rArr : []);
     } catch (e) {
       console.error("Fetch Error:", e);
     }
@@ -130,6 +174,13 @@ const FactoryDispatchPage = () => {
     }
   };
 
+  const removeFromProduce = (id: number) => {
+    setProduceForm({
+      ...produceForm,
+      items: produceForm.items.filter((i) => i.menu_item_id !== id),
+    });
+  };
+
   const handleUpdateStatus = async (id: number, status: string) => {
     try {
       await api.put(`/factory/dispatches/${id}/status`, { status });
@@ -137,6 +188,53 @@ const FactoryDispatchPage = () => {
     } catch (e) {
       console.error(e);
     }
+  };
+
+  const removeFromDispatch = (id: number) => {
+    setDispatchForm({
+      ...dispatchForm,
+      items: dispatchForm.items.filter((i) => i.menu_item_id !== id),
+    });
+  };
+
+  const removeFromReturn = (id: number) => {
+    setReturnForm({
+      ...returnForm,
+      items: returnForm.items.filter((i) => i.menu_item_id !== id),
+    });
+  };
+
+  const handleReturnSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!returnForm.vendor_id) return toast.warning("Please select a vendor.");
+    if (returnForm.items.length === 0) return toast.warning("Please add items to the return list.");
+    
+    try {
+      await api.post("/factory/returns", {
+        ...returnForm,
+        items: returnForm.items.map(i => ({
+          menu_item_id: i.menu_item_id,
+          quantity: i.quantity,
+          unit_price: i.price,
+          expiry_date: i.expiry_date || null
+        }))
+      });
+      toast.success("Return Processed & Wastage Recorded! 🔄");
+      setShowReturnModal(false);
+      setReturnForm({ vendor_id: "", sale_id: "", reason: "Expired / Unsold", items: [] });
+      fetchBaseData();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to process return.");
+    }
+  };
+
+  const addItemToReturn = (item: MenuItem) => {
+    if (returnForm.items.find((i) => i.menu_item_id === item.menu_item_id))
+      return;
+    setReturnForm({
+      ...returnForm,
+      items: [...returnForm.items, { ...item, quantity: 1 }],
+    });
   };
 
   const handleDispatch = async (e: React.FormEvent) => {
@@ -151,6 +249,7 @@ const FactoryDispatchPage = () => {
         expiry_date: "",
         items: [],
         payment_method: "credit",
+        discount_percentage: 0,
       });
       fetchBaseData();
     } catch (error: any) {
@@ -267,6 +366,16 @@ const FactoryDispatchPage = () => {
             >
               <Truck size={18} /> Create Dispatch
             </button>
+            <button
+              className="btn-add"
+              style={{ background: "#be123c" }}
+              onClick={() => {
+                fetchBaseData();
+                setShowReturnModal(true);
+              }}
+            >
+              <RotateCcw size={18} /> Process Sales Return
+            </button>
           </div>
         </div>
 
@@ -307,6 +416,14 @@ const FactoryDispatchPage = () => {
                       <th>Dispatch Date</th>
                       <th className="text-right">Action</th>
                     </tr>
+                  ) : activeTab === "returns" ? (
+                    <tr>
+                      <th>Return ID</th>
+                      <th>Client Name</th>
+                      <th>Reason</th>
+                      <th>Return Date</th>
+                      <th className="text-right">Credit Amount</th>
+                    </tr>
                   ) : (
                     <tr>
                       <th>Batch Code</th>
@@ -329,7 +446,10 @@ const FactoryDispatchPage = () => {
                       dispatches.map((d) => (
                         <tr key={d.sale_id}>
                           <td>
-                            <strong>{d.order_number}</strong>
+                            <div style={{ fontWeight: 800, color: 'var(--primary)', marginBottom: '4px' }}>{d.order_number}</div>
+                            <div style={{ fontSize: '11px', color: '#64748b', background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px', display: 'inline-block' }}>
+                               Batch: {d.batch_number || 'N/A'}
+                            </div>
                           </td>
                           <td>
                             <div style={{ fontWeight: 700 }}>
@@ -397,6 +517,43 @@ const FactoryDispatchPage = () => {
                                 </button>
                               )}
                             </div>
+                          </td>
+                        </tr>
+                      ))
+                    )
+                  ) : activeTab === "returns" ? (
+                    returnsHistory.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="text-center py-4">
+                          No returns recorded.
+                        </td>
+                      </tr>
+                    ) : (
+                      returnsHistory.map((r: any) => (
+                        <tr key={r.return_id}>
+                          <td>
+                            <span style={{ fontWeight: 700 }}>
+                              #RET-{r.return_id}
+                            </span>
+                          </td>
+                          <td>{r.client_name}</td>
+                          <td>
+                            <span
+                              className="status-badge low"
+                              style={{
+                                textTransform: "none",
+                                background: "#fff1f2",
+                                color: "#be123c",
+                              }}
+                            >
+                              {r.reason}
+                            </span>
+                          </td>
+                          <td>{new Date(r.created_at).toLocaleDateString()}</td>
+                          <td className="text-right">
+                            <strong>
+                              {Number(r.total_credit_amount).toFixed(3)} KWD
+                            </strong>
                           </td>
                         </tr>
                       ))
@@ -661,6 +818,13 @@ const FactoryDispatchPage = () => {
                             setProduceForm({ ...produceForm, items: n });
                           }}
                         />
+                        <button 
+                          type="button" 
+                          onClick={() => removeFromProduce(item.menu_item_id)}
+                          style={{ background: 'none', border: 'none', color: '#be123c', cursor: 'pointer', padding: '5px' }}
+                        >
+                          <Trash2 size={16} />
+                        </button>
                       </div>
                     ))}
                   </div>
@@ -711,7 +875,7 @@ const FactoryDispatchPage = () => {
                 <div
                   style={{
                     display: "grid",
-                    gridTemplateColumns: "1fr 1fr 1.2fr",
+                    gridTemplateColumns: "1fr 1fr 1fr 0.8fr",
                     gap: "1rem",
                     marginBottom: "20px",
                   }}
@@ -788,6 +952,17 @@ const FactoryDispatchPage = () => {
                         </option>
                       ))}
                     </select>
+                  </div>
+                  <div className="form-group">
+                    <label>
+                      <Zap size={14} color="#f59e0b" /> Discount (%)
+                    </label>
+                    <input 
+                      type="number"
+                      placeholder="0"
+                      value={dispatchForm.discount_percentage}
+                      onChange={(e) => setDispatchForm({...dispatchForm, discount_percentage: Number(e.target.value)})}
+                    />
                   </div>
                 </div>
 
@@ -866,6 +1041,13 @@ const FactoryDispatchPage = () => {
                             setDispatchForm({ ...dispatchForm, items: n });
                           }}
                         />
+                        <button 
+                          type="button" 
+                          onClick={() => removeFromDispatch(item.menu_item_id)}
+                          style={{ background: 'none', border: 'none', color: '#be123c', cursor: 'pointer', padding: '5px' }}
+                        >
+                          <Trash2 size={16} />
+                        </button>
                       </div>
                     ))}
                   </div>
@@ -886,6 +1068,135 @@ const FactoryDispatchPage = () => {
                 >
                   Confirm Dispatch to Vendor
                 </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* Return Modal */}
+      {showReturnModal && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: "800px" }}>
+            <div className="modal-header">
+              <h3>
+                <RotateCcw
+                  size={22}
+                  style={{ color: "#be123c", marginRight: "10px" }}
+                />{" "}
+                Process Sales Return (Wastage)
+              </h3>
+              <button
+                className="btn-close"
+                onClick={() => setShowReturnModal(false)}
+              >
+                <X />
+              </button>
+            </div>
+            <form onSubmit={handleReturnSubmit}>
+              <div className="modal-body">
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                    <div className="form-group">
+                      <label><Building2 size={14} /> Source Client / Partner</label>
+                      <select 
+                        value={returnForm.vendor_id}
+                        onChange={(e) => {
+                          setReturnForm({...returnForm, vendor_id: e.target.value, sale_id: "", items: []});
+                        }}
+                        required
+                      >
+                        <option value="">-- Choose Partner --</option>
+                        {vendors.map(v => (
+                          <option key={v.vendor_id} value={v.vendor_id}>{v.name_en}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label><ClipboardList size={14} /> Select Dispatch Order</label>
+                      <select 
+                        value={returnForm.sale_id}
+                        onChange={(e) => handleReturnSaleSelect(e.target.value)}
+                        disabled={!returnForm.vendor_id}
+                        required
+                      >
+                        <option value="">-- Choose Dispatch --</option>
+                        {vendorDispatches.map(d => (
+                          <option key={d.sale_id} value={d.sale_id}>
+                            Order: {d.order_number} | Batch: {d.batch_number || 'N/A'} ({new Date(d.created_at).toLocaleDateString()})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="form-group">
+                       <label>Reason for Return</label>
+                       <input 
+                         type="text" 
+                         value={returnForm.reason}
+                         onChange={(e) => setReturnForm({...returnForm, reason: e.target.value})}
+                       />
+                    </div>
+                </div>
+
+                <div 
+                  style={{ 
+                    background: "white", 
+                    border: "1px solid #f1f5f9", 
+                    padding: "20px", 
+                    borderRadius: "15px",
+                    minHeight: '200px'
+                  }}
+                >
+                  <h4 style={{ fontSize: "14px", marginBottom: "20px", color: '#1e293b', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px' }}>
+                    ITEMS DELIVERED IN THIS DISPATCH
+                  </h4>
+                  
+                  {returnForm.items.length === 0 ? (
+                    <div style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>
+                       {returnForm.vendor_id ? "Please select a Dispatch Order to see items." : "Select a Client first."}
+                    </div>
+                  ) : (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                      {returnForm.items.map((item, idx) => (
+                        <div key={idx} style={{ 
+                          display: "flex", 
+                          alignItems: "center", 
+                          justifyContent: 'space-between',
+                          padding: '12px',
+                          background: '#f8fafc',
+                          borderRadius: '12px'
+                        }}>
+                          <div>
+                            <div style={{ fontWeight: 700, fontSize: '13px' }}>{item.name_en}</div>
+                            <div style={{ fontSize: '11px', color: '#64748b' }}>Original Qty: {item.original_quantity}</div>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <label style={{ fontSize: '11px', fontWeight: 600 }}>RETURNED:</label>
+                            <input
+                              type="number"
+                              style={{ width: "80px", padding: "8px", borderRadius: '8px', border: '1px solid #e2e8f0' }}
+                              value={item.quantity}
+                              onChange={(e) => {
+                                const n = [...returnForm.items];
+                                n[idx].quantity = e.target.value;
+                                setReturnForm({ ...returnForm, items: n });
+                              }}
+                            />
+                            <button 
+                              type="button" 
+                              onClick={() => removeFromReturn(item.menu_item_id)}
+                              style={{ background: 'none', border: 'none', color: '#be123c', cursor: 'pointer', padding: '5px' }}
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="modal-footer">
+                 <button type="button" className="btn-secondary" onClick={() => setShowReturnModal(false)}>Cancel</button>
+                 <button type="submit" className="btn-primary" style={{ background: "#be123c" }}>Record Return & Trash Items</button>
               </div>
             </form>
           </div>
