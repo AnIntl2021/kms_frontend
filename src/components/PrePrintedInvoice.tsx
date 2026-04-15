@@ -48,7 +48,8 @@ const PrePrintedInvoice = React.forwardRef<HTMLDivElement, InvoiceProps>(({ orde
     >
       {/* ── HEADER SPACER (space above pre-printed header area) ── */}
       {/* Increased by 1cm (4.5 -> 5.5) to move WHOLE page down as requested */}
-      <div style={{ height: `${5.5 * CM}px` }} />
+      {/* 5.5 + 0.3 = 5.8cm down from top */}
+      <div style={{ height: `${5.8 * CM}px` }} />
 
       {/* ── HEADER ROW: Customer Name (left) + Metadata block (right) ── */}
       {/*
@@ -70,7 +71,7 @@ const PrePrintedInvoice = React.forwardRef<HTMLDivElement, InvoiceProps>(({ orde
           width: `${8 * CM}px`,
           display: 'flex',
           alignItems: 'center',
-          paddingLeft: `${0.3 * CM}px`,
+          paddingLeft: `${-0.2 * CM}px`, // Moved 0.5cm left from 0.3cm
           fontSize: '13px',
           fontWeight: 900,
           textTransform: 'uppercase',
@@ -106,47 +107,45 @@ const PrePrintedInvoice = React.forwardRef<HTMLDivElement, InvoiceProps>(({ orde
         </div>
       </div>
 
-      {/* ── TABLE ── */}
-      <table style={{
-        width: '100%',
-        borderCollapse: 'collapse',
-        tableLayout: 'fixed',
-      }}>
-        <colgroup>
-          <col style={{ width: cols.code }} />
-          <col style={{ width: cols.desc }} />
-          <col style={{ width: cols.unit }} />
-          <col style={{ width: cols.pack }} />
-          <col style={{ width: cols.qty }} />
-          <col style={{ width: cols.unitPrice }} />
-          <col style={{ width: cols.total }} />
-        </colgroup>
-
-        <thead>
-          <tr style={{ height: `${2 * CM}px` }}>
-            <th colSpan={7} />
-          </tr>
-        </thead>
-
-        <tbody>
-          {(items || []).map((item, idx) => (
-            <tr key={idx} style={{ height: `${0.5 * CM}px`, verticalAlign: 'middle' }}>
-              <td style={{ textAlign: 'center', fontSize: '13px', padding: 0, lineHeight: 1 }}>{String(idx + 1).padStart(3, '0')}</td>
-
-              {/* All columns below shifted left by 1.5cm from previous state */}
-              <td style={{ textAlign: 'left', fontWeight: 700, fontSize: '13px', padding: 0, paddingLeft: `${0.8 * CM}px`, lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden' }}>{item.name_en}</td>
-              <td style={{ textAlign: 'center', fontSize: '12px', padding: 0, paddingLeft: `${0.5 * CM}px`, lineHeight: 1 }}>PCS</td>
-              <td style={{ textAlign: 'center', fontSize: '12px', padding: 0, paddingLeft: `${0.5 * CM}px`, lineHeight: 1 }}>1</td>
-              <td style={{ textAlign: 'center', fontSize: '12px', padding: 0, paddingLeft: `${0.5 * CM}px`, lineHeight: 1 }}>{Number(item.quantity).toFixed(0)}</td>
-              <td style={{ textAlign: 'right', fontSize: '12px', padding: 0, paddingLeft: `${0.5 * CM}px`, lineHeight: 1 }}>{Number(item.price).toFixed(3)}</td>
-              <td style={{ textAlign: 'right', fontWeight: 900, fontSize: '13px', padding: 0, paddingRight: `${0.5 * CM}px`, lineHeight: 1 }}>{(item.price * item.quantity).toFixed(3)}</td>
+      {/* ── TABLE AREA (Fixed 13cm height) ── */}
+      <div style={{ height: `${13 * CM}px`, position: 'relative' }}>
+        <table style={{
+          width: '100%',
+          borderCollapse: 'collapse',
+          tableLayout: 'fixed',
+        }}>
+          <colgroup>
+            <col style={{ width: cols.code }} />
+            <col style={{ width: cols.desc }} />
+            <col style={{ width: cols.unit }} />
+            <col style={{ width: cols.pack }} />
+            <col style={{ width: cols.qty }} />
+            <col style={{ width: cols.unitPrice }} />
+            <col style={{ width: cols.total }} />
+          </colgroup>
+  
+          <thead>
+            {/* 2cm Header Row from diagram */}
+            <tr style={{ height: `${2 * CM}px` }}>
+              <th colSpan={7} />
             </tr>
-          ))}
-        </tbody>
-      </table>
-
-      {/* 9.8cm Spacer to drop totals to the bottom boxes (increased by 2.8cm) */}
-      <div style={{ height: `${9.8 * CM}px` }} />
+          </thead>
+  
+          <tbody>
+            {(items || []).map((item, idx) => (
+              <tr key={idx} style={{ height: `${0.5 * CM}px`, verticalAlign: 'middle' }}>
+                <td style={{ textAlign: 'center', fontSize: '13px', padding: 0, lineHeight: 1 }}>{String(idx + 1).padStart(3, '0')}</td>
+                <td style={{ textAlign: 'left', fontWeight: 700, fontSize: '13px', padding: 0, paddingLeft: `${0.8 * CM}px`, lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden' }}>{item.name_en}</td>
+                <td style={{ textAlign: 'center', fontSize: '12px', padding: 0, paddingLeft: `${0.5 * CM}px`, lineHeight: 1 }}>PCS</td>
+                <td style={{ textAlign: 'center', fontSize: '12px', padding: 0, paddingLeft: `${0.5 * CM}px`, lineHeight: 1 }}>1</td>
+                <td style={{ textAlign: 'center', fontSize: '12px', padding: 0, paddingLeft: `${0.5 * CM}px`, lineHeight: 1 }}>{Number(item.quantity).toFixed(0)}</td>
+                <td style={{ textAlign: 'right', fontSize: '12px', padding: 0, paddingLeft: `${0.5 * CM}px`, lineHeight: 1 }}>{Number(item.price).toFixed(3)}</td>
+                <td style={{ textAlign: 'right', fontWeight: 900, fontSize: '13px', padding: 0, paddingRight: `${0.5 * CM}px`, lineHeight: 1 }}>{(item.price * item.quantity).toFixed(3)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       {/* ── FOOTER ROWS (3 × 1 cm) ── */}
       {/*
@@ -175,7 +174,7 @@ const PrePrintedInvoice = React.forwardRef<HTMLDivElement, InvoiceProps>(({ orde
             textAlign: 'right',
             fontWeight: i === 2 ? 900 : 800,
             fontSize: i === 2 ? '14px' : '13px',
-            paddingRight: `${0.8 * CM}px`,
+            paddingRight: `${0.55 * CM}px`, // Shifted 0.25cm right from 0.8cm
           }}>
             {value}
           </div>
