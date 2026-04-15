@@ -48,8 +48,8 @@ const PrePrintedInvoice = React.forwardRef<HTMLDivElement, InvoiceProps>(({ orde
     >
       {/* ── HEADER SPACER (space above pre-printed header area) ── */}
       {/* Increased by 1cm (4.5 -> 5.5) to move WHOLE page down as requested */}
-      {/* 5.8 + 0.4 = 6.2cm down from top */}
-      <div style={{ height: `${6.2 * CM}px` }} />
+      {/* 6.2 - 0.3 = 5.9cm down from top */}
+      <div style={{ height: `${5.9 * CM}px` }} />
 
       {/* ── HEADER ROW: Customer Name (left) + Metadata block (right) ── */}
       {/*
@@ -174,7 +174,7 @@ const PrePrintedInvoice = React.forwardRef<HTMLDivElement, InvoiceProps>(({ orde
             textAlign: 'right',
             fontWeight: i === 2 ? 900 : 800,
             fontSize: i === 2 ? '14px' : '13px',
-            paddingRight: `${0.55 * CM}px`, // Shifted 0.25cm right from 0.8cm
+            paddingRight: `${0.35 * CM}px`, // Shifted 0.2cm right from 0.55cm
           }}>
             {value}
           </div>
