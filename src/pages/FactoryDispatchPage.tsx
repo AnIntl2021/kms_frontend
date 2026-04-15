@@ -49,10 +49,13 @@ const FactoryDispatchPage = () => {
     production_date: new Date().toISOString().split("T")[0],
     expiry_date: "",
     items: [] as any[],
+    branch_id: "",
+    vendor_id: "",
   });
 
   const [returnForm, setReturnForm] = useState({
     vendor_id: "",
+    branch_id: "",
     sale_id: "",
     reason: "Expired / Unsold",
     items: [] as any[],
@@ -63,8 +66,8 @@ const FactoryDispatchPage = () => {
   const vendorDispatches = dispatches
     .filter(d => {
       const idMatch = returnForm.vendor_id && String(d.vendor_id) === String(returnForm.vendor_id);
-      const nameMatch = selectedVendor && d.customer_name === selectedVendor.name_en;
-      return idMatch || nameMatch;
+      const branchMatch = !returnForm.branch_id || String(d.branch_id) === String(returnForm.branch_id);
+      return idMatch && branchMatch;
     })
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
@@ -536,7 +539,12 @@ const FactoryDispatchPage = () => {
                               #RET-{r.return_id}
                             </span>
                           </td>
-                          <td>{r.client_name}</td>
+                          <td>
+                            <div style={{ fontWeight: 700 }}>{r.client_name}</div>
+                            {r.branch_name && (
+                              <div style={{ fontSize: '11px', color: 'var(--primary)' }}>{r.branch_name} Branch</div>
+                            )}
+                          </td>
                           <td>
                             <span
                               className="status-badge low"
@@ -594,7 +602,19 @@ const FactoryDispatchPage = () => {
                             </div>
                           </td>
                           <td>
-                            {new Date(p.production_date).toLocaleDateString()}
+                            {p.branch_id ? (
+                              <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--primary)' }}>
+                                {vendors.find(v => (v as any).branches?.some((b: any) => String(b.branch_id) === String(p.branch_id)))?.name_en} 
+                                {(() => {
+                                  const vendor = vendors.find(v => (v as any).branches?.some((b: any) => String(b.branch_id) === String(p.branch_id)));
+                                  const branch = (vendor as any)?.branches?.find((b: any) => String(b.branch_id) === String(p.branch_id));
+                                  return branch ? ` / ${branch.name_en}` : '';
+                                })()}
+                              </div>
+                            ) : (
+                              <div style={{ fontSize: '12px', color: '#94a3b8 italic' }}>Global/Main</div>
+                            )}
+                            <div style={{ fontSize: '11px' }}>{new Date(p.production_date).toLocaleDateString()}</div>
                           </td>
                           <td>
                             <span style={{ color: "#be123c", fontWeight: 600 }}>
@@ -707,11 +727,59 @@ const FactoryDispatchPage = () => {
                 <div
                   style={{
                     display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
+                    gridTemplateColumns: "1fr 1fr 1fr 1fr",
                     gap: "20px",
                     marginBottom: "20px",
                   }}
                 >
+                  <div className="form-group">
+                    <label>Client / Partner</label>
+                    <select
+                      value={produceForm.vendor_id}
+                      onChange={(e) =>
+                        setProduceForm({
+                          ...produceForm,
+                          vendor_id: e.target.value,
+                          branch_id: "",
+                        })
+                      }
+                      required
+                    >
+                      <option value="">-- Choose Client --</option>
+                      {vendors
+                        .filter((v) => v.type === "client")
+                        .map((v) => (
+                          <option key={v.vendor_id} value={v.vendor_id}>
+                            {v.name_en}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Target Branch</label>
+                    <select
+                      value={produceForm.branch_id}
+                      onChange={(e) =>
+                        setProduceForm({
+                          ...produceForm,
+                          branch_id: e.target.value,
+                        })
+                      }
+                      required
+                    >
+                      <option value="">-- Select Branch --</option>
+                      <option value="main">Main Office</option>
+                      {(
+                        vendors.find(
+                          (v) => String(v.vendor_id) === String(produceForm.vendor_id),
+                        ) as any
+                      )?.branches?.map((br: any) => (
+                        <option key={br.branch_id} value={br.branch_id}>
+                          {br.name_en}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                   <div className="form-group">
                     <label>Mfd Date</label>
                     <input
@@ -939,19 +1007,21 @@ const FactoryDispatchPage = () => {
                     <label>
                       <Zap size={14} /> Production Batch
                     </label>
-                    <select
-                      value={dispatchForm.batch_number}
-                      onChange={(e) => handleBatchSelect(e.target.value)}
-                      required
-                    >
-                      <option value="">-- Choose Batch --</option>
-                      {productionLogs.map((p) => (
-                        <option key={p.production_id} value={p.batch_number}>
-                          {p.batch_number} (Exp:{" "}
-                          {new Date(p.expiry_date).toLocaleDateString()})
-                        </option>
-                      ))}
-                    </select>
+                      <select
+                        value={dispatchForm.batch_number}
+                        onChange={(e) => handleBatchSelect(e.target.value)}
+                        required
+                      >
+                        <option value="">-- Choose Batch --</option>
+                        {productionLogs
+                          .filter(p => !dispatchForm.branch_id || String(p.branch_id) === String(dispatchForm.branch_id))
+                          .map((p) => (
+                            <option key={p.production_id} value={p.batch_number}>
+                              {p.batch_number} (Exp:{" "}
+                              {new Date(p.expiry_date).toLocaleDateString()})
+                            </option>
+                          ))}
+                      </select>
                   </div>
                   <div className="form-group">
                     <label>
@@ -1107,6 +1177,22 @@ const FactoryDispatchPage = () => {
                         <option value="">-- Choose Partner --</option>
                         {vendors.map(v => (
                           <option key={v.vendor_id} value={v.vendor_id}>{v.name_en}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="form-group">
+                      <label><ArrowRight size={14} /> Source Branch</label>
+                      <select 
+                        value={returnForm.branch_id}
+                        onChange={(e) => {
+                          setReturnForm({...returnForm, branch_id: e.target.value, sale_id: "", items: []});
+                        }}
+                        required
+                      >
+                        <option value="">-- Choose Branch --</option>
+                        <option value="main">Main Office</option>
+                        {(vendors.find(v => String(v.vendor_id) === String(returnForm.vendor_id)) as any)?.branches?.map((br: any) => (
+                          <option key={br.branch_id} value={br.branch_id}>{br.name_en}</option>
                         ))}
                       </select>
                     </div>
