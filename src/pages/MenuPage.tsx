@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import api from '../api/axios';
+import SearchableSelect from '../components/SearchableSelect';
 import { 
   Plus, 
   Edit3, 
@@ -31,6 +32,7 @@ interface MenuItem {
   category_id: number;
   image_url?: string;
   status: 'available' | 'unavailable';
+  type?: 'selling' | 'premix';
 }
 
 const MenuPage = () => {
@@ -70,7 +72,7 @@ const MenuPage = () => {
   useEffect(() => {
     let totalCost = 0;
     formData.ingredients?.forEach(ing => {
-      const invItem = (inventoryItems || []).find(i => String(i.inventory_item_id) === String(ing.inventory_item_id));
+      const invItem = (inventoryItems || []).find(i => String(i.inventory_item_id) === String(ing.inventory_item_id).replace('inv-', '').replace('pre-', ''));
       if (invItem && ing.quantity) {
         let multiplier = 1;
         if (ing.package_id === 'virtual_gram') multiplier = 0.001;
@@ -152,7 +154,7 @@ const MenuPage = () => {
           description_en: details.description_en || '',
           description_ar: details.description_ar || '',
           ingredients: (details.ingredients || []).map((ing: any) => ({
-            inventory_item_id: String(ing.inventory_item_id || ''),
+            inventory_item_id: ing.sub_menu_item_id ? `pre-${ing.sub_menu_item_id}` : `inv-${ing.inventory_item_id}`,
             package_id: String(ing.package_id || ''),
             quantity: String(ing.quantity || '')
           }))
@@ -532,18 +534,28 @@ const MenuPage = () => {
                        return (
                         <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1.2fr 1.2fr 1fr 45px', gap: '1rem', background: '#f8fafc', padding: '1rem', borderRadius: '14px', alignItems: 'end', border: '1px solid #f1f5f9' }}>
                           <div className="form-group">
-                             <label style={{ fontSize: '11px', fontWeight: 700, color: '#94a3b8' }}>RAW MATERIAL</label>
-                             <select required value={ing.inventory_item_id} style={{ padding: '0.75rem', borderRadius: '10px', border: '1px solid #e2e8f0' }} onChange={(e) => updateIngredient(idx, 'inventory_item_id', e.target.value)}>
-                                <option value="">-- Select Material / Premix --</option>
-                                <optgroup label="RAW MATERIALS">
-                                   {inventoryItems.map(ii => <option key={`inv-${ii.inventory_item_id}`} value={`inv-${ii.inventory_item_id}`}>{ii.name_en} ({ii.unit_en})</option>)}
-                                </optgroup>
-                                <optgroup label="KITCHEN PREMIXES">
-                                   {items.filter(i => i.type === 'premix').map(p => (
-                                     <option key={`pre-${p.menu_item_id}`} value={`pre-${p.menu_item_id}`}>{p.name_en} (Batch)</option>
-                                   ))}
-                                </optgroup>
-                             </select>
+                             <label style={{ fontSize: '11px', fontWeight: 700, color: '#94a3b8' }}>RAW MATERIAL / PREMIX</label>
+                             <SearchableSelect
+                                value={ing.inventory_item_id}
+                                onChange={(val: any) => updateIngredient(idx, 'inventory_item_id', String(val))}
+                                placeholder="Search Ingredient..."
+                                options={[
+                                  {
+                                    label: 'RAW MATERIALS',
+                                    options: (inventoryItems || []).map(ii => ({
+                                      value: `inv-${ii.inventory_item_id}`,
+                                      label: `${ii.name_en} (${ii.unit_en})`
+                                    })) as any
+                                  },
+                                  {
+                                    label: 'KITCHEN PREMIXES',
+                                    options: (items || []).filter(i => i.type === 'premix').map(p => ({
+                                      value: `pre-${p.menu_item_id}`,
+                                      label: `${p.name_en} (Batch)`
+                                    })) as any
+                                  }
+                                ] as any}
+                             />
                           </div>
                           <div className="form-group">
                              <label style={{ fontSize: '11px', fontWeight: 700, color: '#94a3b8' }}>MEASUREMENT UNIT</label>
