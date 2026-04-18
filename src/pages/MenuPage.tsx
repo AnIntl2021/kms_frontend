@@ -16,7 +16,9 @@ import {
   ChefHat,
   TrendingUp,
   Percent,
-  FileText
+  FileText,
+  Barcode,
+  Eye
 } from 'lucide-react';
 import './InventoryPage.css'; // Reuse themes
 import { toast } from 'react-toastify';
@@ -26,6 +28,7 @@ interface MenuItem {
   menu_item_id: number;
   name_en: string;
   name_ar: string;
+  barcode?: string;
   price: number;
   cost_price: number;
   category_name: string;
@@ -50,6 +53,7 @@ const MenuPage = () => {
   const [formData, setFormData] = useState({
     name_en: '',
     name_ar: '',
+    barcode: '',
     category_id: '',
     price: 0,
     cost_price: 0,
@@ -148,6 +152,7 @@ const MenuPage = () => {
         setFormData({
           name_en: details.name_en,
           name_ar: details.name_ar,
+          barcode: details.barcode || '',
           category_id: String(details.category_id),
           price: Number(details.price),
           cost_price: Number(details.cost_price),
@@ -198,6 +203,7 @@ const MenuPage = () => {
       const form = new FormData();
       form.append('name_en', formData.name_en);
       form.append('name_ar', formData.name_ar);
+      form.append('barcode', formData.barcode || '');
       form.append('category_id', formData.category_id);
       form.append('price', formData.price.toString());
       form.append('cost_price', formData.cost_price.toString());
@@ -242,6 +248,7 @@ const MenuPage = () => {
     setFormData({
       name_en: '',
       name_ar: '',
+      barcode: '',
       category_id: premixCat ? String(premixCat.category_id) : '',
       price: 0,
       cost_price: 0,
@@ -352,7 +359,7 @@ const MenuPage = () => {
                          </div>
                          <div className="item-info">
                             <strong>{item.name_en}</strong>
-                            <span>{item.name_ar}</span>
+                            <span>{item.barcode && <><Barcode size={12} /> {item.barcode}</>}</span>
                          </div>
                       </div>
                     </td>
@@ -361,6 +368,7 @@ const MenuPage = () => {
                     <td><span className={item.status === 'available' ? 'status-badge healthy' : 'status-badge critical'}>{item.status}</span></td>
                      <td className="text-right">
                        <div className="row-actions">
+                          <button className="btn-icon-sm" onClick={() => handleEdit(item)} title="View Recipe"><Eye size={16} /></button>
                           <button className="btn-icon-sm" onClick={() => handleEdit(item)} title="Edit Item"><Edit3 size={16} /></button>
                           {activeTab === 'premix' && <button className="btn-icon-sm" style={{ color: 'var(--primary)' }} title="Production Log"><TrendingUp size={16} /></button>}
                           <button className="btn-icon-sm" onClick={() => handleDelete(item.menu_item_id)} title="Delete"><Trash2 size={16} /></button>
@@ -447,6 +455,17 @@ const MenuPage = () => {
                             {categories.map(c => <option key={c.category_id} value={c.category_id}>{c.name_en}</option>)}
                         </select>
                      </div>
+
+                     {/* BARCODE FIELD - ONLY FOR MENU (SELLING ITEMS) */}
+                     {activeTab === 'menu' && (
+                        <div className="form-group">
+                          <label style={{ fontWeight: 600, fontSize: '13px', color: '#64748b' }}>BARCODE</label>
+                          <div style={{ position: 'relative' }}>
+                            <input type="text" style={{ padding: '0.8rem 0.8rem 0.8rem 2.2rem', width: '100%', borderRadius: '12px', border: '1px solid #e2e8f0', background: '#fff' }} value={formData.barcode} onChange={(e) => setFormData({...formData, barcode: e.target.value})} placeholder="Scan or enter barcode" />
+                            <Barcode size={16} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
+                          </div>
+                        </div>
+                     )}
                      
                      <div style={{ display: 'grid', gridTemplateColumns: activeTab === 'menu' ? '1fr 1fr' : '1fr', gap: '0.8rem' }}>
                         {activeTab === 'menu' && (
