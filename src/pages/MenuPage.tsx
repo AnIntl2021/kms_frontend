@@ -528,7 +528,7 @@ const MenuPage = () => {
                  
                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
                     {formData.ingredients.map((ing, idx) => {
-                       const currentItem = inventoryItems.find(ii => String(ii.inventory_item_id) === String(ing.inventory_item_id));
+                       const currentItem = inventoryItems.find(ii => String(ii.inventory_item_id) === String(ing.inventory_item_id).replace('inv-', '').replace('pre-', ''));
                        return (
                         <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1.2fr 1.2fr 1fr 45px', gap: '1rem', background: '#f8fafc', padding: '1rem', borderRadius: '14px', alignItems: 'end', border: '1px solid #f1f5f9' }}>
                           <div className="form-group">
@@ -558,7 +558,7 @@ const MenuPage = () => {
                                 {(currentItem?.unit_en?.toLowerCase() === 'liter' || currentItem?.unit_en?.toLowerCase() === 'litre') && (
                                    <option value="virtual_ml">ML (0.001 L)</option>
                                 )}
-                                {allPackages.filter((p: any) => String(p.inventory_item_id) === String(ing.inventory_item_id)).map((p: any) => (
+                                {allPackages.filter((p: any) => String(p.inventory_item_id) === String(ing.inventory_item_id).replace('inv-', '').replace('pre-', '')).map((p: any) => (
                                   <option key={p.package_id} value={p.package_id}>{p.name_en} (x{Number(p.multiplier)})</option>
                                 ))}
                              </select>
