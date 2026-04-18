@@ -444,7 +444,7 @@ const FactoryDispatchPage = () => {
                       <th>Client Name</th>
                       <th>Reason</th>
                       <th>Return Date</th>
-                      <th className="text-right">Credit Amount</th>
+                      <th className="text-right">Wastage Value (Loss)</th>
                     </tr>
                   ) : (
                     <tr>
@@ -564,7 +564,7 @@ const FactoryDispatchPage = () => {
                           </td>
                           <td>{new Date(r.created_at).toLocaleDateString()}</td>
                           <td className="text-right">
-                            <strong>
+                            <strong style={{ color: '#be123c' }}>
                               {Number(r.total_credit_amount).toFixed(3)} KWD
                             </strong>
                           </td>
