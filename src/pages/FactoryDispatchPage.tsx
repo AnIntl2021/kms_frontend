@@ -66,9 +66,19 @@ const FactoryDispatchPage = () => {
   
   const vendorDispatches = dispatches
     .filter(d => {
-      const idMatch = returnForm.vendor_id && String(d.vendor_id) === String(returnForm.vendor_id);
-      const branchMatch = !returnForm.branch_id || String(d.branch_id) === String(returnForm.branch_id);
-      return idMatch && branchMatch;
+      // 🕵️‍♂️ MATCH BY ID OR BY NAME (FOR OLD RECORDS)
+      const vendorMatch = returnForm.vendor_id && (
+        String(d.vendor_id) === String(returnForm.vendor_id) || 
+        d.client_name === selectedVendor?.name_en || 
+        d.customer_name === selectedVendor?.name_en
+      );
+
+      // 🏢 IF BRANCH IS MAIN OR NULL, SHOW IN MAIN OFFICE
+      const branchMatch = !returnForm.branch_id || 
+                         (returnForm.branch_id === 'main' && (!d.branch_id || d.branch_id === 'main')) || 
+                         String(d.branch_id) === String(returnForm.branch_id);
+
+      return vendorMatch && branchMatch;
     })
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
@@ -125,7 +135,8 @@ const FactoryDispatchPage = () => {
       const rArr = results[4].data.data || results[4].data;
 
       setVendors(Array.isArray(vArr) ? vArr : []);
-      setMenuItems(Array.isArray(mArr) ? mArr : []);
+      // 🛡️ ONLY SHOW FINISHED PRODUCTS (SELLING) IN DISTRIBUTION
+      setMenuItems(Array.isArray(mArr) ? mArr.filter((i: any) => i.type === 'selling') : []);
       setDispatches(Array.isArray(dArr) ? dArr : []);
       setProductionLogs(Array.isArray(pArr) ? pArr : []);
       setReturnsHistory(Array.isArray(rArr) ? rArr : []);
@@ -186,11 +197,18 @@ const FactoryDispatchPage = () => {
   };
 
   const handleUpdateStatus = async (id: number, status: string) => {
+    const toastId = toast.loading(`Updating status to ${status}...`);
     try {
-      await api.put(`/factory/dispatches/${id}/status`, { status });
-      fetchBaseData();
-    } catch (e) {
+      const res = await api.put(`/factory/dispatches/${id}/status`, { status });
+      if (res.data.success) {
+        toast.update(toastId, { render: `Order marked as ${status}! ✅`, type: "success", isLoading: false, autoClose: 3000 });
+        await fetchBaseData();
+      } else {
+        toast.update(toastId, { render: res.data.message || "Failed to update status", type: "error", isLoading: false, autoClose: 3000 });
+      }
+    } catch (e: any) {
       console.error(e);
+      toast.update(toastId, { render: e.response?.data?.message || "Server error occurred", type: "error", isLoading: false, autoClose: 3000 });
     }
   };
 
@@ -472,9 +490,9 @@ const FactoryDispatchPage = () => {
                           </td>
                           <td>
                             <span
-                              className={`status-badge ${d.dispatch_status === "pending" ? "low" : d.dispatch_status === "in_transit" ? "warning" : "healthy"}`}
+                              className={`status-badge ${d.dispatch_status === "pending" ? "low" : (d.dispatch_status === "in_transit" || d.dispatch_status === "dispatched") ? "warning" : "healthy"}`}
                             >
-                              {d.dispatch_status}
+                              {d.dispatch_status === "in_transit" ? "dispatched" : d.dispatch_status}
                             </span>
                           </td>
                           <td>{new Date(d.created_at).toLocaleDateString()}</td>
@@ -492,21 +510,7 @@ const FactoryDispatchPage = () => {
                               >
                                 {Number(d.total_amount).toFixed(3)} KWD
                               </span>
-                              {d.dispatch_status === "pending" && (
-                                <button
-                                  onClick={() =>
-                                    handleUpdateStatus(d.sale_id, "in_transit")
-                                  }
-                                  className="btn-secondary"
-                                  style={{
-                                    padding: "4px 8px",
-                                    fontSize: "10px",
-                                  }}
-                                >
-                                  Track
-                                </button>
-                              )}
-                              {d.dispatch_status === "in_transit" && (
+                              {(d.dispatch_status === "in_transit" || d.dispatch_status === "dispatched") && (
                                 <button
                                   onClick={() =>
                                     handleUpdateStatus(d.sale_id, "delivered")

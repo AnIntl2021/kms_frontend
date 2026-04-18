@@ -143,7 +143,9 @@ const SalesPage = () => {
     try {
       const response = await api.get('/menu');
       if (response.data.success) {
-        setMenuItems(response.data.data);
+        // 🛡️ FILTER TO ONLY SHOW 'SELLING' ITEMS IN SALES DASHBOARD
+        const items = response.data.data;
+        setMenuItems(Array.isArray(items) ? items.filter((i: any) => i.type === 'selling') : []);
       }
     } catch (e) {
       console.error('Failed to fetch menu:', e);
@@ -433,7 +435,14 @@ const SalesPage = () => {
                         }}>
                           {sale.customer_name?.[0] || '?'}
                         </div>
-                        <span>{sale.customer_name}</span>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                           <span style={{ fontWeight: 700 }}>{sale.customer_name}</span>
+                           {(sale as any).branch_name && (
+                             <span style={{ fontSize: '11px', color: 'var(--primary)', fontWeight: 600 }}>
+                               { (sale as any).branch_name } Branch
+                             </span>
+                           )}
+                        </div>
                       </div>
                     </td>
                     <td>
