@@ -100,7 +100,7 @@ const PrePrintedInvoice = React.forwardRef<HTMLDivElement, InvoiceProps>(({ orde
           justifyContent: 'space-around',
           paddingLeft: `${1.2 * CM}px`, // Adjusted to center value in box
         }}>
-          <div>{order?.sale_id || order?.order_number || ''}</div>
+          <div>FNFI-{100000 + (order?.sale_id || 0)}</div>
           <div>{order?.order_date || today}</div>
           <div>Admin</div>
           <div>N/A</div>

@@ -76,7 +76,7 @@ const FullInvoicePrint = React.forwardRef<HTMLDivElement, InvoiceProps>(({ order
               <tbody>
                 <tr>
                   <td style={{ border: '1px solid #000', padding: '6px', fontSize: '12px', fontWeight: 700, backgroundColor: '#f9fafb' }}>Invoice No:</td>
-                  <td style={{ border: '1px solid #000', padding: '6px', fontSize: '12px' }}>#{order?.sale_id || '---'}</td>
+                  <td style={{ border: '1px solid #000', padding: '6px', fontSize: '12px' }}>FNFI-{100000 + (order?.sale_id || 0)}</td>
                 </tr>
                 <tr>
                   <td style={{ border: '1px solid #000', padding: '6px', fontSize: '12px', fontWeight: 700, backgroundColor: '#f9fafb' }}>Date</td>

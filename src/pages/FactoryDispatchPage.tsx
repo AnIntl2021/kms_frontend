@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import "./InventoryPage.css";
 import { toast } from "react-toastify";
+import SearchableSelect from "../components/SearchableSelect";
 
 interface Vendor {
   vendor_id: number;
@@ -734,51 +735,40 @@ const FactoryDispatchPage = () => {
                 >
                   <div className="form-group">
                     <label>Client / Partner</label>
-                    <select
+                    <SearchableSelect
+                      options={vendors
+                        .filter((v) => v.type === "client" || v.type === "supplier")
+                        .map((v) => ({ value: v.vendor_id, label: v.name_en }))}
                       value={produceForm.vendor_id}
-                      onChange={(e) =>
+                      onChange={(val) =>
                         setProduceForm({
                           ...produceForm,
-                          vendor_id: e.target.value,
+                          vendor_id: String(val),
                           branch_id: "",
                         })
                       }
-                      required
-                    >
-                      <option value="">-- Choose Client --</option>
-                      {vendors
-                        .filter((v) => v.type === "client")
-                        .map((v) => (
-                          <option key={v.vendor_id} value={v.vendor_id}>
-                            {v.name_en}
-                          </option>
-                        ))}
-                    </select>
+                      placeholder="Choose Client..."
+                    />
                   </div>
                   <div className="form-group">
                     <label>Target Branch</label>
-                    <select
+                    <SearchableSelect
+                      options={[
+                        { value: 'main', label: 'Main Office' },
+                        ...((vendors.find((v) => String(v.vendor_id) === String(produceForm.vendor_id)) as any)?.branches?.map((br: any) => ({
+                          value: br.branch_id,
+                          label: br.name_en
+                        })) || [])
+                      ]}
                       value={produceForm.branch_id}
-                      onChange={(e) =>
+                      onChange={(val) =>
                         setProduceForm({
                           ...produceForm,
-                          branch_id: e.target.value,
+                          branch_id: String(val),
                         })
                       }
-                      required
-                    >
-                      <option value="">-- Select Branch --</option>
-                      <option value="main">Main Office</option>
-                      {(
-                        vendors.find(
-                          (v) => String(v.vendor_id) === String(produceForm.vendor_id),
-                        ) as any
-                      )?.branches?.map((br: any) => (
-                        <option key={br.branch_id} value={br.branch_id}>
-                          {br.name_en}
-                        </option>
-                      ))}
-                    </select>
+                      placeholder="Select Branch..."
+                    />
                   </div>
                   <div className="form-group">
                     <label>Mfd Date</label>
@@ -952,76 +942,58 @@ const FactoryDispatchPage = () => {
                     <label>
                       <Building2 size={14} /> Client / Partner
                     </label>
-                    <select
+                    <SearchableSelect
+                      options={vendors
+                        .filter((v) => v.type === "client" || v.type === "supplier")
+                        .map((v: any) => ({ value: v.vendor_id, label: v.name_en }))}
                       value={dispatchForm.vendor_id}
-                      onChange={(e) =>
+                      onChange={(val) =>
                         setDispatchForm({
                           ...dispatchForm,
-                          vendor_id: e.target.value,
+                          vendor_id: String(val),
                           branch_id: "",
                         } as any)
                       }
-                      required
-                    >
-                      <option value="">-- Choose Client --</option>
-                      {vendors
-                        .filter(
-                          (v) => v.type === "client" || vendors.length < 5,
-                        )
-                        .map((v: any) => (
-                          <option key={v.vendor_id} value={v.vendor_id}>
-                            {v.name_en}
-                          </option>
-                        ))}
-                    </select>
+                      placeholder="Choose Client..."
+                    />
                   </div>
                   <div className="form-group">
                     <label>
                       <ArrowRight size={14} /> Target Branch
                     </label>
-                    <select
+                    <SearchableSelect
+                      options={[
+                        { value: 'main', label: 'Main / Corporate Office' },
+                        ...((vendors.find((v: any) => v.vendor_id === Number(dispatchForm.vendor_id)) as any)?.branches?.map((br: any) => ({
+                          value: br.branch_id,
+                          label: br.name_en
+                        })) || [])
+                      ]}
                       value={(dispatchForm as any).branch_id}
-                      onChange={(e) =>
+                      onChange={(val) =>
                         setDispatchForm({
                           ...dispatchForm,
-                          branch_id: e.target.value,
+                          branch_id: String(val),
                         } as any)
                       }
-                      required
-                    >
-                      <option value="">-- Choose Branch --</option>
-                      <option value="main">Main / Corporate Office</option>
-                      {(
-                        vendors.find(
-                          (v: any) =>
-                            v.vendor_id === Number(dispatchForm.vendor_id),
-                        ) as any
-                      )?.branches?.map((br: any) => (
-                        <option key={br.branch_id} value={br.branch_id}>
-                          {br.name_en}
-                        </option>
-                      ))}
-                    </select>
+                      placeholder="Choose Branch..."
+                    />
                   </div>
                   <div className="form-group">
                     <label>
                       <Zap size={14} /> Production Batch
                     </label>
-                      <select
-                        value={dispatchForm.batch_number}
-                        onChange={(e) => handleBatchSelect(e.target.value)}
-                        required
-                      >
-                        <option value="">-- Choose Batch --</option>
-                        {productionLogs
-                          .filter(p => !dispatchForm.branch_id || String(p.branch_id) === String(dispatchForm.branch_id))
-                          .map((p) => (
-                            <option key={p.production_id} value={p.batch_number}>
-                              {p.batch_number} (Exp:{" "}
-                              {new Date(p.expiry_date).toLocaleDateString()})
-                            </option>
-                          ))}
-                      </select>
+                    <SearchableSelect
+                      options={productionLogs
+                        .filter(p => !dispatchForm.branch_id || String(p.branch_id) === String(dispatchForm.branch_id))
+                        .map((p) => ({
+                          value: p.batch_number,
+                          label: `${p.batch_number} (Exp: ${new Date(p.expiry_date).toLocaleDateString()})`
+                        }))}
+                      value={dispatchForm.batch_number}
+                      onChange={(val) => handleBatchSelect(String(val))}
+                      placeholder="Choose Batch..."
+                    />
                   </div>
                   <div className="form-group">
                     <label>
@@ -1167,50 +1139,43 @@ const FactoryDispatchPage = () => {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px', marginBottom: '20px' }}>
                     <div className="form-group">
                       <label><Building2 size={14} /> Source Client / Partner</label>
-                      <select 
+                      <SearchableSelect
+                        options={vendors.map(v => ({ value: v.vendor_id, label: v.name_en }))}
                         value={returnForm.vendor_id}
-                        onChange={(e) => {
-                          setReturnForm({...returnForm, vendor_id: e.target.value, sale_id: "", items: []});
+                        onChange={(val) => {
+                          setReturnForm({...returnForm, vendor_id: String(val), sale_id: "", items: []});
                         }}
-                        required
-                      >
-                        <option value="">-- Choose Partner --</option>
-                        {vendors.map(v => (
-                          <option key={v.vendor_id} value={v.vendor_id}>{v.name_en}</option>
-                        ))}
-                      </select>
+                        placeholder="Choose Partner..."
+                      />
                     </div>
                     <div className="form-group">
                       <label><ArrowRight size={14} /> Source Branch</label>
-                      <select 
+                      <SearchableSelect
+                        options={[
+                          { value: 'main', label: 'Main Office' },
+                          ...((vendors.find(v => String(v.vendor_id) === String(returnForm.vendor_id)) as any)?.branches?.map((br: any) => ({
+                            value: br.branch_id,
+                            label: br.name_en
+                          })) || [])
+                        ]}
                         value={returnForm.branch_id}
-                        onChange={(e) => {
-                          setReturnForm({...returnForm, branch_id: e.target.value, sale_id: "", items: []});
+                        onChange={(val) => {
+                          setReturnForm({...returnForm, branch_id: String(val), sale_id: "", items: []});
                         }}
-                        required
-                      >
-                        <option value="">-- Choose Branch --</option>
-                        <option value="main">Main Office</option>
-                        {(vendors.find(v => String(v.vendor_id) === String(returnForm.vendor_id)) as any)?.branches?.map((br: any) => (
-                          <option key={br.branch_id} value={br.branch_id}>{br.name_en}</option>
-                        ))}
-                      </select>
+                        placeholder="Choose Branch..."
+                      />
                     </div>
                     <div className="form-group">
                       <label><ClipboardList size={14} /> Select Dispatch Order</label>
-                      <select 
+                      <SearchableSelect
+                        options={vendorDispatches.map(d => ({
+                          value: d.sale_id,
+                          label: `Order: ${d.order_number} | Batch: ${d.batch_number || 'N/A'} (${new Date(d.created_at).toLocaleDateString()})`
+                        }))}
                         value={returnForm.sale_id}
-                        onChange={(e) => handleReturnSaleSelect(e.target.value)}
-                        disabled={!returnForm.vendor_id}
-                        required
-                      >
-                        <option value="">-- Choose Dispatch --</option>
-                        {vendorDispatches.map(d => (
-                          <option key={d.sale_id} value={d.sale_id}>
-                            Order: {d.order_number} | Batch: {d.batch_number || 'N/A'} ({new Date(d.created_at).toLocaleDateString()})
-                          </option>
-                        ))}
-                      </select>
+                        onChange={(val) => handleReturnSaleSelect(String(val))}
+                        placeholder="Choose Dispatch Order..."
+                      />
                     </div>
                     <div className="form-group">
                        <label>Reason for Return</label>

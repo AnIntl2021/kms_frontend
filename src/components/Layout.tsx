@@ -24,6 +24,7 @@ import {
 import './Layout.css';
 import logo from '../assets/logo.jpeg';
 import AIAssistant from './AIAssistant';
+import api from '../api/axios';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -33,8 +34,44 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({ children, title }) => {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [notifications, setNotifications] = useState<any[]>([]);
   const { admin, logout } = useAuthStore();
   const location = useLocation();
+
+  useEffect(() => {
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 30000); // 30s refresh
+    return () => clearInterval(interval);
+  }, []);
+
+  const fetchNotifications = async () => {
+    try {
+      const res = await api.get('/notifications');
+      if (res.data.success) setNotifications(res.data.data);
+    } catch (e) {
+      console.warn("Silent notification fetch fail - likely unauthorized or network dip.");
+    }
+  };
+
+  const markAsRead = async (id: number) => {
+    try {
+      await api.put(`/notifications/${id}/read`);
+      setNotifications(notifications.filter(n => n.notification_id !== id));
+    } catch (e) {
+      console.error("Failed to mark as read");
+    }
+  };
+
+  const clearAllNotifs = async () => {
+    try {
+      await api.post('/notifications/clear-all');
+      setNotifications([]);
+      setNotifOpen(false);
+    } catch (e) {
+      console.error("Failed to clear all");
+    }
+  };
 
   useEffect(() => {
     const handleUnauthorized = () => logout();
@@ -131,10 +168,46 @@ const Layout: React.FC<LayoutProps> = ({ children, title }) => {
               <Search size={18} />
               <input type="text" placeholder="Search operations..." />
             </div>
-            <div className="icon-btn notification">
-              <Bell size={20} />
-              <span className="badge">3</span>
+            
+            {/* 🔔 DYNAMIC NOTIFICATION HUB */}
+            <div className="notification-wrapper" style={{ position: 'relative' }}>
+              <div 
+                className="icon-btn notification" 
+                onClick={() => setNotifOpen(!notifOpen)}
+                style={{ cursor: 'pointer' }}
+              >
+                <Bell size={20} />
+                {notifications.length > 0 && <span className="badge">{notifications.length}</span>}
+              </div>
+
+              {notifOpen && (
+                <div className="notif-dropdown" style={{ position: 'absolute', top: '100%', right: 0, width: '300px', background: 'white', borderRadius: '15px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', z_index: 1000, marginTop: '10px', padding: '10px', border: '1px solid #eee' }}>
+                   <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px', borderBottom: '1px solid #eee', marginBottom: '10px' }}>
+                      <strong style={{ fontSize: '14px' }}>Notifications</strong>
+                      <button onClick={clearAllNotifs} style={{ border: 'none', background: 'none', color: 'var(--primary)', fontSize: '11px', cursor: 'pointer', fontWeight: 700 }}>Clear All</button>
+                   </div>
+                   <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                      {notifications.length === 0 ? (
+                        <div style={{ padding: '20px', textAlign: 'center', color: '#94a3b8', fontSize: '12px' }}>No new alerts. You're all caught up! ✨</div>
+                      ) : notifications.map((n: any) => (
+                        <div 
+                          key={n.notification_id} 
+                          onClick={() => markAsRead(n.notification_id)}
+                          style={{ padding: '12px', borderBottom: '1px solid #f8fafc', fontSize: '12px', cursor: 'pointer', borderRadius: '8px', transition: 'background 0.2s' }}
+                          onMouseOver={(e) => e.currentTarget.style.background = '#f1f5f9'}
+                          onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+                        >
+                           <div style={{ fontWeight: 600, marginBottom: '4px', color: n.type === 'danger' || n.type === 'warning' ? '#ef4444' : '#334155' }}>
+                              {n.message}
+                           </div>
+                           <div style={{ fontSize: '10px', color: '#94a3b8' }}>{new Date(n.created_at).toLocaleString()}</div>
+                        </div>
+                      ))}
+                   </div>
+                </div>
+              )}
             </div>
+
             <div className="user-initial" onClick={logout} title="Logout">
               {(admin?.username?.[0] || 'A').toUpperCase()}
             </div>

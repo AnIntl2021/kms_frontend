@@ -78,7 +78,7 @@ input::-webkit-credentials-auto-fill-button {
   --toastify-toast-max-height: 800px;
   --toastify-toast-bd-radius: 20px;
   --toastify-font-family: 'DM Sans', sans-serif;
-  --toastify-z-index: 9999;
+  --toastify-z-index: 15000;
 }
 
 .Toastify__toast {

@@ -79,8 +79,9 @@ const MenuPage = () => {
            const pkg = allPackages.find(p => String(p.package_id) === String(ing.package_id));
            if (pkg) multiplier = Number(pkg.multiplier);
         }
-        const calcMultiplier = Number(multiplier || 1) === 0 ? 1 : Number(multiplier || 1);
-        totalCost += (Number(invItem.dynamic_cost_price || invItem.cost_price || 0) * Number(ing.quantity) / calcMultiplier);
+        const calcMultiplier = Number(multiplier) || 1;
+        const itemCost = Number(invItem.dynamic_cost_price || invItem.cost_price || 0);
+        totalCost += (itemCost * Number(ing.quantity) * calcMultiplier);
       }
     });
     setFormData(prev => ({ ...prev, cost_price: Number(totalCost.toFixed(3)) }));
@@ -328,8 +329,7 @@ const MenuPage = () => {
                 ) : (filteredItems || [])
                     .filter(i => {
                       if (!i) return false;
-                      const catName = (i.category_name || '').toLowerCase();
-                      return activeTab === 'premix' ? catName.includes('premix') : !catName.includes('premix');
+                      return activeTab === 'premix' ? i.type === 'premix' : i.type === 'selling';
                     })
                     .map(item => (
                   <tr key={item.menu_item_id}>
@@ -534,8 +534,15 @@ const MenuPage = () => {
                           <div className="form-group">
                              <label style={{ fontSize: '11px', fontWeight: 700, color: '#94a3b8' }}>RAW MATERIAL</label>
                              <select required value={ing.inventory_item_id} style={{ padding: '0.75rem', borderRadius: '10px', border: '1px solid #e2e8f0' }} onChange={(e) => updateIngredient(idx, 'inventory_item_id', e.target.value)}>
-                                <option value="">-- Select Material --</option>
-                                {inventoryItems.map(ii => <option key={ii.inventory_item_id} value={ii.inventory_item_id}>{ii.name_en} ({ii.unit_en})</option>)}
+                                <option value="">-- Select Material / Premix --</option>
+                                <optgroup label="RAW MATERIALS">
+                                   {inventoryItems.map(ii => <option key={`inv-${ii.inventory_item_id}`} value={`inv-${ii.inventory_item_id}`}>{ii.name_en} ({ii.unit_en})</option>)}
+                                </optgroup>
+                                <optgroup label="KITCHEN PREMIXES">
+                                   {items.filter(i => i.type === 'premix').map(p => (
+                                     <option key={`pre-${p.menu_item_id}`} value={`pre-${p.menu_item_id}`}>{p.name_en} (Batch)</option>
+                                   ))}
+                                </optgroup>
                              </select>
                           </div>
                           <div className="form-group">

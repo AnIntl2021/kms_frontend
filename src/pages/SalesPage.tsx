@@ -29,6 +29,7 @@ import FullInvoicePrint from '../components/FullInvoicePrint';
 import PrePrintedInvoice from '../components/PrePrintedInvoice';
 import './InventoryPage.css';
 import { toast } from 'react-toastify';
+import SearchableSelect from '../components/SearchableSelect';
 
 interface SaleOrder {
   sale_id: number;
@@ -149,10 +150,55 @@ const SalesPage = () => {
     }
   };
 
+  const handleEditOrder = async (order: any) => {
+    try {
+      const response = await api.get(`/factory/sales/${order.sale_id}/items`);
+      const items = response.data.data;
+      
+      setEditingOrder({
+        sale_id: order.sale_id,
+        vendor_id: order.vendor_id,
+        branch_id: order.branch_id || 'main',
+        customer_name: order.customer_name,
+        discount_percentage: Number(((Number(order.discount_amount || 0) / Number(order.total_amount)) * 100).toFixed(2)) || 0,
+        total_amount: Number(order.total_amount),
+        batch_number: order.batch_number,
+        expiry_date: order.expiry_date,
+        items: items
+      });
+      setIsEditModalOpen(true);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to load order items for editing.");
+    }
+  };
+
+  const handleUpdateOrder = async () => {
+    if (!editingOrder) return;
+    try {
+      await api.put(`/factory/sales/${editingOrder.sale_id}`, editingOrder);
+      toast.success("Order fully updated and stock reconciled!");
+      setIsEditModalOpen(false);
+      fetchSales();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to update order");
+    }
+  };
+
+  const addItemToEditOrder = (item: any) => {
+    if (!editingOrder) return;
+    const existing = editingOrder.items.find((i: any) => i.menu_item_id === item.menu_item_id);
+    if (existing) {
+       const updated = editingOrder.items.map((i: any) => i.menu_item_id === item.menu_item_id ? {...i, quantity: i.quantity + 1} : i);
+       setEditingOrder({...editingOrder, items: updated});
+    } else {
+       setEditingOrder({...editingOrder, items: [...editingOrder.items, {...item, quantity: 1, price: item.price}]});
+    }
+  };
+
   const handleUpdateStatus = async (saleId: number, nextStatus: string) => {
     try {
       await api.put(`/sales/${saleId}/status`, { dispatch_status: nextStatus });
-      toast.success(`Order #${saleId} is now ${nextStatus.toUpperCase()}! 📦`);
+      toast.success(`Order FNFI-${100000 + saleId} is now ${nextStatus.toUpperCase()}! 📦`);
       fetchSales();
     } catch (error) {
       toast.error('Failed to update order status.');
@@ -173,7 +219,7 @@ const SalesPage = () => {
       const response = await api.post(`/sales/${saleId}/return`);
       console.warn('✅ BACKEND RESPONSE:', response.data);
       
-      toast.info(`Order #${saleId} has been returned. Stock levels restored! 🔄`);
+      toast.info(`Order FNFI-${100000 + saleId} has been returned. Stock levels restored! 🔄`);
       fetchSales();
     } catch (error: any) {
       console.error('❌ RETURN ERROR TRACE:', error);
@@ -214,41 +260,14 @@ const SalesPage = () => {
      }
   };
 
-  const handleEditOrder = async (sale: any) => {
-    try {
-      const res = await api.get(`/sales/${sale.sale_id}`);
-      if (res.data.success) {
-        setEditingOrder(res.data.data);
-        setIsEditModalOpen(true);
-      }
-    } catch (e) {
-      toast.error('Failed to prepare edit mode.');
-    }
-  };
-
-  const handleUpdateOrder = async () => {
-    if (!editingOrder) return;
-    try {
-      await api.put(`/factory/sales/${editingOrder.sale_id}`, {
-        customer_name: editingOrder.customer_name,
-        discount_percentage: editingOrder.discount_percentage
-      });
-      toast.success('Order Successfully Updated! ✏️');
-      setIsEditModalOpen(false);
-      fetchSales();
-    } catch (e: any) {
-      toast.error(e.response?.data?.message || 'Update failed.');
-    }
-  };
-
   const handlePrint = useReactToPrint({
     contentRef: printRef,
-    documentTitle: `Invoice-${printOrder?.sale_id || 'Order'}`
+    documentTitle: `Invoice-FNFI-${100000 + (printOrder?.sale_id || 0)}`
   });
 
   const handleDotMatrixPrint = useReactToPrint({
     contentRef: dotMatrixPrintRef,
-    documentTitle: `LQ350-Invoice-${printOrder?.sale_id || 'Order'}`
+    documentTitle: `LQ350-Invoice-FNFI-${100000 + (printOrder?.sale_id || 0)}`
   });
 
   const preparePrint = async (sale: any, isPrePrinted: boolean = false) => {
@@ -291,7 +310,10 @@ const SalesPage = () => {
 
   const filteredSales = (sales || []).filter(s => {
     const nameMatch = (s.customer_name || '').toLowerCase().includes(searchTerm.toLowerCase());
-    const idMatch = String(s.sale_id || '').includes(searchTerm);
+    const orderNum = 100000 + (s.sale_id || 0);
+    const idMatch = String(s.sale_id || '').includes(searchTerm) || 
+                    String(orderNum).includes(searchTerm) ||
+                    `FNFI-${orderNum}`.toLowerCase().includes(searchTerm.toLowerCase());
     const statusMatch = (statusFilter === 'all' || s.dispatch_status === statusFilter);
     return (nameMatch || idMatch) && statusMatch;
   });
@@ -391,7 +413,7 @@ const SalesPage = () => {
                   <tr key={sale.sale_id || Math.random()}>
                     <td>
                       <div className="item-info">
-                        <strong>Order #{sale.sale_id || 'N/A'}</strong>
+                        <strong>FNFI-{100000 + (sale.sale_id || 0)}</strong>
                         <span>{sale.items_count || 0} items included</span>
                       </div>
                     </td>
@@ -496,7 +518,7 @@ const SalesPage = () => {
               <div className="modal-header">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                   <Eye size={24} color="var(--primary)" />
-                  <h3 style={{ margin: 0 }}>Order Details #{detailOrder.sale_id}</h3>
+                  <h3 style={{ margin: 0 }}>Order Details FNFI-{100000 + (detailOrder.sale_id || 0)}</h3>
                 </div>
                 <button className="btn-close" onClick={() => setIsDetailModalOpen(false)}><X size={20} /></button>
               </div>
@@ -537,127 +559,184 @@ const SalesPage = () => {
              </div>
              <div className="modal-body" style={{ padding: '2rem' }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
-                   <div style={{ background: '#f8fafc', padding: '1.25rem', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
-                      <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-                        <label style={{ fontWeight: 700, fontSize: '11px', color: '#64748b' }}>DISTRIBUTION PARTNER *</label>
-                        <select 
-                          style={{ padding: '0.8rem', borderRadius: '12px', border: '1px solid #e2e8f0', width: '100%', marginTop: '5px' }} 
-                          value={formData.vendor_id} 
-                          onChange={(e) => {
-                            const v = vendors.find(v => String(v.vendor_id) === e.target.value);
-                            setFormData({...formData, vendor_id: e.target.value, branch_id: '', customer_name: v?.name_en || ''});
-                          }}
-                          required
-                        >
-                          <option value="">-- Choose Client Profile --</option>
-                          {vendors.filter(v => v.type === 'client').map(v => <option key={v.vendor_id} value={v.vendor_id}>{v.name_en}</option>)}
-                        </select>
-                      </div>
+                    <div style={{ background: '#f8fafc', padding: '1.25rem', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
+                       <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                         <label style={{ fontWeight: 700, fontSize: '11px', color: '#64748b' }}>DISTRIBUTION PARTNER *</label>
+                         <SearchableSelect
+                           options={vendors
+                             .filter(v => v.type === 'client' || v.type === 'supplier')
+                             .map(v => ({ value: v.vendor_id, label: v.name_en }))}
+                           value={formData.vendor_id}
+                           onChange={(val) => {
+                             const v = vendors.find(v => String(v.vendor_id) === String(val));
+                             setFormData({...formData, vendor_id: String(val), branch_id: '', customer_name: v?.name_en || ''});
+                           }}
+                           placeholder="Choose Client..."
+                         />
+                       </div>
+  
+                       <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                         <label style={{ fontWeight: 700, fontSize: '11px', color: '#64748b' }}>DELIVERY BRANCH NODE *</label>
+                         <SearchableSelect
+                           options={[
+                             { value: 'main', label: 'Main Corporate Hub' },
+                             ...(vendors.find(v => String(v.vendor_id) === String(formData.vendor_id))?.branches?.map((br: any) => ({
+                               value: br.branch_id,
+                               label: br.name_en
+                             })) || [])
+                           ]}
+                           value={formData.branch_id}
+                           onChange={(val) => setFormData({...formData, branch_id: String(val)})}
+                           placeholder="Select Destination..."
+                         />
+                       </div>
+  
+                       <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                         <label style={{ fontWeight: 700, fontSize: '11px', color: '#64748b' }}>PRODUCTION BATCH *</label>
+                         <SearchableSelect
+                           options={productionLogs.map(p => ({
+                             value: p.batch_number,
+                             label: `${p.batch_number} (Exp: ${new Date(p.expiry_date).toLocaleDateString()})`
+                           }))}
+                           value={formData.batch_number}
+                           onChange={(val) => {
+                             const b = productionLogs.find(p => p.batch_number === val);
+                             setFormData({...formData, batch_number: String(val), expiry_date: b?.expiry_date || ''});
+                           }}
+                           placeholder="Choose Batch..."
+                         />
+                       </div>
 
-                      <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-                        <label style={{ fontWeight: 700, fontSize: '11px', color: '#64748b' }}>DELIVERY BRANCH NODE *</label>
-                        <select 
-                          style={{ padding: '0.8rem', borderRadius: '12px', border: '1px solid #e2e8f0', width: '100%', marginTop: '5px', fontWeight: 800 }} 
-                          value={formData.branch_id} 
-                           onChange={(e) => setFormData({...formData, branch_id: e.target.value})}
-                          required
-                        >
-                          <option value="">-- Select Destination --</option>
-                          <option value="main">Main Corporate Hub</option>
-                          {vendors.find(v => String(v.vendor_id) === String(formData.vendor_id))?.branches?.map((br: any) => (
-                            <option key={br.branch_id} value={br.branch_id}>{br.name_en}</option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-                        <label style={{ fontWeight: 700, fontSize: '11px', color: '#64748b' }}>PRODUCTION BATCH *</label>
-                        <select 
-                          style={{ padding: '0.8rem', borderRadius: '12px', border: '1px solid #e2e8f0', width: '100%', marginTop: '5px' }} 
-                          value={formData.batch_number} 
-                          onChange={(e) => {
-                            const b = productionLogs.find(p => p.batch_number === e.target.value);
-                            setFormData({...formData, batch_number: e.target.value, expiry_date: b?.expiry_date || ''});
-                          }}
-                          required
-                        >
-                          <option value="">-- Choose Batch --</option>
-                          {productionLogs.map(p => (
-                            <option key={p.production_id} value={p.batch_number}>
-                              {p.batch_number} (Exp: {new Date(p.expiry_date).toLocaleDateString()})
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <h5 style={{ margin: '1rem 0 0.5rem 0' }}>Cart: {selectedItems.length} Products</h5>
-                      <div style={{ maxHeight: '150px', overflowY: 'auto' }}>
-                         {selectedItems.map(item => (<div key={item.menu_item_id} style={{ fontSize: '11px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' }}>{item.name_en} x {item.quantity}</div>))}
-                      </div>
-                   </div>
-                   <div>
-                      <h5 style={{ fontSize: '13px', color: '#64748b', marginBottom: '1rem' }}>Selection Menu</h5>
-                      <div style={{ maxHeight: '300px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        {menuItems.map(item => (
-                          <div key={item.menu_item_id} onClick={() => addItemToOrder(item)} style={{ cursor: 'pointer', padding: '10px 15px', background: 'white', border: '1px solid #eee', borderRadius: '10px', fontSize: '13px', fontWeight: 600 }}>
-                            {item.name_en}
-                          </div>
-                        ))}
-                      </div>
-                   </div>
-                </div>
-                <button onClick={() => handleCreateOrder()} style={{ marginTop: '2rem', width: '100%', padding: '1rem', background: '#054c2d', color: 'white', borderRadius: '14px', fontWeight: 800, fontSize: '15px' }}>
-                  FINALIZE DISTRIBUTION & RECORD SALE
-                </button>
-             </div>
-          </div>
+                       <h5 style={{ margin: '1rem 0 0.5rem 0' }}>Cart: {selectedItems.length} Products</h5>
+                       <div style={{ maxHeight: '150px', overflowY: 'auto' }}>
+                          {selectedItems.map(item => (<div key={item.menu_item_id} style={{ fontSize: '11px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' }}>{item.name_en} x {item.quantity}</div>))}
+                       </div>
+                    </div>
+                    <div>
+                       <h5 style={{ fontSize: '13px', color: '#64748b', marginBottom: '1rem' }}>Selection Menu</h5>
+                       <div style={{ maxHeight: '300px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                         {menuItems.map(item => (
+                           <div key={item.menu_item_id} onClick={() => addItemToOrder(item)} style={{ cursor: 'pointer', padding: '10px 15px', background: 'white', border: '1px solid #eee', borderRadius: '10px', fontSize: '13px', fontWeight: 600 }}>
+                             {item.name_en}
+                           </div>
+                         ))}
+                       </div>
+                    </div>
+                 </div>
+                 <button onClick={() => handleCreateOrder()} style={{ marginTop: '2rem', width: '100%', padding: '1rem', background: '#054c2d', color: 'white', borderRadius: '14px', fontWeight: 800, fontSize: '15px' }}>
+                   FINALIZE DISTRIBUTION & RECORD SALE
+                 </button>
+              </div>
+           </div>
         </div>
       )}
-      
-      {/* EDIT ORDER MODAL */}
       {isEditModalOpen && editingOrder && (
         <div className="modal-overlay">
-          <div className="modal-content" style={{ maxWidth: '500px', borderRadius: '24px' }}>
+          <div className="modal-content" style={{ maxWidth: '850px', borderRadius: '24px' }}>
             <div className="modal-header">
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <Edit size={24} color="#0369a1" />
-                <h3 style={{ margin: 0 }}>Edit Order #{editingOrder.sale_id}</h3>
+                <Edit size={24} color="var(--primary)" />
+                <h3 style={{ margin: 0 }}>Modify Order FNFI-{100000 + (editingOrder.sale_id || 0)}</h3>
               </div>
               <button className="btn-close" onClick={() => setIsEditModalOpen(false)}><X size={20} /></button>
             </div>
             <div className="modal-body" style={{ padding: '2rem' }}>
-               <div style={{ background: '#f0f9ff', padding: '1rem', borderRadius: '12px', marginBottom: '1.5rem', border: '1px solid #bae6fd' }}>
-                  <p style={{ margin: 0, fontSize: '12px', color: '#0369a1' }}>Total Amount: <b>{Number(editingOrder.total_amount).toFixed(3)} KWD</b></p>
-                  <p style={{ margin: 0, fontSize: '12px', color: '#0369a1' }}>Status: {editingOrder.dispatch_status}</p>
+               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+                  <div style={{ background: '#f8fafc', padding: '1.25rem', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
+                    <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                       <label style={{ fontWeight: 700, fontSize: '11px', color: '#64748b' }}>DISTRIBUTION PARTNER</label>
+                       <SearchableSelect
+                         options={vendors
+                           .filter(v => v.type === 'client' || v.type === 'supplier')
+                           .map(v => ({ value: v.vendor_id, label: v.name_en }))}
+                         value={editingOrder.vendor_id}
+                         onChange={(val) => {
+                           const v = vendors.find(v => String(v.vendor_id) === String(val));
+                           setEditingOrder({...editingOrder, vendor_id: String(val), customer_name: v?.name_en || ''});
+                         }}
+                         placeholder="Choose Client..."
+                       />
+                    </div>
+
+                    <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                       <label style={{ fontWeight: 700, fontSize: '11px', color: '#64748b' }}>DELIVERY BRANCH NODE</label>
+                       <SearchableSelect
+                         options={[
+                           { value: 'main', label: 'Main Corporate Hub' },
+                           ...(vendors.find(v => String(v.vendor_id) === String(editingOrder.vendor_id))?.branches?.map((br: any) => ({
+                             value: br.branch_id,
+                             label: br.name_en
+                           })) || [])
+                         ]}
+                         value={editingOrder.branch_id}
+                         onChange={(val) => setEditingOrder({...editingOrder, branch_id: String(val)})}
+                         placeholder="Select Destination..."
+                       />
+                    </div>
+
+                    <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                       <label style={{ fontWeight: 700, fontSize: '11px', color: '#64748b' }}>PRODUCTION BATCH</label>
+                       <SearchableSelect
+                         options={productionLogs.map(p => ({
+                           value: p.batch_number,
+                           label: `${p.batch_number} (Exp: ${new Date(p.expiry_date).toLocaleDateString()})`
+                         }))}
+                         value={editingOrder.batch_number}
+                         onChange={(val) => {
+                           const b = productionLogs.find(p => p.batch_number === val);
+                           setEditingOrder({...editingOrder, batch_number: String(val), expiry_date: b?.expiry_date || ''});
+                         }}
+                         placeholder="Choose Batch..."
+                       />
+                    </div>
+
+                    <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                       <label style={{ fontWeight: 700, fontSize: '11px', color: '#64748b' }}>DISCOUNT PERCENTAGE (%)</label>
+                       <input 
+                         type="number" 
+                         style={{ padding: '0.8rem', borderRadius: '12px', border: '1px solid #e2e8f0', width: '100%', marginTop: '5px', fontWeight: 700 }}
+                         value={editingOrder.discount_percentage}
+                         onChange={(e) => setEditingOrder({...editingOrder, discount_percentage: Number(e.target.value)})}
+                       />
+                    </div>
+
+                    <h5 style={{ margin: '1rem 0 0.5rem 0' }}>Current Cart: {editingOrder.items.length} Products</h5>
+                    <div style={{ maxHeight: '150px', overflowY: 'auto', background: 'white', borderRadius: '10px', padding: '10px', border: '1px solid #eef2f6' }}>
+                       {editingOrder.items.map(item => (
+                         <div key={item.menu_item_id} style={{ fontSize: '12px', display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #f1f5f9' }}>
+                           <span><b>{item.name_en}</b> x {item.quantity}</span>
+                           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                             <button onClick={() => {
+                               const updated = editingOrder.items.map(i => i.menu_item_id === item.menu_item_id ? {...i, quantity: Math.max(1, i.quantity - 1)} : i);
+                               setEditingOrder({...editingOrder, items: updated});
+                             }} style={{ width: '24px', height: '24px', borderRadius: '6px', border: '1px solid #ddd', background: 'white', cursor: 'pointer' }}>-</button>
+                             <button onClick={() => {
+                               const updated = editingOrder.items.map(i => i.menu_item_id === item.menu_item_id ? {...i, quantity: i.quantity + 1} : i);
+                               setEditingOrder({...editingOrder, items: updated});
+                             }} style={{ width: '24px', height: '24px', borderRadius: '6px', border: '1px solid #ddd', background: 'white', cursor: 'pointer' }}>+</button>
+                             <button onClick={() => setEditingOrder({...editingOrder, items: editingOrder.items.filter(i => i.menu_item_id !== item.menu_item_id)})} style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '10px', cursor: 'pointer', fontWeight: 800, marginLeft: '5px' }}>REMOVE</button>
+                           </div>
+                         </div>
+                       ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <h5 style={{ fontSize: '13px', color: '#64748b', marginBottom: '1rem' }}>Add More Products</h5>
+                    <div style={{ maxHeight: '420px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {menuItems.map(item => (
+                        <div key={item.menu_item_id} onClick={() => addItemToEditOrder(item)} style={{ cursor: 'pointer', padding: '12px 15px', background: 'white', border: '1px solid #e2e8f0', borderRadius: '12px', fontSize: '13px', fontWeight: 600, transition: 'all 0.2s ease', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span>{item.name_en}</span>
+                          <span style={{ fontSize: '11px', color: 'var(--primary)' }}>{Number(item.price).toFixed(3)} KWD</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                </div>
                
-               <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-                  <label style={{ fontWeight: 700, fontSize: '11px', color: '#64748b' }}>CUSTOMER NAME / PARTNER</label>
-                  <select 
-                    style={{ padding: '0.8rem', borderRadius: '12px', border: '1px solid #e2e8f0', width: '100%', marginTop: '5px', fontWeight: 700 }}
-                    value={editingOrder.customer_name}
-                    onChange={(e) => setEditingOrder({...editingOrder, customer_name: e.target.value})}
-                  >
-                    <option value="Counter Customer">Counter Customer</option>
-                    {vendors.map(v => (
-                      <option key={v.vendor_id} value={v.name_en}>{v.name_en} ({v.type})</option>
-                    ))}
-                  </select>
-               </div>
-
-               <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-                  <label style={{ fontWeight: 700, fontSize: '11px', color: '#64748b' }}>DISCOUNT PERCENTAGE (%)</label>
-                  <input 
-                    type="number"
-                    style={{ padding: '0.8rem', borderRadius: '12px', border: '1px solid #e2e8f0', width: '100%', marginTop: '5px' }}
-                    value={editingOrder.discount_percentage}
-                    onChange={(e) => setEditingOrder({...editingOrder, discount_percentage: e.target.value})}
-                  />
-               </div>
-
-               <div style={{ marginTop: '2rem', display: 'flex', gap: '1rem' }}>
-                  <button onClick={() => setIsEditModalOpen(false)} style={{ flex: 1, padding: '0.8rem', border: '1px solid #e2e8f0', borderRadius: '12px', fontWeight: 600 }}>Cancel</button>
-                  <button onClick={handleUpdateOrder} style={{ flex: 2, padding: '0.8rem', background: '#0369a1', color: 'white', borderRadius: '12px', fontWeight: 700 }}>Save Changes</button>
+               <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
+                  <button onClick={() => setIsEditModalOpen(false)} style={{ flex: 1, padding: '1rem', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '14px', fontWeight: 700 }}>Cancel Changes</button>
+                  <button onClick={() => handleUpdateOrder()} style={{ flex: 2, padding: '1rem', background: 'var(--primary)', color: 'white', border: 'none', borderRadius: '14px', fontWeight: 800, boxShadow: '0 4px 15px rgba(1, 86, 44, 0.2)' }}>SAVE & SYNC ORDER</button>
                </div>
             </div>
           </div>
