@@ -92,7 +92,13 @@ const SearchableSelect = ({ options, value, onChange, placeholder = "Select...",
     })
   };
 
-  const selectedOption = options.find(opt => String(opt.value) === String(value)) || null;
+  // Support both flat and grouped options for finding the current value
+  const allOptions = options.reduce((acc: Option[], curr: any) => {
+    if (curr.options) return [...acc, ...curr.options];
+    return [...acc, curr];
+  }, []);
+
+  const selectedOption = allOptions.find(opt => String(opt.value) === String(value)) || null;
 
   return (
     <Select
