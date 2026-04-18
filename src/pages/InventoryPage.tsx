@@ -12,8 +12,11 @@ import {
   AlertTriangle, 
   TrendingUp,
   PackagePlus,
-  Edit
+  Edit,
+  Trash2
 } from 'lucide-react';
+import { toast } from 'react-toastify';
+import Swal from 'sweetalert2';
 import './InventoryPage.css';
 
 interface InventoryItem {
@@ -53,6 +56,31 @@ const InventoryPage = () => {
       setLoading(false);
     }
   }, [searchTerm]);
+
+  const handleDelete = async (id: number) => {
+    const { isConfirmed } = await Swal.fire({
+      title: 'Are you sure?',
+      text: "You won't be able to revert this data!",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#94a3b8',
+      confirmButtonText: 'Yes, delete it!'
+    });
+
+    if (isConfirmed) {
+      try {
+        const response = await api.delete(`/inventory/${id}`);
+        if (response.data.success) {
+          toast.success('Inventory item deleted successfully! 🗑️');
+          fetchInventory();
+        }
+      } catch (error) {
+        console.error('Delete error:', error);
+        toast.error('Failed to delete item. It might be linked to existing recipes.');
+      }
+    }
+  };
 
   useEffect(() => {
     const debounceFetch = setTimeout(() => {
@@ -163,7 +191,7 @@ const InventoryPage = () => {
                       <div className="row-actions">
                         <button className="btn-icon-sm" onClick={() => setAdjustItem(item)} title="Adjust Stock"><PackagePlus size={16} /></button>
                         <button className="btn-icon-sm" onClick={() => setEditItem(item)} title="Edit Item"><Edit size={16} /></button>
-                        <button className="btn-more"><MoreVertical size={18} /></button>
+                        <button className="btn-icon-sm" onClick={() => handleDelete(item.inventory_item_id)} title="Delete" style={{ color: '#ef4444' }}><Trash2 size={16} /></button>
                       </div>
                     </td>
                   </tr>
