@@ -110,6 +110,7 @@ const FactoryDispatchPage = () => {
     items: [] as any[],
     payment_method: "credit",
     discount_percentage: 0,
+    dispatch_date: new Date().toISOString().split("T")[0],
   });
 
   useEffect(() => {
@@ -272,6 +273,7 @@ const FactoryDispatchPage = () => {
         items: [],
         payment_method: "credit",
         discount_percentage: 0,
+        dispatch_date: new Date().toISOString().split("T")[0],
       });
       fetchBaseData();
     } catch (error: any) {
@@ -495,7 +497,7 @@ const FactoryDispatchPage = () => {
                               {d.dispatch_status === "in_transit" ? "dispatched" : d.dispatch_status}
                             </span>
                           </td>
-                          <td>{new Date(d.created_at).toLocaleDateString()}</td>
+                          <td>{d.dispatch_date}</td>
                           <td className="text-right">
                             <div
                               style={{
@@ -937,7 +939,7 @@ const FactoryDispatchPage = () => {
                 <div
                   style={{
                     display: "grid",
-                    gridTemplateColumns: "1fr 1fr 1fr 0.8fr",
+                    gridTemplateColumns: "1fr 1fr 1fr 0.6fr 0.8fr",
                     gap: "1rem",
                     marginBottom: "20px",
                   }}
@@ -1008,6 +1010,18 @@ const FactoryDispatchPage = () => {
                       placeholder="0"
                       value={dispatchForm.discount_percentage}
                       onChange={(e) => setDispatchForm({...dispatchForm, discount_percentage: Number(e.target.value)})}
+                      className="po-table-input"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>
+                      <ClipboardList size={14} /> Dispatch Date
+                    </label>
+                    <input 
+                      type="date"
+                      value={dispatchForm.dispatch_date}
+                      onChange={(e) => setDispatchForm({...dispatchForm, dispatch_date: e.target.value})}
+                      className="po-table-input"
                     />
                   </div>
                 </div>

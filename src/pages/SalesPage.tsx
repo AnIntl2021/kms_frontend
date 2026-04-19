@@ -39,6 +39,7 @@ interface SaleOrder {
   payment_status: 'paid' | 'pending' | 'failed';
   dispatch_status: 'pending' | 'dispatched' | 'delivered' | 'cancelled';
   items_count: number;
+  dispatch_date?: string;
 }
 
 const SalesPage = () => {
@@ -401,7 +402,7 @@ const SalesPage = () => {
                 <tr>
                   <th>Order Info</th>
                   <th>Customer</th>
-                  <th>Date & Time</th>
+                  <th>Dispatch Date</th>
                   <th>Total Amount</th>
                   <th>Payment</th>
                   <th>Dispatch Status</th>
@@ -446,7 +447,7 @@ const SalesPage = () => {
                       </div>
                     </td>
                     <td>
-                      <div style={{ fontSize: '13px', color: '#64748b' }}>{sale.order_date}</div>
+                      <div style={{ fontSize: '13px', color: '#64748b' }}>{sale.dispatch_date || sale.order_date}</div>
                     </td>
                     <td><strong>{Number(sale.total_amount).toFixed(3)} د.ك</strong></td>
                     <td><span className={getStatusBadge(sale.payment_status)}>{sale.payment_status}</span></td>

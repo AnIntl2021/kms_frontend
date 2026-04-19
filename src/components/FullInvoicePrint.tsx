@@ -80,7 +80,7 @@ const FullInvoicePrint = React.forwardRef<HTMLDivElement, InvoiceProps>(({ order
                 </tr>
                 <tr>
                   <td style={{ border: '1px solid #000', padding: '6px', fontSize: '12px', fontWeight: 700, backgroundColor: '#f9fafb' }}>Date</td>
-                  <td style={{ border: '1px solid #000', padding: '6px', fontSize: '12px' }}>{order?.order_date || today}</td>
+                  <td style={{ border: '1px solid #000', padding: '6px', fontSize: '12px' }}>{(order?.dispatch_date || today).split(' ')[0]}</td>
                 </tr>
                 <tr>
                   <td style={{ border: '1px solid #000', padding: '6px', fontSize: '12px', fontWeight: 700, backgroundColor: '#f9fafb' }}>Sales Man</td>
