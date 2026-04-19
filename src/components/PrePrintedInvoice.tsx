@@ -154,7 +154,7 @@ const PrePrintedInvoice = React.forwardRef<HTMLDivElement, InvoiceProps>(({ orde
       */}
       {[
         { label: 'Total Amount', value: subTotal.toFixed(3) },
-        { label: 'Discount', value: discount.toFixed(3) },
+        { label: 'Discount', value: `${Number(order?.discount_percentage) > 0 ? `(${Number(order.discount_percentage).toFixed(2)}%) ` : ''}${discount.toFixed(3)}` },
         { label: 'Net Amount', value: netAmount.toFixed(3) },
       ].map(({ label, value }, i) => (
         <div
@@ -170,11 +170,12 @@ const PrePrintedInvoice = React.forwardRef<HTMLDivElement, InvoiceProps>(({ orde
         >
           {/* value sits inside the rightmost 2.6 cm column, shifted 0.5cm left */}
           <div style={{
-            width: `${2.6 * CM}px`,
+            width: `${4.0 * CM}px`,
             textAlign: 'right',
             fontWeight: i === 2 ? 900 : 800,
             fontSize: i === 2 ? '14px' : '13px',
-            paddingRight: `${0.35 * CM}px`, // Shifted 0.2cm right from 0.55cm
+            paddingRight: `${0.35 * CM}px`, 
+            whiteSpace: 'nowrap'
           }}>
             {value}
           </div>

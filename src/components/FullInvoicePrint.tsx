@@ -162,7 +162,10 @@ const FullInvoicePrint = React.forwardRef<HTMLDivElement, InvoiceProps>(({ order
                 <td style={{ border: '1px solid #000', padding: '10px 8px', textAlign: 'right', fontWeight: 900, fontSize: '16px', width: '150px' }}>{subTotal.toFixed(3)}</td>
               </tr>
               <tr>
-                <td style={{ border: '1px solid #000', padding: '10px 15px', fontWeight: 700, fontSize: '13px', textAlign: 'left' }}>Discount <span style={{ float: 'right' }}>الخصم</span></td>
+                <td style={{ border: '1px solid #000', padding: '10px 15px', fontWeight: 700, fontSize: '13px', textAlign: 'left' }}>
+                  Discount {Number(order?.discount_percentage) > 0 && `(${Number(order.discount_percentage)}%)`} 
+                  <span style={{ float: 'right' }}>الخصم</span>
+                </td>
                 <td style={{ border: '1px solid #000', padding: '10px 8px', textAlign: 'right', fontWeight: 900, fontSize: '16px' }}>{discount.toFixed(3)}</td>
               </tr>
               <tr>

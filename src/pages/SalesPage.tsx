@@ -40,6 +40,9 @@ interface SaleOrder {
   dispatch_status: 'pending' | 'dispatched' | 'delivered' | 'cancelled';
   items_count: number;
   dispatch_date?: string;
+  discount_amount?: number;
+  discount_percentage?: number;
+  final_amount?: number;
 }
 
 const SalesPage = () => {
@@ -167,6 +170,7 @@ const SalesPage = () => {
         total_amount: Number(order.total_amount),
         batch_number: order.batch_number,
         expiry_date: order.expiry_date,
+        dispatch_status: order.dispatch_status,
         items: items
       });
       setIsEditModalOpen(true);
@@ -403,6 +407,8 @@ const SalesPage = () => {
                   <th>Order Info</th>
                   <th>Customer</th>
                   <th>Dispatch Date</th>
+                  <th>Amount</th>
+                  <th>Discount (%)</th>
                   <th>Total Amount</th>
                   <th>Payment</th>
                   <th>Dispatch Status</th>
@@ -447,9 +453,19 @@ const SalesPage = () => {
                       </div>
                     </td>
                     <td>
-                      <div style={{ fontSize: '13px', color: '#64748b' }}>{sale.dispatch_date || sale.order_date}</div>
+                      <div style={{ fontSize: '13px', color: '#1e293b', fontWeight: 700 }}>{sale.dispatch_date || sale.order_date}</div>
                     </td>
-                    <td><strong>{Number(sale.total_amount).toFixed(3)} د.ك</strong></td>
+                    <td>
+                       <span style={{ fontSize: '14px', color: '#1e293b', fontWeight: 800 }}>
+                          {Number(sale.total_amount).toFixed(3)} د.ك
+                       </span>
+                    </td>
+                    <td>
+                       <span style={{ fontSize: '13px', color: '#ef4444', fontWeight: 600 }}>
+                          {Number(sale.discount_percentage || 0) > 0 ? `${Number(sale.discount_percentage).toFixed(2)}%` : '-'}
+                       </span>
+                    </td>
+                    <td><strong style={{ fontSize: '15px', color: 'var(--primary)' }}>{Number(sale.final_amount || sale.total_amount).toFixed(3)} د.ك</strong></td>
                     <td><span className={getStatusBadge(sale.payment_status)}>{sale.payment_status}</span></td>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -546,9 +562,19 @@ const SalesPage = () => {
                        </div>
                     ))}
                  </div>
-                 <div style={{ marginTop: '2rem', borderTop: '2px dashed #e2e8f0', paddingTop: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h3 style={{ margin: 0 }}>Total Amount</h3>
-                    <h2 style={{ margin: 0, color: 'var(--primary)', fontWeight: 900 }}>{Number(detailOrder.total_amount).toFixed(3)} د.ك</h2>
+                 <div style={{ marginTop: '2rem', borderTop: '2px dashed #e2e8f0', paddingTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                       <span style={{ fontSize: '14px', color: '#64748b' }}>Subtotal</span>
+                       <span style={{ fontWeight: 700 }}>{Number(detailOrder.items?.reduce((s: any, i: any) => s + (i.price * i.quantity), 0) || 0).toFixed(3)} د.ك</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#ef4444' }}>
+                       <span style={{ fontSize: '14px' }}>Discount {Number(detailOrder.discount_percentage) > 0 && `(${detailOrder.discount_percentage}%)`}</span>
+                       <span style={{ fontWeight: 700 }}>-{Number(detailOrder.discount_amount || 0).toFixed(3)} د.ك</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid #f1f5f9' }}>
+                       <h3 style={{ margin: 0 }}>Net Total</h3>
+                       <h2 style={{ margin: 0, color: 'var(--primary)', fontWeight: 900 }}>{Number(detailOrder.total_amount).toFixed(3)} د.ك</h2>
+                    </div>
                  </div>
               </div>
             </div>
