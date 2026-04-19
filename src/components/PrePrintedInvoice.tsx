@@ -175,9 +175,20 @@ const PrePrintedInvoice = React.forwardRef<HTMLDivElement, InvoiceProps>(({ orde
             fontWeight: i === 2 ? 900 : 800,
             fontSize: i === 2 ? '14px' : '13px',
             paddingRight: `${0.35 * CM}px`, 
-            whiteSpace: 'nowrap'
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'flex-end',
+            lineHeight: i === 1 ? '1.1' : '1.5'
           }}>
-            {value}
+            {i === 1 && Number(order?.discount_percentage) > 0 ? (
+              <>
+                <span style={{ fontSize: '10px', fontWeight: 700 }}>({Number(order.discount_percentage).toFixed(2)}%)</span>
+                <span>{discount.toFixed(3)}</span>
+              </>
+            ) : (
+              value
+            )}
           </div>
         </div>
       ))}
