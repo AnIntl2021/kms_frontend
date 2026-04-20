@@ -995,7 +995,11 @@ const FactoryDispatchPage = () => {
                     </label>
                     <SearchableSelect
                       options={productionLogs
-                        .filter(p => !dispatchForm.branch_id || String(p.branch_id) === String(dispatchForm.branch_id))
+                        .filter(p => {
+                          const fBranch = dispatchForm.branch_id === 'main' ? null : dispatchForm.branch_id;
+                          const pBranch = p.branch_id === 'main' ? null : p.branch_id;
+                          return !dispatchForm.branch_id || String(pBranch) === String(fBranch);
+                        })
                         .map((p) => ({
                           value: p.batch_number,
                           label: `${p.batch_number} (Exp: ${new Date(p.expiry_date).toLocaleDateString()})`
