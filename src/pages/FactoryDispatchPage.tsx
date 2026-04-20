@@ -625,11 +625,11 @@ const FactoryDispatchPage = () => {
                             ) : (
                               <div style={{ fontSize: '12px', color: '#94a3b8 italic' }}>Global/Main</div>
                             )}
-                            <div style={{ fontSize: '11px' }}>{new Date(p.production_date).toLocaleDateString()}</div>
+                            <div style={{ fontSize: '11px' }}>{p.production_date}</div>
                           </td>
                           <td>
                             <span style={{ color: "#be123c", fontWeight: 600 }}>
-                              {new Date(p.expiry_date).toLocaleDateString()}
+                              {p.expiry_date}
                             </span>
                           </td>
                           <td>{p.total_items} types</td>
