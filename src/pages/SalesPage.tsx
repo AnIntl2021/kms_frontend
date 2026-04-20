@@ -22,7 +22,8 @@ import {
   Receipt,
   Edit,
   Settings,
-  Zap
+  Zap,
+  Trash2
 } from 'lucide-react';
 import { useReactToPrint } from 'react-to-print';
 import FullInvoicePrint from '../components/FullInvoicePrint';
@@ -231,6 +232,17 @@ const SalesPage = () => {
     } catch (error: any) {
       console.error('❌ RETURN ERROR TRACE:', error);
       toast.error('Failed to process order return: ' + (error.response?.data?.message || error.message));
+    }
+  };
+
+  const handleDeleteOrder = async (saleId: number) => {
+    if (!window.confirm("Are you sure you want to delete this order?")) return;
+    try {
+      await api.delete(`/factory/sales/${saleId}`);
+      toast.success("Order deleted successfully! 🗑️");
+      fetchSales();
+    } catch (e) {
+      toast.error("Failed to delete order.");
     }
   };
 
@@ -524,6 +536,9 @@ const SalesPage = () => {
                                 <div style={{ height: '1px', background: '#f1f5f9' }} />
                                 <button className="dropdown-item" onClick={() => handleReturnOrder(sale.sale_id)} style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '10px 15px', border: 'none', background: 'none', textAlign: 'left', fontSize: '13px', cursor: 'pointer', color: '#ef4444' }}>
                                   <RotateCcw size={14} /> Return Order
+                                </button>
+                                <button className="dropdown-item" onClick={() => handleDeleteOrder(sale.sale_id)} style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '10px 15px', border: 'none', background: 'none', textAlign: 'left', fontSize: '13px', cursor: 'pointer', color: '#be123c', fontWeight: 600 }}>
+                                  <Trash2 size={14} /> Delete Order
                                 </button>
                               </div>
                             )}

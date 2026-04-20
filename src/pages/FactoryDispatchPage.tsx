@@ -197,6 +197,28 @@ const FactoryDispatchPage = () => {
     });
   };
 
+  const handleDeleteProduction = async (id: number) => {
+    if (!window.confirm("Are you sure you want to delete this production batch? This will NOT restore used stock automatically.")) return;
+    try {
+      await api.delete(`/factory/production/batch/${id}`);
+      toast.success("Production batch deleted! 🗑️");
+      fetchBaseData();
+    } catch (e) {
+      toast.error("Failed to delete production batch.");
+    }
+  };
+
+  const handleDeleteDispatch = async (id: number) => {
+    if (!window.confirm("Are you sure you want to delete this dispatch order?")) return;
+    try {
+      await api.delete(`/factory/sales/${id}`);
+      toast.success("Dispatch order deleted! 🗑️");
+      fetchBaseData();
+    } catch (e) {
+      toast.error("Failed to delete dispatch order.");
+    }
+  };
+
   const handleUpdateStatus = async (id: number, status: string) => {
     const toastId = toast.loading(`Updating status to ${status}...`);
     try {
@@ -455,6 +477,7 @@ const FactoryDispatchPage = () => {
                       <th>Exp Date</th>
                       <th>Line Count</th>
                       <th className="text-right">Batch Size</th>
+                      <th className="text-right">Action</th>
                     </tr>
                   )}
                 </thead>
@@ -526,6 +549,13 @@ const FactoryDispatchPage = () => {
                                   Deliver
                                 </button>
                               )}
+                               <button 
+                                 onClick={() => handleDeleteDispatch(d.sale_id)} 
+                                 className="btn-icon" 
+                                 style={{ background: '#fff1f2', color: '#be123c', border: 'none', padding: '6px', cursor: 'pointer' }}
+                               >
+                                 <Trash2 size={16} />
+                               </button>
                             </div>
                           </td>
                         </tr>
@@ -634,8 +664,17 @@ const FactoryDispatchPage = () => {
                           </td>
                           <td>{p.total_items} types</td>
                           <td className="text-right">
-                            <strong>{p.total_qty} units</strong>
-                          </td>
+                               <strong>{p.total_qty} units</strong>
+                           </td>
+                           <td className="text-right">
+                             <button 
+                               onClick={() => handleDeleteProduction(p.production_id)} 
+                               className="btn-icon"
+                               style={{ background: '#fff1f2', color: '#be123c', border: 'none', padding: '6px', borderRadius: '8px', cursor: 'pointer' }}
+                             >
+                               <Trash2 size={16} />
+                             </button>
+                           </td>
                         </tr>
                       ))
                   )}
