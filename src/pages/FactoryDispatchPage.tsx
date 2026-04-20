@@ -581,7 +581,11 @@ const FactoryDispatchPage = () => {
                     </tr>
                   ) : (
                     productionLogs
-                      .filter((p) => p.batch_number)
+                      .filter((p) => 
+                        p.batch_number && 
+                        (p.batch_number.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                         (p.product_summary && p.product_summary.toLowerCase().includes(searchTerm.toLowerCase())))
+                      )
                       .map((p) => (
                         <tr key={p.production_id}>
                           <td>
