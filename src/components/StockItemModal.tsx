@@ -254,41 +254,17 @@ const StockItemModal = ({ isOpen, item, onClose, onSuccess }: StockItemModalProp
               <table className="pkg-table">
                 <thead>
                   <tr>
-                    <th>Base Unit</th>
-                    <th>Rate</th>
-                    <th>Conv. Unit</th>
-                    <th>Details</th>
                     <th>Package Name</th>
+                    <th>Contains</th>
+                    <th>How many?</th>
+                    <th>Base Unit</th>
+                    <th>Description</th>
                     <th className="text-center">Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {packages.map((pkg, idx) => (
                     <tr key={idx} style={pkg.is_base ? { background: 'rgba(1, 86, 44, 0.05)' } : {}}>
-                      <td style={{ width: '15%' }}>
-                        <select disabled={true}>
-                          <option>{packages[0].name_en}</option>
-                        </select>
-                      </td>
-                      <td style={{ width: '15%' }}>
-                        <input 
-                          type="number" 
-                          step="0.001"
-                          disabled={pkg.is_base}
-                          value={pkg.multiplier} 
-                          onChange={(e) => updatePackage(idx, 'multiplier', Number(e.target.value))}
-                        />
-                      </td>
-                      <td style={{ width: '15%', color: '#64748b', fontWeight: 600 }}>
-                        {packages[0].name_en}
-                      </td>
-                      <td className="pkg-detail-text">
-                        {pkg.is_base ? (
-                          <span style={{ color: '#01562c', fontWeight: 800 }}>PRIMARY BASE UNIT</span>
-                        ) : (
-                          `1 ${packages[0].name_en} = ${pkg.multiplier} ${pkg.name_en || '...'}`
-                        )}
-                      </td>
                       <td>
                         {pkg.is_base ? (
                            <select 
@@ -308,13 +284,38 @@ const StockItemModal = ({ isOpen, item, onClose, onSuccess }: StockItemModalProp
                           />
                         )}
                       </td>
+                      <td style={{ textAlign: 'center', color: '#64748b', fontSize: '11px', fontWeight: 800 }}>
+                         CONTAINS
+                      </td>
+                      <td style={{ width: '15%' }}>
+                        <input 
+                          type="number" 
+                          step="0.001"
+                          disabled={pkg.is_base}
+                          style={{ fontWeight: 800, color: 'var(--primary)' }}
+                          value={pkg.multiplier} 
+                          onChange={(e) => updatePackage(idx, 'multiplier', Number(e.target.value))}
+                        />
+                      </td>
+                      <td style={{ width: '15%', color: '#64748b', fontWeight: 600 }}>
+                        {packages[0].name_en}
+                      </td>
+                      <td className="pkg-detail-text">
+                        {pkg.is_base ? (
+                          <span style={{ color: '#01562c', fontWeight: 800 }}>SMALLEST UNIT</span>
+                        ) : (
+                          <div style={{ fontSize: '11px' }}>
+                             <b>1 {pkg.name_en || '...'}</b> = {pkg.multiplier} {packages[0].name_en}
+                          </div>
+                        )}
+                      </td>
                       <td className="text-center">
                         {!pkg.is_base ? (
                           <button type="button" onClick={() => removePackage(idx)} className="btn-remove-pkg">
                             <Trash2 size={16} />
                           </button>
                         ) : (
-                          <span className="base-badge">SMALLEST UNIT</span>
+                          <span className="base-badge">BASE</span>
                         )}
                       </td>
                     </tr>
