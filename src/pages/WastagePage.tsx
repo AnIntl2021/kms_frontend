@@ -36,9 +36,12 @@ const WastagePage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [inventoryItems, setInventoryItems] = useState<any[]>([]);
+  const [menuItems, setMenuItems] = useState<any[]>([]);
+  const [itemType, setItemType] = useState<'inventory' | 'menu'>('inventory');
 
   const [formData, setFormData] = useState({
     inventory_item_id: '',
+    menu_item_id: '',
     quantity: '',
     reason: '',
     notes: ''
@@ -47,6 +50,7 @@ const WastagePage = () => {
   useEffect(() => {
     fetchWastage();
     fetchInventory();
+    fetchMenu();
   }, []);
 
   const fetchWastage = async () => {
@@ -64,6 +68,17 @@ const WastagePage = () => {
     }
   };
 
+  const fetchMenu = async () => {
+    try {
+      const response = await api.get('/menu');
+      if (response.data.success) {
+        setMenuItems(response.data.data.filter((m: any) => m.type === 'selling'));
+      }
+    } catch (e) {
+      console.error('Failed to fetch menu items for wastage reporting:', e);
+    }
+  };
+
   const fetchInventory = async () => {
     try {
       const response = await api.get('/inventory');
@@ -78,26 +93,38 @@ const WastagePage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await api.post('/wastage', formData);
+      await api.post('/wastage', {
+        ...formData,
+        inventory_item_id: itemType === 'inventory' ? formData.inventory_item_id : '',
+        menu_item_id: itemType === 'menu' ? formData.menu_item_id : '',
+        reason_en: formData.reason,
+      });
       setIsModalOpen(false);
       fetchWastage();
-      setFormData({ inventory_item_id: '', quantity: '', reason: '', notes: '' });
+      setFormData({ inventory_item_id: '', menu_item_id: '', quantity: '', reason: '', notes: '' });
       toast.success('Wastage Report Submitted! 📉');
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Report submission failed.');
     }
   };
 
-  const filteredRecords = records.filter(r => 
-    r.item_name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    r.sku.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredRecords = records.filter(r => {
+    const name = r.item_name || (r as any).item_name_en || (r as any).menu_name_en || (r as any).product_name_en || '';
+    const sku = r.sku || '';
+    return name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+           sku.toLowerCase().includes(searchTerm.toLowerCase());
+  });
+
+  const todayStr = new Date().toLocaleDateString();
 
   const stats = {
-    totalValue: records.reduce((acc, curr) => acc + curr.total_wasted_value, 0),
+    totalValue: records.reduce((acc, curr) => acc + Number(curr.total_wasted_value || 0), 0),
     count: records.length,
     highReason: 'Expired', // Just static analysis for now
-    todayValue: records.filter(r => r.date === '2026-03-26').reduce((acc, curr) => acc + curr.total_wasted_value, 0)
+    todayValue: records.filter(r => {
+      const recordDateStr = r.date || ((r as any).created_at ? new Date((r as any).created_at).toLocaleDateString() : new Date().toLocaleDateString());
+      return recordDateStr === todayStr;
+    }).reduce((acc, curr) => acc + Number(curr.total_wasted_value || 0), 0)
   };
 
   return (
@@ -183,25 +210,25 @@ const WastagePage = () => {
                   <tr key={record.wastage_id}>
                     <td>
                       <div className="item-info">
-                        <strong>{record.item_name}</strong>
-                        <span className="sku-badge" style={{ fontSize: '10px' }}>{record.sku}</span>
+                        <strong>{(record as any).item_name_en || (record as any).menu_name_en || (record as any).product_name_en || record.item_name}</strong>
+                        <span className="sku-badge" style={{ fontSize: '10px' }}>{record.sku || 'N/A'}</span>
                       </div>
                     </td>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <div style={{ width: 8, height: 8, borderRadius: '50%', background: record.reason === 'Expired' ? '#dc2626' : '#f59e0b' }}></div>
-                        <span style={{ fontWeight: 600, color: '#475569' }}>{record.reason}</span>
+                        <div style={{ width: 8, height: 8, borderRadius: '50%', background: (record as any).reason_en === 'Expired' ? '#dc2626' : '#f59e0b' }}></div>
+                        <span style={{ fontWeight: 600, color: '#475569' }}>{(record as any).reason_en || record.reason}</span>
                       </div>
                     </td>
                     <td>
-                      <strong>{record.quantity} {record.unit}</strong>
+                      <strong>{record.quantity} {record.unit || 'units'}</strong>
                     </td>
                     <td>
-                      <strong style={{ color: '#dc2626' }}>{record.total_wasted_value.toFixed(3)} KWD</strong>
+                      <strong style={{ color: '#dc2626' }}>{Number(record.total_wasted_value || 0).toFixed(3)} KWD</strong>
                     </td>
-                    <td>{record.date}</td>
+                    <td>{record.date || ((record as any).created_at ? new Date((record as any).created_at).toLocaleDateString() : new Date().toLocaleDateString())}</td>
                     <td>
-                      <span style={{ fontSize: '13px', color: '#64748b' }}>{record.reporter}</span>
+                      <span style={{ fontSize: '13px', color: '#64748b' }}>{(record as any).admin_name || record.reporter || 'Admin'}</span>
                     </td>
                     <td className="text-right">
                        <button className="btn-icon-sm" title="View Audit Trail"><FileText size={16} /></button>
@@ -235,20 +262,46 @@ const WastagePage = () => {
             
             <form onSubmit={handleSubmit} className="modal-body" style={{ padding: '2rem' }}>
                <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                 <div style={{ display: 'flex', gap: '20px', marginBottom: '10px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
+                      <input type="radio" checked={itemType === 'inventory'} onChange={() => setItemType('inventory')} />
+                      Raw Material (Inventory)
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
+                      <input type="radio" checked={itemType === 'menu'} onChange={() => setItemType('menu')} />
+                      Finished Product (Menu Item)
+                    </label>
+                 </div>
                  <label style={{ fontWeight: 700, fontSize: '12px', color: '#64748b', textTransform: 'uppercase' }}>SELECT DAMAGED ITEM *</label>
-                 <select 
-                    style={{ background: '#f8fafc', padding: '1rem', border: '1px solid #e2e8f0', borderRadius: '14px', width: '100%', fontSize: '15px' }}
-                    required 
-                    value={formData.inventory_item_id} 
-                    onChange={(e) => setFormData({...formData, inventory_item_id: e.target.value})}
-                  >
-                    <option value="">-- Choose Stock Item --</option>
-                    {inventoryItems.map(item => (
-                      <option key={item.inventory_item_id} value={item.inventory_item_id}>
-                        {item.name_en} ({item.sku}) - {item.current_stock} {item.unit_en} available
-                      </option>
-                    ))}
-                 </select>
+                 {itemType === 'inventory' ? (
+                   <select 
+                      style={{ background: '#f8fafc', padding: '1rem', border: '1px solid #e2e8f0', borderRadius: '14px', width: '100%', fontSize: '15px' }}
+                      required 
+                      value={formData.inventory_item_id} 
+                      onChange={(e) => setFormData({...formData, inventory_item_id: e.target.value})}
+                    >
+                      <option value="">-- Choose Stock Item --</option>
+                      {inventoryItems.map(item => (
+                        <option key={item.inventory_item_id} value={item.inventory_item_id}>
+                          {item.name_en} ({item.sku}) - {item.current_stock} {item.unit_en} available
+                        </option>
+                      ))}
+                   </select>
+                 ) : (
+                   <select 
+                      style={{ background: '#f8fafc', padding: '1rem', border: '1px solid #e2e8f0', borderRadius: '14px', width: '100%', fontSize: '15px' }}
+                      required 
+                      value={formData.menu_item_id} 
+                      onChange={(e) => setFormData({...formData, menu_item_id: e.target.value})}
+                    >
+                      <option value="">-- Choose Menu Item --</option>
+                      {menuItems.map(item => (
+                        <option key={item.menu_item_id} value={item.menu_item_id}>
+                          {item.name_en} - {item.current_stock} units available
+                        </option>
+                      ))}
+                   </select>
+                 )}
                </div>
 
                <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>

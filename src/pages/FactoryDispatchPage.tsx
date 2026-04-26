@@ -1,6 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Layout from "../components/Layout";
 import api from "../api/axios";
+import { useReactToPrint } from "react-to-print";
+import FullInvoicePrint from "../components/FullInvoicePrint";
 import {
   Truck,
   Zap,
@@ -13,6 +15,7 @@ import {
   ClipboardList,
   RotateCcw,
   Trash2,
+  Printer,
 } from "lucide-react";
 import "./InventoryPage.css";
 import { toast } from "react-toastify";
@@ -50,8 +53,6 @@ const FactoryDispatchPage = () => {
     production_date: new Date().toISOString().split("T")[0],
     expiry_date: "",
     items: [] as any[],
-    branch_id: "",
-    vendor_id: "",
   });
 
   const [returnForm, setReturnForm] = useState({
@@ -61,6 +62,41 @@ const FactoryDispatchPage = () => {
     reason: "Expired / Unsold",
     items: [] as any[],
   });
+
+  const [printReturnData, setPrintReturnData] = useState<{order: any, items: any[]} | null>(null);
+  const printRef = useRef<HTMLDivElement>(null);
+  const handlePrintAction = useReactToPrint({
+    contentRef: printRef,
+    documentTitle: "Return_Receipt",
+    onAfterPrint: () => setPrintReturnData(null)
+  });
+
+  const printReturn = async (returnRecord: any) => {
+    const toastId = toast.loading('Preparing document for print...');
+    try {
+      const res = await api.get(`/factory/returns/${returnRecord.return_id}/items`);
+      if (res.data.success) {
+        setPrintReturnData({
+          order: {
+             sale_id: returnRecord.return_id,
+             customer_name: returnRecord.client_name,
+             dispatch_date: new Date(returnRecord.created_at).toLocaleDateString('en-GB'),
+             final_amount: returnRecord.total_credit_amount,
+             discount_amount: 0
+          },
+          items: res.data.data
+        });
+        toast.dismiss(toastId);
+        setTimeout(() => {
+          handlePrintAction();
+        }, 300);
+      } else {
+        toast.update(toastId, { render: 'Failed to fetch print data', type: 'error', isLoading: false, autoClose: 3000 });
+      }
+    } catch (error) {
+      toast.update(toastId, { render: 'API Error: Failed to load return items', type: 'error', isLoading: false, autoClose: 3000 });
+    }
+  };
 
   const selectedVendor = vendors.find(v => String(v.vendor_id) === String(returnForm.vendor_id));
   
@@ -469,6 +505,7 @@ const FactoryDispatchPage = () => {
                       <th>Reason</th>
                       <th>Return Date</th>
                       <th className="text-right">Wastage Value (Loss)</th>
+                      <th className="text-center">Actions</th>
                     </tr>
                   ) : (
                     <tr>
@@ -599,6 +636,11 @@ const FactoryDispatchPage = () => {
                             <strong style={{ color: '#be123c' }}>
                               {Number(r.total_credit_amount).toFixed(3)} KWD
                             </strong>
+                          </td>
+                          <td className="text-center">
+                             <button onClick={() => printReturn(r)} className="btn-icon" style={{ padding: '6px', cursor: 'pointer', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
+                                <Printer size={16} />
+                             </button>
                           </td>
                         </tr>
                       ))
@@ -777,48 +819,11 @@ const FactoryDispatchPage = () => {
                 <div
                   style={{
                     display: "grid",
-                    gridTemplateColumns: "1fr 1fr 1fr 1fr",
+                    gridTemplateColumns: "1fr 1fr",
                     gap: "20px",
                     marginBottom: "20px",
                   }}
                 >
-                  <div className="form-group">
-                    <label>Client / Partner</label>
-                    <SearchableSelect
-                      options={vendors
-                        .filter((v) => v.type === "client" || v.type === "supplier")
-                        .map((v) => ({ value: v.vendor_id, label: v.name_en }))}
-                      value={produceForm.vendor_id}
-                      onChange={(val) =>
-                        setProduceForm({
-                          ...produceForm,
-                          vendor_id: String(val),
-                          branch_id: "",
-                        })
-                      }
-                      placeholder="Choose Client..."
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Target Branch</label>
-                    <SearchableSelect
-                      options={[
-                        { value: 'main', label: 'Main Office' },
-                        ...((vendors.find((v) => String(v.vendor_id) === String(produceForm.vendor_id)) as any)?.branches?.map((br: any) => ({
-                          value: br.branch_id,
-                          label: br.name_en
-                        })) || [])
-                      ]}
-                      value={produceForm.branch_id}
-                      onChange={(val) =>
-                        setProduceForm({
-                          ...produceForm,
-                          branch_id: String(val),
-                        })
-                      }
-                      placeholder="Select Branch..."
-                    />
-                  </div>
                   <div className="form-group">
                     <label>Mfd Date</label>
                     <input
@@ -1318,6 +1323,17 @@ const FactoryDispatchPage = () => {
           </div>
         </div>
       )}
+
+      {/* Hidden Print Container */}
+      <div style={{ display: 'none' }}>
+          <FullInvoicePrint 
+            ref={printRef} 
+            order={printReturnData?.order || {}} 
+            items={printReturnData?.items || []} 
+            isReturn={true}
+          />
+      </div>
+
     </Layout>
   );
 };

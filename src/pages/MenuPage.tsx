@@ -80,6 +80,7 @@ const MenuPage = () => {
 
   // AUTO COST CALCULATION
   useEffect(() => {
+    if (!formData.ingredients || formData.ingredients.length === 0) return;
     let totalCost = 0;
     formData.ingredients?.forEach(ing => {
       const isPremix = String(ing.inventory_item_id).startsWith('pre-');
@@ -530,7 +531,7 @@ const MenuPage = () => {
                         <div className="form-group">
                            <label style={{ fontWeight: 800, fontSize: '11px', color: '#f59e0b' }}>{isPremix ? 'TOTAL PRODUCTION COST' : 'COST PRICE (RECIPE)'}</label>
                            <div style={{ position: 'relative' }}>
-                             <input type="number" step="0.001" style={{ padding: '0.8rem 0.8rem 0.8rem 2rem', width: '100%', borderRadius: '12px', border: '2px solid #fef3c7', background: '#fffbeb', fontWeight: 'bold', color: '#b45309' }} value={formData.cost_price} readOnly />
+                             <input type="number" step="0.001" style={{ padding: '0.8rem 0.8rem 0.8rem 2rem', width: '100%', borderRadius: '12px', border: '2px solid #fef3c7', background: '#fffbeb', fontWeight: 'bold', color: '#b45309' }} value={formData.cost_price} onChange={(e) => setFormData({...formData, cost_price: Number(e.target.value)})} />
                              <TrendingUp size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#f59e0b' }} />
                            </div>
                         </div>

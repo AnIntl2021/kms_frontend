@@ -4,9 +4,10 @@ import logo from '../assets/logo.jpeg';
 interface InvoiceProps {
   order: any;
   items: any[];
+  isReturn?: boolean;
 }
 
-const FullInvoicePrint = React.forwardRef<HTMLDivElement, InvoiceProps>(({ order, items }, ref) => {
+const FullInvoicePrint = React.forwardRef<HTMLDivElement, InvoiceProps>(({ order, items, isReturn }, ref) => {
   const today = new Date().toLocaleDateString('en-GB');
 
   // ELITE CALCULATION ORACLE
@@ -61,8 +62,12 @@ const FullInvoicePrint = React.forwardRef<HTMLDivElement, InvoiceProps>(({ order
 
         {/* Invoice Title */}
         <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-          <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 900, direction: 'rtl' }}>فاتورة مبيعات</h3>
-          <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 700, borderBottom: '2px solid #000', display: 'inline-block', paddingBottom: '3px' }}>Sales Invoice</h4>
+          <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 900, direction: 'rtl' }}>
+            {isReturn ? 'فاتورة مرتجع' : 'فاتورة مبيعات'}
+          </h3>
+          <h4 style={{ margin: 0, fontSize: '14px', fontWeight: 700, borderBottom: '2px solid #000', display: 'inline-block', paddingBottom: '3px' }}>
+            {isReturn ? 'Return Invoice' : 'Sales Invoice'}
+          </h4>
         </div>
 
         {/* Metadata Grid */}
