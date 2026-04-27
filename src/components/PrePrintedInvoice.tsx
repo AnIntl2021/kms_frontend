@@ -135,7 +135,18 @@ const PrePrintedInvoice = React.forwardRef<HTMLDivElement, InvoiceProps>(({ orde
             {(items || []).map((item, idx) => (
               <tr key={idx} style={{ height: `${0.5 * CM}px`, verticalAlign: 'middle' }}>
                 <td style={{ textAlign: 'center', fontSize: '13px', padding: 0, lineHeight: 1 }}>{String(idx + 1).padStart(3, '0')}</td>
-                <td style={{ textAlign: 'left', fontWeight: 700, fontSize: '13px', padding: 0, paddingLeft: `${0.8 * CM}px`, lineHeight: 1, whiteSpace: 'nowrap', overflow: 'hidden' }}>{item.name_en} {item.name_ar ? `/ ${item.name_ar}` : ''}</td>
+                <td style={{ 
+                  textAlign: 'left', 
+                  fontWeight: 700, 
+                  fontSize: '10.5px', 
+                  padding: '2px 0', 
+                  paddingLeft: `${0.8 * CM}px`, 
+                  lineHeight: 1, 
+                  wordBreak: 'break-word',
+                  overflow: 'hidden'
+                }}>
+                  {item.name_en} {item.name_ar ? `/ ${item.name_ar}` : ''}
+                </td>
                 <td style={{ textAlign: 'center', fontSize: '12px', padding: 0, paddingLeft: `${0.5 * CM}px`, lineHeight: 1 }}>PCS</td>
                 <td style={{ textAlign: 'center', fontSize: '12px', padding: 0, paddingLeft: `${0.5 * CM}px`, lineHeight: 1 }}>1</td>
                 <td style={{ textAlign: 'center', fontSize: '12px', padding: 0, paddingLeft: `${0.5 * CM}px`, lineHeight: 1 }}>{Number(item.quantity).toFixed(0)}</td>
