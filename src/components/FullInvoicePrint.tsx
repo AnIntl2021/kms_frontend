@@ -146,7 +146,7 @@ const FullInvoicePrint = React.forwardRef<HTMLDivElement, InvoiceProps>(({ order
               {(items || []).map((item, idx) => (
                 <tr key={idx} style={{ height: '35px' }}>
                   <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center', fontSize: '13px' }}>{String(item.item_code || idx + 1).padStart(3, '0')}</td>
-                  <td style={{ border: '1px solid #000', padding: '6px', fontWeight: 700, fontSize: '13px' }}>{item.name_en}</td>
+                  <td style={{ border: '1px solid #000', padding: '6px', fontWeight: 700, fontSize: '13px' }}>{item.name_en} {item.name_ar ? `/ ${item.name_ar}` : ''}</td>
                   <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center', fontSize: '13px' }}>PCS</td>
                   <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center', fontSize: '13px' }}>1</td>
                   <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center', fontSize: '13px' }}>{Number(item.quantity).toFixed(0)}</td>
