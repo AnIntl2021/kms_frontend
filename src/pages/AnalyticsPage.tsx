@@ -130,12 +130,16 @@ const AnalyticsPage = () => {
                          <span className="lab">Total Settled Revenue</span>
                       </div>
                       <div className="sub-stat loss">
-                         <span className="val">{parseFloat(health?.total_loss_kwd || '0').toFixed(3)} د.ك</span>
-                         <span className="lab">Loss to Wastage / Expiry</span>
+                         <span className="val">{parseFloat(health?.total_returns_7d || '0').toFixed(3)} د.ك</span>
+                         <span className="lab">Total Returns (Loss)</span>
                       </div>
-                      <div className="sub-stat units">
-                         <span className="val">{health?.total_wasted || 0}</span>
-                         <span className="lab">Units Expired</span>
+                      <div className="sub-stat profit">
+                         <span className="val" style={{ color: '#0ea5e9' }}>{parseFloat(health?.total_profit_7d || '0').toFixed(3)} د.ك</span>
+                         <span className="lab">Net Profit (After Costs)</span>
+                      </div>
+                      <div className="sub-stat units" style={{ marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid #f1f5f9' }}>
+                         <span className="val" style={{ fontSize: '1rem' }}>{health?.total_wasted || 0} Units / {parseFloat(health?.total_loss_kwd || '0').toFixed(3)} د.ك</span>
+                         <span className="lab">Expired Wastage Potential</span>
                       </div>
                    </div>
                </div>

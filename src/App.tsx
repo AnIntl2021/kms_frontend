@@ -15,6 +15,8 @@ import AdministrationPage from './pages/AdministrationPage';
 import FactoryDispatchPage from './pages/FactoryDispatchPage';
 import SettingsPage from './pages/SettingsPage';
 import AnalyticsPage from './pages/AnalyticsPage';
+import ReportsPage from './pages/ReportsPage';
+import SalesmenPage from './pages/SalesmenPage';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -59,6 +61,8 @@ function App() {
         <Route path="/administration" element={<ProtectedRoute><AdministrationPage /></ProtectedRoute>} />
         <Route path="/factory-dispatch" element={<ProtectedRoute><FactoryDispatchPage /></ProtectedRoute>} />
         <Route path="/analytics" element={<ProtectedRoute><AnalyticsPage /></ProtectedRoute>} />
+        <Route path="/reports" element={<ProtectedRoute><ReportsPage /></ProtectedRoute>} />
+        <Route path="/salesmen" element={<ProtectedRoute><SalesmenPage /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
 
         <Route path="/" element={<Navigate to="/dashboard" />} />

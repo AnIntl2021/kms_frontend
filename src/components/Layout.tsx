@@ -19,7 +19,9 @@ import {
   Store,
   ShoppingCart,
   Zap,
-  BarChart2
+  BarChart2,
+  FileText,
+  Users
 } from 'lucide-react';
 import './Layout.css';
 import logo from '../assets/logo.jpeg';
@@ -90,7 +92,9 @@ const Layout: React.FC<LayoutProps> = ({ children, title }) => {
     { name: 'Production & Distribution', path: '/factory-dispatch', icon: <Zap size={20} />, section: 'Operations' },
     { name: 'Direct Sales (POS)', path: '/sales', icon: <Truck size={20} />, section: 'Operations' },
     { name: 'Analytics & Forecasts', path: '/analytics', icon: <BarChart2 size={20} />, section: 'Operations' },
+    { name: 'Reports & BI', path: '/reports', icon: <FileText size={20} />, section: 'Operations' },
     { name: 'Accounts', path: '/accounts', icon: <Wallet size={20} />, section: 'Operations' },
+    { name: 'Sales Team', path: '/salesmen', icon: <Users size={20} />, section: 'Operations' },
     { name: 'Administration', path: '/administration', icon: <ShieldCheck size={20} />, section: 'Admin' },
     { name: 'Settings', path: '/settings', icon: <Settings size={20} />, section: 'Admin' },
   ];

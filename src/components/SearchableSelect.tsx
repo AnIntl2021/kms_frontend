@@ -6,14 +6,16 @@ interface Option {
 }
 
 interface SearchableSelectProps {
-  options: Option[];
-  value: string | number;
-  onChange: (value: string | number) => void;
+  options: any[];
+  value: any;
+  onChange: (value: any) => void;
   placeholder?: string;
   isClearable?: boolean;
+  isMulti?: boolean;
+  closeMenuOnSelect?: boolean;
 }
 
-const SearchableSelect = ({ options, value, onChange, placeholder = "Select...", isClearable = false }: SearchableSelectProps) => {
+const SearchableSelect = ({ options, value, onChange, placeholder = "Select...", isClearable = false, isMulti = false, closeMenuOnSelect = true }: SearchableSelectProps) => {
   const customStyles = {
     control: (base: any, state: any) => ({
       ...base,
@@ -31,6 +33,28 @@ const SearchableSelect = ({ options, value, onChange, placeholder = "Select...",
     valueContainer: (base: any) => ({
       ...base,
       padding: '2px 16px',
+    }),
+    multiValue: (base: any) => ({
+      ...base,
+      backgroundColor: 'rgba(1, 86, 44, 0.1)',
+      color: 'var(--primary)',
+      borderRadius: '8px',
+      padding: '2px 6px',
+      fontWeight: '700'
+    }),
+    multiValueLabel: (base: any) => ({
+      ...base,
+      color: 'var(--primary)',
+      fontSize: '0.85rem'
+    }),
+    multiValueRemove: (base: any) => ({
+      ...base,
+      color: 'var(--primary)',
+      ':hover': {
+        backgroundColor: 'var(--primary)',
+        color: 'white',
+        borderRadius: '8px'
+      }
     }),
     input: (base: any) => ({
       ...base,
@@ -98,13 +122,28 @@ const SearchableSelect = ({ options, value, onChange, placeholder = "Select...",
     return [...acc, curr];
   }, []);
 
-  const selectedOption = allOptions.find(opt => String(opt.value) === String(value)) || null;
+  const getSelectedValue = () => {
+    if (isMulti) {
+      if (!Array.isArray(value)) return [];
+      const stringValues = value.map(v => String(v));
+      return allOptions.filter(opt => stringValues.includes(String(opt.value)));
+    }
+    return allOptions.find(opt => String(opt.value) === String(value)) || null;
+  };
 
   return (
     <Select
       options={options}
-      value={selectedOption}
-      onChange={(val: any) => onChange(val ? val.value : '')}
+      value={getSelectedValue()}
+      isMulti={isMulti}
+      closeMenuOnSelect={closeMenuOnSelect}
+      onChange={(val: any) => {
+        if (isMulti) {
+          onChange(val ? val.map((v: any) => v.value) : []);
+        } else {
+          onChange(val ? val.value : '');
+        }
+      }}
       placeholder={placeholder}
       isClearable={isClearable}
       styles={customStyles}

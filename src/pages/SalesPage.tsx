@@ -61,9 +61,11 @@ const SalesPage = () => {
     branch_id: '',
     batch_number: '',
     expiry_date: '',
-    payment_status: 'paid',
-    dispatch_status: 'pending'
+    payment_status: 'credit',
+    dispatch_status: 'pending',
+    salesman_id: ''
   });
+  const [salesmen, setSalesmen] = useState<any[]>([]);
   const [productionLogs, setProductionLogs] = useState<any[]>([]);
   const [menuItems, setMenuItems] = useState<any[]>([]);
   const [selectedItems, setSelectedItems] = useState<any[]>([]);
@@ -91,6 +93,7 @@ const SalesPage = () => {
     fetchMenuItems();
     fetchCategories();
     fetchVendors();
+    fetchSalesmen();
     fetchProductionHistory();
 
     // Close menu when clicking outside
@@ -105,6 +108,15 @@ const SalesPage = () => {
       setVendors(res.data.data || []);
     } catch (e) {
       console.error('Failed to fetch vendors for sales segregation:', e);
+    }
+  };
+
+  const fetchSalesmen = async () => {
+    try {
+      const res = await api.get('/salesmen');
+      setSalesmen(res.data.data || []);
+    } catch (e) {
+      console.error('Failed to fetch salesmen:', e);
     }
   };
 
@@ -206,10 +218,20 @@ const SalesPage = () => {
   const handleUpdateStatus = async (saleId: number, nextStatus: string) => {
     try {
       await api.put(`/sales/${saleId}/status`, { dispatch_status: nextStatus });
-      toast.success(`Order FNFI-${100000 + saleId} is now ${nextStatus.toUpperCase()}! 📦`);
+      toast.success(`Order status is now ${nextStatus.toUpperCase()}! 📦`);
       fetchSales();
     } catch (error) {
       toast.error('Failed to update order status.');
+    }
+  };
+
+  const handleUpdatePayment = async (saleId: number, nextPayment: string) => {
+    try {
+      await api.put(`/sales/${saleId}/payment-status`, { payment_status: nextPayment });
+      toast.success(`Payment status marked as ${nextPayment.toUpperCase()}! 💰`);
+      fetchSales();
+    } catch (error) {
+      toast.error('Failed to update payment status.');
     }
   };
 
@@ -258,7 +280,7 @@ const SalesPage = () => {
         items: selectedItems.map(i => ({ menu_item_id: i.menu_item_id, quantity: i.quantity, price: i.price }))
       });
       setIsModalOpen(false);
-      setFormData({ customer_name: '', vendor_id: '', branch_id: '', batch_number: '', expiry_date: '', payment_status: 'paid', dispatch_status: 'pending' });
+      setFormData({ customer_name: '', vendor_id: '', branch_id: '', batch_number: '', expiry_date: '', payment_status: 'credit', dispatch_status: 'pending' });
       setSelectedItems([]);
       fetchSales();
       toast.success('Sale & Branch Segregation Recorded! 💹');
@@ -321,7 +343,7 @@ const SalesPage = () => {
   const getStatusBadge = (status: string) => {
     const statusLower = (status || '').toLowerCase();
     if (statusLower === 'delivered' || statusLower === 'paid') return 'status-badge healthy';
-    if (statusLower === 'dispatched') return 'status-badge warning';
+    if (statusLower === 'dispatched' || statusLower === 'credit') return 'status-badge warning';
     if (statusLower === 'pending') return 'status-badge pending';
     if (statusLower === 'cancelled' || statusLower === 'failed') return 'status-badge critical';
     return 'status-badge';
@@ -338,7 +360,9 @@ const SalesPage = () => {
   });
 
   const stats = {
-    totalRevenue: (Array.isArray(sales) ? sales : []).reduce((acc, curr) => acc + (curr.payment_status === 'paid' ? Number(curr.total_amount || 0) : 0), 0),
+    totalRevenue: (Array.isArray(sales) ? sales : [])
+      .filter(s => s.dispatch_status === 'delivered')
+      .reduce((acc, curr) => acc + (Number(curr.final_amount || curr.total_amount) - Number(curr.returns_amount || 0)), 0),
     pendingDispatch: (Array.isArray(sales) ? sales : []).filter(s => (s.dispatch_status || '').toLowerCase() === 'pending').length,
     todayOrders: (Array.isArray(sales) ? sales : []).length,
     completed: (Array.isArray(sales) ? sales : []).filter(s => (s.dispatch_status || '').toLowerCase() === 'delivered').length
@@ -478,7 +502,18 @@ const SalesPage = () => {
                        </span>
                     </td>
                     <td><strong style={{ fontSize: '15px', color: 'var(--primary)' }}>{Number(sale.final_amount || sale.total_amount).toFixed(3)} د.ك</strong></td>
-                    <td><span className={getStatusBadge(sale.payment_status)}>{sale.payment_status}</span></td>
+                    <td>
+                      <select 
+                        className={getStatusBadge(sale.payment_status)} 
+                        value={sale.payment_status}
+                        onChange={(e) => handleUpdatePayment(sale.sale_id, e.target.value)}
+                        style={{ border: 'none', cursor: 'pointer', outline: 'none', appearance: 'none', textAlign: 'center', width: '80px' }}
+                      >
+                        <option value="credit">credit</option>
+                        <option value="paid">paid</option>
+                        <option value="failed">failed</option>
+                      </select>
+                    </td>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <span className={getStatusBadge(sale.dispatch_status)}>{sale.dispatch_status}</span>
@@ -600,7 +635,7 @@ const SalesPage = () => {
       {/* 🛡️ DYNAMIC DISTRIBUTION MODAL */}
       {isModalOpen && (
         <div className="modal-overlay">
-          <div className="modal-content" style={{ maxWidth: '800px', borderRadius: '24px' }}>
+          <div className="modal-content" style={{ width: '95%', maxWidth: '1100px', borderRadius: '24px' }}>
              <div className="modal-header">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                   <ShoppingCart size={24} color="var(--primary)" />
@@ -609,8 +644,8 @@ const SalesPage = () => {
                 <button className="btn-close" onClick={() => setIsModalOpen(false)}><X size={20} /></button>
              </div>
              <div className="modal-body" style={{ padding: '2rem' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
-                    <div style={{ background: '#f8fafc', padding: '1.25rem', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
+                 <div style={{ display: 'flex', flexWrap: 'nowrap', gap: '2rem' }}>
+                    <div style={{ flex: '0 0 500px', background: '#f8fafc', padding: '1.25rem', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
                        <div className="form-group" style={{ marginBottom: '1.5rem' }}>
                          <label style={{ fontWeight: 700, fontSize: '11px', color: '#64748b' }}>DISTRIBUTION PARTNER *</label>
                          <SearchableSelect
@@ -658,14 +693,24 @@ const SalesPage = () => {
                          />
                        </div>
 
+                       <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                          <label style={{ fontWeight: 700, fontSize: '11px', color: '#64748b' }}>ASSIGN SALESMAN</label>
+                          <SearchableSelect
+                            options={salesmen.map(s => ({ value: s.salesman_id, label: s.name_en }))}
+                            value={formData.salesman_id}
+                            onChange={(val) => setFormData({...formData, salesman_id: String(val)})}
+                            placeholder="Choose Salesman..."
+                          />
+                        </div>
+
                        <h5 style={{ margin: '1rem 0 0.5rem 0' }}>Cart: {selectedItems.length} Products</h5>
                        <div style={{ maxHeight: '150px', overflowY: 'auto' }}>
                           {selectedItems.map(item => (<div key={item.menu_item_id} style={{ fontSize: '11px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' }}>{item.name_en} x {item.quantity}</div>))}
                        </div>
                     </div>
-                    <div>
+                    <div style={{ flex: '1 1 300px' }}>
                        <h5 style={{ fontSize: '13px', color: '#64748b', marginBottom: '1rem' }}>Selection Menu</h5>
-                       <div style={{ maxHeight: '300px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                       <div style={{ maxHeight: '350px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', paddingRight: '5px' }}>
                          {menuItems.map(item => (
                            <div key={item.menu_item_id} onClick={() => addItemToOrder(item)} style={{ cursor: 'pointer', padding: '10px 15px', background: 'white', border: '1px solid #eee', borderRadius: '10px', fontSize: '13px', fontWeight: 600 }}>
                              {item.name_en}
@@ -683,7 +728,7 @@ const SalesPage = () => {
       )}
       {isEditModalOpen && editingOrder && (
         <div className="modal-overlay">
-          <div className="modal-content" style={{ maxWidth: '850px', borderRadius: '24px' }}>
+          <div className="modal-content" style={{ width: '95%', maxWidth: '1100px', borderRadius: '24px' }}>
             <div className="modal-header">
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 <Edit size={24} color="var(--primary)" />
@@ -692,8 +737,8 @@ const SalesPage = () => {
               <button className="btn-close" onClick={() => setIsEditModalOpen(false)}><X size={20} /></button>
             </div>
             <div className="modal-body" style={{ padding: '2rem' }}>
-               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
-                  <div style={{ background: '#f8fafc', padding: '1.25rem', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
+               <div style={{ display: 'flex', flexWrap: 'nowrap', gap: '2rem' }}>
+                  <div style={{ flex: '0 0 500px', background: '#f8fafc', padding: '1.25rem', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
                     <div className="form-group" style={{ marginBottom: '1.5rem' }}>
                        <label style={{ fontWeight: 700, fontSize: '11px', color: '#64748b' }}>DISTRIBUTION PARTNER</label>
                        <SearchableSelect
@@ -742,6 +787,16 @@ const SalesPage = () => {
                     </div>
 
                     <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                      <label style={{ fontWeight: 700, fontSize: '11px', color: '#64748b' }}>ASSIGN SALESMAN</label>
+                      <SearchableSelect
+                        options={salesmen.map(s => ({ value: s.salesman_id, label: s.name_en }))}
+                        value={editingOrder.salesman_id}
+                        onChange={(val) => setEditingOrder({...editingOrder, salesman_id: String(val)})}
+                        placeholder="Choose Salesman..."
+                      />
+                    </div>
+
+                    <div className="form-group" style={{ marginBottom: '1.5rem' }}>
                        <label style={{ fontWeight: 700, fontSize: '11px', color: '#64748b' }}>DISCOUNT PERCENTAGE (%)</label>
                        <input 
                          type="number" 
@@ -772,9 +827,9 @@ const SalesPage = () => {
                     </div>
                   </div>
 
-                  <div>
-                    <h5 style={{ fontSize: '13px', color: '#64748b', marginBottom: '1rem' }}>Add More Products</h5>
-                    <div style={{ maxHeight: '420px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ flex: '1 1 300px' }}>
+                     <h5 style={{ fontSize: '13px', color: '#64748b', marginBottom: '1rem' }}>Add More Products</h5>
+                     <div style={{ maxHeight: '350px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', paddingRight: '5px' }}>
                       {menuItems.map(item => (
                         <div key={item.menu_item_id} onClick={() => addItemToEditOrder(item)} style={{ cursor: 'pointer', padding: '12px 15px', background: 'white', border: '1px solid #e2e8f0', borderRadius: '12px', fontSize: '13px', fontWeight: 600, transition: 'all 0.2s ease', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <span>{item.name_en}</span>

@@ -16,10 +16,14 @@ import {
   RotateCcw,
   Trash2,
   Printer,
+  Users,
+  Eye,
+  Pencil,
 } from "lucide-react";
 import "./InventoryPage.css";
 import { toast } from "react-toastify";
 import SearchableSelect from "../components/SearchableSelect";
+import Swal from "sweetalert2";
 
 interface Vendor {
   vendor_id: number;
@@ -41,6 +45,7 @@ const FactoryDispatchPage = () => {
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [dispatches, setDispatches] = useState<any[]>([]);
+  const [salesmen, setSalesmen] = useState<any[]>([]);
   const [productionLogs, setProductionLogs] = useState<any[]>([]);
   const [returnsHistory, setReturnsHistory] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -48,6 +53,11 @@ const FactoryDispatchPage = () => {
   const [showProduceModal, setShowProduceModal] = useState(false);
   const [showDispatchModal, setShowDispatchModal] = useState(false);
   const [showReturnModal, setShowReturnModal] = useState(false);
+  const [showReturnViewModal, setShowReturnViewModal] = useState(false);
+  const [showReturnEditModal, setShowReturnEditModal] = useState(false);
+  const [selectedReturn, setSelectedReturn] = useState<any>(null);
+  const [editingReturnId, setEditingReturnId] = useState<number | null>(null);
+  const [returnItems, setReturnItems] = useState<any[]>([]);
 
   const [produceForm, setProduceForm] = useState({
     production_date: new Date().toISOString().split("T")[0],
@@ -58,8 +68,9 @@ const FactoryDispatchPage = () => {
   const [returnForm, setReturnForm] = useState({
     vendor_id: "",
     branch_id: "",
-    sale_id: "",
+    sale_ids: [] as string[],
     reason: "Expired / Unsold",
+    salesman_id: "",
     items: [] as any[],
   });
 
@@ -118,24 +129,58 @@ const FactoryDispatchPage = () => {
     })
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
-  const handleReturnSaleSelect = async (saleId: string) => {
-    if (!saleId) return;
+  const handleReturnSaleSelect = async (saleIds: string[]) => {
+    if (!saleIds || saleIds.length === 0) {
+      setReturnForm({ ...returnForm, sale_ids: [], items: [] });
+      return;
+    }
+
+    const toastId = toast.loading('Aggregating items from selected dispatches...');
     try {
-      const res = await api.get(`/sales/${saleId}`);
-      if (res.data.success) {
-        const saleItems = res.data.data.items || [];
-        setReturnForm({
-          ...returnForm,
-          sale_id: saleId,
-          items: saleItems.map((i: any) => ({
-             ...i,
-             original_quantity: i.quantity_delivered || i.quantity,
-             quantity: 0 
-          }))
-        });
-      }
+      // 🚀 FETCH ALL SELECTED SALES IN PARALLEL
+      const results = await Promise.all(
+        saleIds.map(id => api.get(`/sales/${id}`))
+      );
+
+      // 📦 SAVE CURRENT USER INPUTS (QUANTITIES)
+      const currentInputs = new Map();
+      returnForm.items.forEach(item => {
+        if (Number(item.quantity) > 0) {
+          currentInputs.set(item.menu_item_id, item.quantity);
+        }
+      });
+
+      // 📦 COLLECT ALL ITEMS FROM ALL BATCHES SEPARATELY
+      let allItems: any[] = [];
+      results.forEach(res => {
+        if (res.data.success) {
+          const saleData = res.data.data;
+          const saleItems = saleData.items || [];
+          saleItems.forEach((i: any) => {
+             // UNIQUE KEY: ITEM ID + SALE ID
+             const uniqueKey = `${i.menu_item_id}_${saleData.sale_id}`;
+             
+             allItems.push({
+               ...i,
+               unique_key: uniqueKey,
+               sale_id: saleData.sale_id,
+               order_number: saleData.order_number,
+               original_quantity: i.quantity_delivered || i.quantity,
+               // RESTORE QUANTITY IF USER HAD ALREADY TYPED SOMETHING FOR THIS SPECIFIC ITEM+BATCH
+               quantity: currentInputs.get(uniqueKey) || 0
+             });
+          });
+        }
+      });
+
+      setReturnForm({
+        ...returnForm,
+        sale_ids: saleIds,
+        items: allItems
+      });
+      toast.dismiss(toastId);
     } catch (e) {
-      toast.error("Failed to load items from this dispatch.");
+      toast.update(toastId, { render: "Failed to aggregate items.", type: 'error', isLoading: false, autoClose: 3000 });
     }
   };
 
@@ -146,6 +191,7 @@ const FactoryDispatchPage = () => {
     items: [] as any[],
     payment_method: "credit",
     discount_percentage: 0,
+    salesman_id: "",
     dispatch_date: new Date().toISOString().split("T")[0],
   });
 
@@ -161,6 +207,7 @@ const FactoryDispatchPage = () => {
         api.get("/factory/dispatches").catch(() => ({ data: { data: [] } })),
         api.get("/factory/production/logs").catch(() => ({ data: { data: [] } })),
         api.get("/factory/returns").catch(() => ({ data: { data: [] } })),
+        api.get("/salesmen").catch(() => ({ data: { data: [] } })),
       ]);
 
       const vArr = results[0].data.data || results[0].data;
@@ -170,6 +217,7 @@ const FactoryDispatchPage = () => {
         (p: any) => p.batch_number,
       );
       const rArr = results[4].data.data || results[4].data;
+      const sArr = results[5].data.data || results[5].data;
 
       setVendors(Array.isArray(vArr) ? vArr : []);
       // 🛡️ ONLY SHOW FINISHED PRODUCTS (SELLING) IN DISTRIBUTION
@@ -177,6 +225,7 @@ const FactoryDispatchPage = () => {
       setDispatches(Array.isArray(dArr) ? dArr : []);
       setProductionLogs(Array.isArray(pArr) ? pArr : []);
       setReturnsHistory(Array.isArray(rArr) ? rArr : []);
+      setSalesmen(Array.isArray(sArr) ? sArr : []);
     } catch (e) {
       console.error("Fetch Error:", e);
     }
@@ -234,7 +283,18 @@ const FactoryDispatchPage = () => {
   };
 
   const handleDeleteProduction = async (id: number) => {
-    if (!window.confirm("Are you sure you want to delete this production batch? This will NOT restore used stock automatically.")) return;
+    const result = await Swal.fire({
+      title: "Delete Production Batch?",
+      text: "This action cannot be undone and will NOT restore used stock automatically.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#be123c",
+      cancelButtonColor: "#64748b",
+      confirmButtonText: "Yes, Delete Batch",
+    });
+
+    if (!result.isConfirmed) return;
+
     try {
       await api.delete(`/factory/production/batch/${id}`);
       toast.success("Production batch deleted! 🗑️");
@@ -245,7 +305,18 @@ const FactoryDispatchPage = () => {
   };
 
   const handleDeleteDispatch = async (id: number) => {
-    if (!window.confirm("Are you sure you want to delete this dispatch order?")) return;
+    const result = await Swal.fire({
+      title: "Delete Dispatch Order?",
+      text: "Are you sure you want to permanently delete this distribution record?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#be123c",
+      cancelButtonColor: "#64748b",
+      confirmButtonText: "Yes, Delete Order",
+    });
+
+    if (!result.isConfirmed) return;
+
     try {
       await api.delete(`/factory/sales/${id}`);
       toast.success("Dispatch order deleted! 🗑️");
@@ -278,10 +349,10 @@ const FactoryDispatchPage = () => {
     });
   };
 
-  const removeFromReturn = (id: number) => {
+  const removeFromReturn = (uniqueKey: string) => {
     setReturnForm({
       ...returnForm,
-      items: returnForm.items.filter((i) => i.menu_item_id !== id),
+      items: returnForm.items.filter((i) => (i.unique_key || i.menu_item_id) !== uniqueKey),
     });
   };
 
@@ -291,18 +362,34 @@ const FactoryDispatchPage = () => {
     if (returnForm.items.length === 0) return toast.warning("Please add items to the return list.");
     
     try {
-      await api.post("/factory/returns", {
-        ...returnForm,
-        items: returnForm.items.map(i => ({
-          menu_item_id: i.menu_item_id,
-          quantity: i.quantity,
-          unit_price: i.price,
-          expiry_date: i.expiry_date || null
-        }))
-      });
-      toast.success("Return Processed & Wastage Recorded! 🔄");
+      if (editingReturnId) {
+        await api.put(`/factory/returns/${editingReturnId}`, {
+          ...returnForm,
+          items: returnForm.items.map(i => ({
+            menu_item_id: i.menu_item_id,
+            quantity: i.quantity,
+            unit_price: i.price,
+            expiry_date: i.expiry_date || null
+          }))
+        });
+        toast.success("Return record updated successfully! ✨");
+      } else {
+        await api.post("/factory/returns", {
+          ...returnForm,
+          sale_id: returnForm.sale_ids[0],
+          sale_ids: returnForm.sale_ids,
+          items: returnForm.items.map(i => ({
+            menu_item_id: i.menu_item_id,
+            quantity: i.quantity,
+            unit_price: i.price,
+            expiry_date: i.expiry_date || null
+          }))
+        });
+        toast.success("Returns Processed & Wastage Recorded! 🔄");
+      }
       setShowReturnModal(false);
-      setReturnForm({ vendor_id: "", sale_id: "", reason: "Expired / Unsold", items: [] });
+      setEditingReturnId(null);
+      setReturnForm({ vendor_id: "", branch_id: "", sale_ids: [], salesman_id: "", reason: "Expired / Unsold", items: [] });
       fetchBaseData();
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Failed to process return.");
@@ -463,12 +550,10 @@ const FactoryDispatchPage = () => {
 
         <div
           style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 350px",
-            gap: "2rem",
+            width: "100%"
           }}
         >
-          <div className="stock-table-card">
+          <div className="stock-table-card" style={{ width: "100%" }}>
             <div
               style={{
                 padding: "20px",
@@ -494,6 +579,7 @@ const FactoryDispatchPage = () => {
                     <tr>
                       <th>SO #</th>
                       <th>Distribution Partner</th>
+                      <th>Salesman</th>
                       <th>Status</th>
                       <th>Dispatch Date</th>
                       <th className="text-right">Action</th>
@@ -549,6 +635,9 @@ const FactoryDispatchPage = () => {
                                 {d.branch_name} Branch
                               </div>
                             )}
+                          </td>
+                          <td>
+                             <div style={{ fontSize: '13px', fontWeight: 600 }}>{d.salesman_name || '---'}</div>
                           </td>
                           <td>
                             <span
@@ -638,9 +727,78 @@ const FactoryDispatchPage = () => {
                             </strong>
                           </td>
                           <td className="text-center">
-                             <button onClick={() => printReturn(r)} className="btn-icon" style={{ padding: '6px', cursor: 'pointer', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
-                                <Printer size={16} />
-                             </button>
+                             <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                               <button 
+                                 onClick={async () => {
+                                   setSelectedReturn(r);
+                                   const toastId = toast.loading('Loading return details...');
+                                   try {
+                                     const res = await api.get(`/factory/returns/${r.return_id}/items`);
+                                     setReturnItems(res.data.data || []);
+                                     setShowReturnViewModal(true);
+                                     toast.dismiss(toastId);
+                                   } catch (e) {
+                                     toast.update(toastId, { render: 'Failed to load details', type: 'error', isLoading: false, autoClose: 3000 });
+                                   }
+                                 }} 
+                                 className="btn-icon" 
+                                 style={{ padding: '6px', cursor: 'pointer', background: '#eff6ff', color: '#3b82f6', border: 'none', borderRadius: '8px' }}
+                                 title="View Details">
+                                  <Eye size={16} />
+                                </button>
+                               <button 
+                                 onClick={async () => {
+                                   setSelectedReturn(r);
+                                   setEditingReturnId(r.return_id);
+                                   const toastId = toast.loading("Loading return details...");
+                                   try {
+                                     // 1. Fetch items already in this return
+                                     const retRes = await api.get(`/factory/returns/${r.return_id}/items`);
+                                     const currentReturnedItems = retRes.data.data;
+
+                                     // 2. Fetch original dispatch items to allow "adding missed ones"
+                                     const saleRes = await api.get(`/factory/sales/${r.sale_id}`);
+                                     const originalDispatchItems = saleRes.data.data.items;
+
+                                     // 3. Merge: If item exists in return, set its quantity. Else set quantity 0.
+                                     const mergedItems = originalDispatchItems.map((orig: any) => {
+                                        const returned = currentReturnedItems.find((ret: any) => ret.menu_item_id === orig.menu_item_id);
+                                        return {
+                                          ...orig,
+                                          unique_key: `${orig.menu_item_id}_${r.sale_id}`,
+                                          quantity: returned ? returned.quantity : 0,
+                                          original_quantity: orig.quantity,
+                                          price: orig.price
+                                        };
+                                     });
+
+                                     setReturnForm({
+                                       vendor_id: String(r.vendor_id),
+                                       branch_id: String(r.branch_id),
+                                       sale_ids: [String(r.sale_id)],
+                                       reason: r.reason,
+                                       salesman_id: String(r.salesman_id),
+                                       items: mergedItems
+                                     });
+                                     
+                                     setShowReturnModal(true);
+                                     toast.dismiss(toastId);
+                                   } catch (err) {
+                                     toast.update(toastId, { render: "Failed to load edit data", type: 'error', isLoading: false, autoClose: 3000 });
+                                   }
+                                 }} 
+                                 className="btn-icon" 
+                                 style={{ padding: '6px', cursor: 'pointer', background: '#f0fdf4', color: '#10b981', border: 'none', borderRadius: '8px' }}
+                                 title="Edit Return Info"
+                               >
+                                   <Pencil size={16} />
+                               </button>
+                               <button onClick={() => printReturn(r)} className="btn-icon" style={{ padding: '6px', cursor: 'pointer', background: '#f8fafc', color: '#64748b', border: '1px solid #e2e8f0', borderRadius: '8px' }} title="Print Receipt">
+                                  <Printer size={16} />
+                               </button>
+
+
+                             </div>
                           </td>
                         </tr>
                       ))
@@ -725,73 +883,6 @@ const FactoryDispatchPage = () => {
             </div>
           </div>
 
-          <div
-            style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}
-          >
-            <div
-              style={{
-                background: "#ecfdf5",
-                border: "1px solid #6ee7b7",
-                padding: "1.5rem",
-                borderRadius: "20px",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "10px",
-                  color: "#047857",
-                  marginBottom: "10px",
-                  fontWeight: 800,
-                }}
-              >
-                <ClipboardList size={20} /> Traceability Live
-              </div>
-              <p style={{ fontSize: "13px", color: "#047857" }}>
-                All current dispatches are linked to valid production batches.
-              </p>
-            </div>
-            <div
-              style={{
-                background: "white",
-                padding: "1.5rem",
-                borderRadius: "20px",
-                border: "1px solid #f1f5f9",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "10px",
-                  color: "#1e293b",
-                  marginBottom: "15px",
-                  fontWeight: 800,
-                }}
-              >
-                <Zap size={20} /> Efficiency
-              </div>
-              <div
-                style={{
-                  background: "#f8fafc",
-                  padding: "10px",
-                  borderRadius: "12px",
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    fontSize: "12px",
-                  }}
-                >
-                  <span>System Uptime</span>
-                  <strong>100%</strong>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -815,7 +906,7 @@ const FactoryDispatchPage = () => {
               </button>
             </div>
             <form onSubmit={handleProduceSubmit}>
-              <div className="modal-body">
+              <div className="modal-body" style={{ padding: "1.25rem" }}>
                 <div
                   style={{
                     display: "grid",
@@ -855,24 +946,27 @@ const FactoryDispatchPage = () => {
                 </div>
                 <div
                   style={{
-                    display: "grid",
-                    gridTemplateColumns: "1.2fr 1fr",
-                    gap: "20px",
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: "2rem",
+                    marginTop: "1.5rem",
                   }}
                 >
                   <div
                     style={{
+                      flex: "1 1 350px",
+                      minWidth: "280px",
                       background: "#f8fafc",
-                      padding: "15px",
-                      borderRadius: "15px",
-                      maxHeight: "400px",
-                      overflowY: "auto",
+                      padding: "1.25rem",
+                      borderRadius: "20px",
+                      border: "1px solid #eef2f6",
                     }}
                   >
                     <h4 style={{ fontSize: "13px", marginBottom: "15px" }}>
                       Product Catalog
                     </h4>
-                    {menuItems.map((item) => (
+                    <div style={{ maxHeight: "280px", overflowY: "auto", paddingRight: "5px" }}>
+                      {menuItems.map((item) => (
                       <div
                         key={item.menu_item_id}
                         onClick={() => addItemToBatch(item)}
@@ -895,6 +989,7 @@ const FactoryDispatchPage = () => {
                         </span>
                       </div>
                     ))}
+                    </div>
                   </div>
                   <div
                     style={{
@@ -905,9 +1000,10 @@ const FactoryDispatchPage = () => {
                     }}
                   >
                     <h4 style={{ fontSize: "13px", marginBottom: "15px" }}>
-                      Batch Composition
+                      Current Batch Items
                     </h4>
-                    {produceForm.items.map((item, idx) => (
+                    <div style={{ maxHeight: "280px", overflowY: "auto", paddingRight: "5px" }}>
+                      {produceForm.items.map((item, idx) => (
                       <div
                         key={idx}
                         style={{
@@ -939,6 +1035,7 @@ const FactoryDispatchPage = () => {
                         </button>
                       </div>
                     ))}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -966,7 +1063,7 @@ const FactoryDispatchPage = () => {
       {/* Dispatch Modal - WITH BATCH SELECT */}
       {showDispatchModal && (
         <div className="modal-overlay">
-          <div className="modal-content" style={{ maxWidth: "800px" }}>
+          <div className="modal-content" style={{ width: "95%", maxWidth: "1100px", borderRadius: "24px" }}>
             <div className="modal-header">
               <h3>
                 <Truck
@@ -983,13 +1080,13 @@ const FactoryDispatchPage = () => {
               </button>
             </div>
             <form onSubmit={handleDispatch}>
-              <div className="modal-body">
+              <div className="modal-body" style={{ padding: "1.25rem" }}>
                 <div
                   style={{
                     display: "grid",
-                    gridTemplateColumns: "1fr 1fr 1fr 0.6fr 0.8fr",
+                    gridTemplateColumns: "repeat(3, 1fr)",
                     gap: "1rem",
-                    marginBottom: "20px",
+                    marginBottom: "15px",
                   }}
                 >
                   <div className="form-group">
@@ -1001,13 +1098,15 @@ const FactoryDispatchPage = () => {
                         .filter((v) => v.type === "client" || v.type === "supplier")
                         .map((v: any) => ({ value: v.vendor_id, label: v.name_en }))}
                       value={dispatchForm.vendor_id}
-                      onChange={(val) =>
+                      onChange={(val) => {
+                        const vendor = vendors.find(v => String(v.vendor_id) === String(val));
                         setDispatchForm({
                           ...dispatchForm,
                           vendor_id: String(val),
                           branch_id: "",
-                        } as any)
-                      }
+                          discount_percentage: vendor?.default_discount || 0
+                        } as any);
+                      }}
                       placeholder="Choose Client..."
                     />
                   </div>
@@ -1067,6 +1166,25 @@ const FactoryDispatchPage = () => {
                   </div>
                   <div className="form-group">
                     <label>
+                      <Users size={14} /> Assigned Salesman
+                    </label>
+                    <SearchableSelect
+                      options={salesmen.map((s) => ({
+                        value: s.salesman_id,
+                        label: s.name_en,
+                      }))}
+                      value={dispatchForm.salesman_id}
+                      onChange={(val) =>
+                        setDispatchForm({
+                          ...dispatchForm,
+                          salesman_id: String(val),
+                        })
+                      }
+                      placeholder="Choose Salesman..."
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>
                       <ClipboardList size={14} /> Dispatch Date
                     </label>
                     <input 
@@ -1080,22 +1198,27 @@ const FactoryDispatchPage = () => {
 
                 <div
                   style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
-                    gap: "20px",
+                    display: "flex",
+                    flexWrap: "nowrap",
+                    gap: "1.5rem",
+                    marginTop: "1rem",
                   }}
                 >
                   <div
                     style={{
+                      flex: "1 1 350px",
+                      minWidth: "280px",
                       background: "#f8fafc",
-                      padding: "15px",
-                      borderRadius: "15px",
+                      padding: "1.25rem",
+                      borderRadius: "20px",
+                      border: "1px solid #eef2f6",
                     }}
                   >
                     <h4 style={{ fontSize: "13px", marginBottom: "15px" }}>
                       Finished Product Stock
                     </h4>
-                    {menuItems.map((item) => (
+                    <div style={{ maxHeight: "280px", overflowY: "auto", paddingRight: "5px" }}>
+                      {menuItems.map((item) => (
                       <div
                         key={item.menu_item_id}
                         onClick={() => addItemToDispatch(item)}
@@ -1118,19 +1241,23 @@ const FactoryDispatchPage = () => {
                         </span>
                       </div>
                     ))}
+                    </div>
                   </div>
                   <div
                     style={{
+                      flex: "1 1 350px",
+                      minWidth: "280px",
                       background: "white",
-                      border: "1px solid #f1f5f9",
-                      padding: "15px",
-                      borderRadius: "15px",
+                      border: "1px solid #eef2f6",
+                      padding: "1.25rem",
+                      borderRadius: "20px",
                     }}
                   >
                     <h4 style={{ fontSize: "13px", marginBottom: "15px" }}>
                       Loading for Partner
                     </h4>
-                    {dispatchForm.items.map((item, idx) => (
+                    <div style={{ maxHeight: "280px", overflowY: "auto", paddingRight: "5px" }}>
+                      {dispatchForm.items.map((item, idx) => (
                       <div
                         key={idx}
                         style={{
@@ -1162,6 +1289,7 @@ const FactoryDispatchPage = () => {
                         </button>
                       </div>
                     ))}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1188,7 +1316,7 @@ const FactoryDispatchPage = () => {
       {/* Return Modal */}
       {showReturnModal && (
         <div className="modal-overlay">
-          <div className="modal-content" style={{ maxWidth: "800px" }}>
+          <div className="modal-content" style={{ width: "95%", maxWidth: "1100px", borderRadius: "24px" }}>
             <div className="modal-header">
               <h3>
                 <RotateCcw
@@ -1205,15 +1333,15 @@ const FactoryDispatchPage = () => {
               </button>
             </div>
             <form onSubmit={handleReturnSubmit}>
-              <div className="modal-body">
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+              <div className="modal-body" style={{ padding: "1.25rem" }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '20px', marginBottom: '20px' }}>
                     <div className="form-group">
                       <label><Building2 size={14} /> Source Client / Partner</label>
                       <SearchableSelect
                         options={vendors.map(v => ({ value: v.vendor_id, label: v.name_en }))}
                         value={returnForm.vendor_id}
                         onChange={(val) => {
-                          setReturnForm({...returnForm, vendor_id: String(val), sale_id: "", items: []});
+                          setReturnForm({...returnForm, vendor_id: String(val), sale_ids: [], items: []});
                         }}
                         placeholder="Choose Partner..."
                       />
@@ -1230,7 +1358,7 @@ const FactoryDispatchPage = () => {
                         ]}
                         value={returnForm.branch_id}
                         onChange={(val) => {
-                          setReturnForm({...returnForm, branch_id: String(val), sale_id: "", items: []});
+                          setReturnForm({...returnForm, branch_id: String(val), sale_ids: [], items: []});
                         }}
                         placeholder="Choose Branch..."
                       />
@@ -1242,10 +1370,21 @@ const FactoryDispatchPage = () => {
                           value: d.sale_id,
                           label: `Order: ${d.order_number} | Batch: ${d.batch_number || 'N/A'} (${new Date(d.created_at).toLocaleDateString()})`
                         }))}
-                        value={returnForm.sale_id}
-                        onChange={(val) => handleReturnSaleSelect(String(val))}
-                        placeholder="Choose Dispatch Order..."
+                        value={returnForm.sale_ids}
+                        isMulti={true}
+                        closeMenuOnSelect={false}
+                        onChange={(vals) => handleReturnSaleSelect(vals as string[])}
+                        placeholder="Choose Dispatch Orders (Multiple)..."
                       />
+                    </div>
+                    <div className="form-group">
+                       <label><Users size={14} /> Brought Back By (Salesman)</label>
+                       <SearchableSelect
+                         options={salesmen.map(s => ({ value: s.salesman_id, label: s.name_en }))}
+                         value={returnForm.salesman_id}
+                         onChange={(val) => setReturnForm({...returnForm, salesman_id: String(val)})}
+                         placeholder="Choose Salesman..."
+                       />
                     </div>
                     <div className="form-group">
                        <label>Reason for Return</label>
@@ -1253,6 +1392,7 @@ const FactoryDispatchPage = () => {
                          type="text" 
                          value={returnForm.reason}
                          onChange={(e) => setReturnForm({...returnForm, reason: e.target.value})}
+                         placeholder="e.g. Expired / Unsold"
                        />
                     </div>
                 </div>
@@ -1272,12 +1412,12 @@ const FactoryDispatchPage = () => {
                   
                   {returnForm.items.length === 0 ? (
                     <div style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>
-                       {returnForm.vendor_id ? "Please select a Dispatch Order to see items." : "Select a Client first."}
+                       {returnForm.vendor_id ? "Please select Dispatch Order(s) to see items." : "Select a Client first."}
                     </div>
                   ) : (
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                       {returnForm.items.map((item, idx) => (
-                        <div key={idx} style={{ 
+                        <div key={item.unique_key || idx} style={{ 
                           display: "flex", 
                           alignItems: "center", 
                           justifyContent: 'space-between',
@@ -1287,7 +1427,10 @@ const FactoryDispatchPage = () => {
                         }}>
                           <div>
                             <div style={{ fontWeight: 700, fontSize: '13px' }}>{item.name_en}</div>
-                            <div style={{ fontSize: '11px', color: '#64748b' }}>Original Qty: {item.original_quantity}</div>
+                            <div style={{ fontSize: '10px', color: 'var(--primary)', fontWeight: 700, background: 'rgba(1, 86, 44, 0.05)', display: 'inline-block', padding: '2px 6px', borderRadius: '4px', marginTop: '4px' }}>
+                               Order: {item.order_number}
+                            </div>
+                            <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>Original Qty: {item.original_quantity}</div>
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                             <label style={{ fontSize: '11px', fontWeight: 600 }}>RETURNED:</label>
@@ -1303,7 +1446,7 @@ const FactoryDispatchPage = () => {
                             />
                             <button 
                               type="button" 
-                              onClick={() => removeFromReturn(item.menu_item_id)}
+                              onClick={() => removeFromReturn(item.unique_key || item.menu_item_id)}
                               style={{ background: 'none', border: 'none', color: '#be123c', cursor: 'pointer', padding: '5px' }}
                             >
                               <Trash2 size={16} />
@@ -1323,6 +1466,68 @@ const FactoryDispatchPage = () => {
           </div>
         </div>
       )}
+
+      {/* VIEW RETURN MODAL */}
+      {showReturnViewModal && selectedReturn && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ width: "95%", maxWidth: "800px", borderRadius: "24px" }}>
+            <div className="modal-header">
+              <h3><Eye size={22} style={{ color: "#3b82f6", marginRight: "10px" }} /> Return Details: #RET-{selectedReturn.return_id}</h3>
+              <button className="btn-close" onClick={() => setShowReturnViewModal(false)}><X /></button>
+            </div>
+            <div className="modal-body" style={{ padding: "1.5rem" }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px', background: '#f8fafc', padding: '15px', borderRadius: '15px' }}>
+                <div>
+                  <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>CLIENT / PARTNER</div>
+                  <div style={{ fontWeight: 700 }}>{selectedReturn.client_name}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>SALESMAN</div>
+                  <div style={{ fontWeight: 700 }}>{selectedReturn.salesman_name || 'N/A'}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>RETURN REASON</div>
+                  <div style={{ fontWeight: 700, color: '#be123c' }}>{selectedReturn.reason}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>RETURN DATE</div>
+                  <div style={{ fontWeight: 700 }}>{new Date(selectedReturn.created_at).toLocaleString()}</div>
+                </div>
+              </div>
+
+              <div style={{ background: 'white', borderRadius: '15px', border: '1px solid #f1f5f9' }}>
+                <h4 style={{ padding: '15px', borderBottom: '1px solid #f1f5f9', fontSize: '14px' }}>Returned Items</h4>
+                <div style={{ maxHeight: '300px', overflowY: 'auto', padding: '10px' }}>
+                   {returnItems.map((item, idx) => {
+                     const pName = item.product_name || item.name_en || item.name || 'Unknown Product';
+                     const uPrice = Number(item.unit_price || item.price || 0);
+                     const qty = Number(item.quantity || 0);
+                     return (
+                       <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px', background: '#f8fafc', borderRadius: '10px', marginBottom: '8px' }}>
+                         <div>
+                           <div style={{ fontWeight: 700, fontSize: '13px' }}>{pName}</div>
+                           <div style={{ fontSize: '11px', color: '#64748b' }}>Unit Price: {uPrice.toFixed(3)} KWD</div>
+                         </div>
+                         <div style={{ textAlign: 'right' }}>
+                           <div style={{ fontWeight: 800, color: '#be123c' }}>Qty: {qty}</div>
+                           <div style={{ fontSize: '11px', fontWeight: 700 }}>Total: {(qty * uPrice).toFixed(3)} KWD</div>
+                         </div>
+                       </div>
+                     );
+                   })}
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setShowReturnViewModal(false)}>Close View</button>
+              <button className="btn-primary" onClick={() => { setShowReturnViewModal(false); printReturn(selectedReturn); }}>
+                <Printer size={16} style={{ marginRight: '8px' }} /> Print Receipt
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
 
       {/* Hidden Print Container */}
       <div style={{ display: 'none' }}>

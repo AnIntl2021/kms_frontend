@@ -25,6 +25,7 @@ interface Vendor {
   address: string;
   type: 'supplier' | 'client';
   status: 'active' | 'inactive';
+  default_discount: number;
   branches?: any[];
 }
 
@@ -43,6 +44,7 @@ const VendorsPage = () => {
     address: '',
     type: 'supplier',
     status: 'active',
+    default_discount: 0,
     branches: []
   });
 
@@ -73,6 +75,7 @@ const VendorsPage = () => {
       address: v.address,
       type: v.type,
       status: v.status,
+      default_discount: v.default_discount || 0,
       branches: v.branches || []
     });
     setShowModal(true);
@@ -109,7 +112,7 @@ const VendorsPage = () => {
       }
       setShowModal(false);
       setEditingVendor(null);
-      setFormData({ name_en: '', name_ar: '', contact_person: '', email: '', phone: '', address: '', type: 'supplier', status: 'active', branches: [] });
+      setFormData({ name_en: '', name_ar: '', contact_person: '', email: '', phone: '', address: '', type: 'supplier', status: 'active', default_discount: 0, branches: [] });
       fetchVendors();
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to save partner data.');
@@ -139,13 +142,14 @@ const VendorsPage = () => {
                   <th>Partner Name</th>
                   <th>Contact Details</th>
                   <th>Type</th>
+                  <th>Default Discount</th>
                   <th>Status</th>
                   <th className="text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={5} className="text-center py-5">Loading records...</td></tr>
+                  <tr><td colSpan={6} className="text-center py-5">Loading records...</td></tr>
                 ) : filtered.map(v => (
                   <tr key={v.vendor_id}>
                     <td>
@@ -169,6 +173,13 @@ const VendorsPage = () => {
                         {v.type?.toUpperCase()}
                       </span>
                     </td>
+                    <td>
+                      {v.type === 'client' ? (
+                        <span style={{ fontWeight: 700, color: '#3b82f6' }}>{v.default_discount || 0}%</span>
+                      ) : (
+                        <span style={{ color: '#94a3b8' }}>N/A</span>
+                      )}
+                    </td>
                     <td><span className={`status-badge ${v.status === 'active' ? 'healthy' : 'low'}`}>{v.status}</span></td>
                     <td className="text-right">
                        <div className="row-actions">
@@ -189,7 +200,7 @@ const VendorsPage = () => {
           <div className="modal-content" style={{ maxWidth: '600px' }}>
             <div className="modal-header">
               <h3><Store size={22} style={{ color: 'var(--primary)', marginRight: '10px' }} /> {editingVendor ? 'Update Partner' : 'Register Partner'}</h3>
-              <button className="btn-close" onClick={() => { setShowModal(false); setEditingVendor(null); setFormData({ name_en: '', name_ar: '', contact_person: '', email: '', phone: '', address: '', type: 'supplier', status: 'active' }); }}><X /></button>
+              <button className="btn-close" onClick={() => { setShowModal(false); setEditingVendor(null); setFormData({ name_en: '', name_ar: '', contact_person: '', email: '', phone: '', address: '', type: 'supplier', status: 'active', default_discount: 0, branches: [] }); }}><X /></button>
             </div>
             <form onSubmit={handleSubmit}>
               <div className="modal-body">
@@ -217,14 +228,28 @@ const VendorsPage = () => {
                    </div>
                 </div>
                 <div className="form-grid">
+                  {formData.type === 'client' && (
+                    <div className="form-group">
+                      <label>Default Discount (%)</label>
+                      <input 
+                        type="number" 
+                        value={formData.default_discount} 
+                        onChange={e => setFormData({...formData, default_discount: Number(e.target.value)})}
+                        placeholder="0"
+                        min="0"
+                        max="100"
+                        style={{ borderColor: 'var(--primary)', fontWeight: 'bold' }}
+                      />
+                    </div>
+                  )}
                   <div className="form-group">
-                    <label>Email</label>
+                    <label>Email Address</label>
                     <input type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
                   </div>
-                  <div className="form-group" style={{ flex: 2 }}>
-                    <label>Phone</label>
-                    <input type="text" required value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} />
-                  </div>
+                </div>
+                <div className="form-group">
+                  <label>Phone</label>
+                  <input type="text" required value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} />
                 </div>
 
                 {/* 🛡️ ELITE BRANCH SEGREGATION HUB (Hierarchical Distribution) */}
@@ -301,7 +326,7 @@ const VendorsPage = () => {
                 </div>
               </div>
               <div className="modal-footer">
-                <button type="button" className="btn-secondary" onClick={() => { setShowModal(false); setEditingVendor(null); setFormData({ name_en: '', name_ar: '', contact_person: '', email: '', phone: '', address: '', type: 'supplier', status: 'active', branches: [] }); }}>Cancel</button>
+                <button type="button" className="btn-secondary" onClick={() => { setShowModal(false); setEditingVendor(null); setFormData({ name_en: '', name_ar: '', contact_person: '', email: '', phone: '', address: '', type: 'supplier', status: 'active', default_discount: 0, branches: [] }); }}>Cancel</button>
                 <button type="submit" className="btn-primary">Save Partner & Network</button>
               </div>
             </form>
