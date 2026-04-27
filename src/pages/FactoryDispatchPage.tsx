@@ -757,17 +757,18 @@ const FactoryDispatchPage = () => {
                                      const currentReturnedItems = retRes.data.data;
 
                                      // 2. Fetch original dispatch items to allow "adding missed ones"
-                                     const saleRes = await api.get(`/factory/sales/${r.sale_id}`);
-                                     const originalDispatchItems = saleRes.data.data.items;
+                                     const saleRes = await api.get(`/factory/sales/${r.sale_id}/items`);
+                                     const originalDispatchItems = saleRes.data.data;
 
-                                     // 3. Merge: If item exists in return, set its quantity. Else set quantity 0.
+                                     // 3. Merge: Total allowed is (Remaining in Dispatch) + (Currently in this Return)
                                      const mergedItems = originalDispatchItems.map((orig: any) => {
                                         const returned = currentReturnedItems.find((ret: any) => ret.menu_item_id === orig.menu_item_id);
+                                        const currentQtyInThisReturn = returned ? Number(returned.quantity) : 0;
                                         return {
                                           ...orig,
                                           unique_key: `${orig.menu_item_id}_${r.sale_id}`,
-                                          quantity: returned ? returned.quantity : 0,
-                                          original_quantity: orig.quantity,
+                                          quantity: currentQtyInThisReturn,
+                                          original_quantity: Number(orig.quantity) + currentQtyInThisReturn,
                                           price: orig.price
                                         };
                                      });
