@@ -70,14 +70,25 @@ const PrePrintedInvoice = React.forwardRef<HTMLDivElement, InvoiceProps>(({ orde
         <div style={{
           width: `${8 * CM}px`,
           display: 'flex',
-          alignItems: 'center',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'flex-start',
           paddingLeft: `${0.8 * CM}px`, // Moved 1cm right from -0.2cm
-          fontSize: '13px',
-          fontWeight: 900,
-          textTransform: 'uppercase',
           flexShrink: 0,
         }}>
-          {order?.customer_name || 'Counter Customer'}
+          <div style={{ fontSize: '13px', fontWeight: 900, textTransform: 'uppercase' }}>
+            {order?.customer_name || 'Counter Customer'}
+          </div>
+          {order?.branch_name && (
+            <div style={{ fontSize: '11px', fontWeight: 700, marginTop: '2px' }}>
+              {order.branch_name} Branch
+            </div>
+          )}
+          {(order?.branch_phone || order?.client_phone) && (
+            <div style={{ fontSize: '10px', fontWeight: 600, marginTop: '1px' }}>
+              +965 {(order.branch_phone || order.client_phone).replace(/^\+965\s*/, '')}
+            </div>
+          )}
         </div>
 
         {/* 5.2 cm gap (Increased to align above Unit Price) */}

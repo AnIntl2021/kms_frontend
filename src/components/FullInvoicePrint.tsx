@@ -75,6 +75,16 @@ const FullInvoicePrint = React.forwardRef<HTMLDivElement, InvoiceProps>(({ order
           <div style={{ flex: 1.5, border: '2px solid #000', padding: '12px' }}>
              <p style={{ margin: 0, fontSize: '12px', fontWeight: 800 }}>Customer Name</p>
              <h3 style={{ margin: '8px 0 0 0', fontSize: '16px', textTransform: 'uppercase' }}>{order?.customer_name || 'Counter Customer'}</h3>
+             {order?.branch_name && (
+               <div style={{ fontSize: '13px', color: '#334155', fontWeight: 700, marginTop: '4px' }}>
+                 {order.branch_name} Branch
+               </div>
+             )}
+             {(order?.branch_phone || order?.client_phone) && (
+               <div style={{ fontSize: '12px', color: '#475569', marginTop: '2px' }}>
+                 +965 {(order.branch_phone || order.client_phone).replace(/^\+965\s*/, '')}
+               </div>
+             )}
           </div>
           <div style={{ flex: 1, border: '2px solid #000' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', height: '100%' }}>

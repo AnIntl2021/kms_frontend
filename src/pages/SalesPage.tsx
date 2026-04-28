@@ -485,6 +485,11 @@ const SalesPage = () => {
                                { (sale as any).branch_name } Branch
                              </span>
                            )}
+                           {((sale as any).branch_phone || (sale as any).client_phone) && (
+                             <span style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
+                               +965 {((sale as any).branch_phone || (sale as any).client_phone).replace(/^\+965\s*/, '')}
+                             </span>
+                           )}
                         </div>
                       </div>
                     </td>
