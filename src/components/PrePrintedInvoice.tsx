@@ -85,7 +85,7 @@ const PrePrintedInvoice = React.forwardRef<HTMLDivElement, InvoiceProps>(({ orde
             </div>
           )}
           {(order?.branch_phone || order?.client_phone) && (
-            <div style={{ fontSize: '10px', fontWeight: 600, marginTop: '1px' }}>
+            <div style={{ fontSize: '11px', fontWeight: 600, marginTop: '1px' }}>
               +965 {(order.branch_phone || order.client_phone).replace(/^\+965\s*/, '')}
             </div>
           )}
@@ -116,7 +116,7 @@ const PrePrintedInvoice = React.forwardRef<HTMLDivElement, InvoiceProps>(({ orde
           <div style={{ fontSize: '12px', whiteSpace: 'nowrap', overflow: 'hidden', marginLeft: `-${0.8 * CM}px`, fontWeight: 900 }}>
             {order?.salesman_name || 'Admin'} 
             {order?.salesman_phone && (
-              <span style={{ fontSize: '10px', fontWeight: 600, marginLeft: '4px' }}>
+              <span style={{ fontSize: '11px', fontWeight: 600, marginLeft: '4px' }}>
                 / +965 {order.salesman_phone.replace(/^\+965\s*/, '')}
               </span>
             )}
