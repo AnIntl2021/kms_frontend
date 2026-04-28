@@ -99,7 +99,14 @@ const FullInvoicePrint = React.forwardRef<HTMLDivElement, InvoiceProps>(({ order
                 </tr>
                 <tr>
                   <td style={{ border: '1px solid #000', padding: '6px', fontSize: '12px', fontWeight: 700, backgroundColor: '#f9fafb' }}>Sales Man</td>
-                  <td style={{ border: '1px solid #000', padding: '6px', fontSize: '12px' }}>Admin</td>
+                  <td style={{ border: '1px solid #000', padding: '6px', fontSize: '12px' }}>
+                    {order?.salesman_name || 'Admin'}
+                    {order?.salesman_phone && (
+                      <div style={{ fontSize: '11px', color: '#64748b' }}>
+                        +965 {order.salesman_phone.replace(/^\+965\s*/, '')}
+                      </div>
+                    )}
+                  </td>
                 </tr>
                 <tr>
                   <td style={{ border: '1px solid #000', padding: '6px', fontSize: '12px', fontWeight: 700, backgroundColor: '#f9fafb' }}>Lpo No</td>

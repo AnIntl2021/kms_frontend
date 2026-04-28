@@ -113,7 +113,14 @@ const PrePrintedInvoice = React.forwardRef<HTMLDivElement, InvoiceProps>(({ orde
         }}>
           <div>FNFI-{100000 + (order?.sale_id || 0)}</div>
           <div>{(order?.dispatch_date || today).split(' ')[0]}</div>
-          <div>Admin</div>
+          <div style={{ lineHeight: '1', display: 'flex', flexDirection: 'column' }}>
+            <span style={{ fontSize: '12px' }}>{order?.salesman_name || 'Admin'}</span>
+            {order?.salesman_phone && (
+              <span style={{ fontSize: '9px', fontWeight: 700, color: '#334155' }}>
+                +965 {order.salesman_phone.replace(/^\+965\s*/, '')}
+              </span>
+            )}
+          </div>
           <div>N/A</div>
         </div>
       </div>
