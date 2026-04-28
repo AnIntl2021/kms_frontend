@@ -567,7 +567,7 @@ const SalesPage = () => {
                                   <Printer size={14} color="#054c2d" /> Standard PDF Print
                                 </button>
                                 <button className="dropdown-item" onClick={() => preparePrint(sale, true)} style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '10px 15px', border: 'none', background: 'none', textAlign: 'left', fontSize: '13px', cursor: 'pointer' }}>
-                                  <Receipt size={14} color="#f59e0b" /> Dot Matrix (LQ350)
+                                  <Receipt size={14} color="#f59e0b" /> Dot Matrix Print
                                 </button>
                                 {(sale.dispatch_status || '').toLowerCase() !== 'delivered' && (
                                   <button className="dropdown-item" onClick={() => handleEditOrder(sale)} style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '10px 15px', border: 'none', background: 'none', textAlign: 'left', fontSize: '13px', cursor: 'pointer' }}>
