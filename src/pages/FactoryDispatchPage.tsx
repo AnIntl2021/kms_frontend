@@ -1140,9 +1140,11 @@ const FactoryDispatchPage = () => {
                     <SearchableSelect
                       options={productionLogs
                         .filter(p => {
-                          const fBranch = dispatchForm.branch_id === 'main' ? null : dispatchForm.branch_id;
-                          const pBranch = p.branch_id === 'main' ? null : p.branch_id;
-                          return !dispatchForm.branch_id || String(pBranch) === String(fBranch);
+                          // Filter out expired batches
+                          const expiryDate = new Date(p.expiry_date);
+                          const today = new Date();
+                          today.setHours(0, 0, 0, 0);
+                          return expiryDate >= today;
                         })
                         .map((p) => ({
                           value: p.batch_number,
