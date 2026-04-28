@@ -184,6 +184,7 @@ const SalesPage = () => {
         batch_number: order.batch_number,
         expiry_date: order.expiry_date,
         dispatch_status: order.dispatch_status,
+        salesman_id: order.salesman_id,
         items: items
       });
       setIsEditModalOpen(true);
