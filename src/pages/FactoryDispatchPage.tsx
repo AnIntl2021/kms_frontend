@@ -379,6 +379,7 @@ const FactoryDispatchPage = () => {
           sale_id: returnForm.sale_ids[0],
           sale_ids: returnForm.sale_ids,
           items: returnForm.items.map(i => ({
+            sale_id: i.sale_id,
             menu_item_id: i.menu_item_id,
             quantity: i.quantity,
             unit_price: i.price,
