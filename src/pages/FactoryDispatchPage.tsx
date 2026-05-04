@@ -137,27 +137,30 @@ const FactoryDispatchPage = () => {
 
     const toastId = toast.loading('Aggregating items from selected dispatches...');
     try {
-      // 🚀 FETCH ALL SELECTED SALES IN PARALLEL
+      // 🚀 FETCH BOTH ORIGINAL SALE DATA AND REMAINING QUANTITIES
       const results = await Promise.all(
-        saleIds.map(id => api.get(`/sales/${id}`))
+        saleIds.map(id => Promise.all([
+          api.get(`/sales/${id}`),
+          api.get(`/factory/sales/${id}/items`)
+        ]))
       );
 
       // 📦 SAVE CURRENT USER INPUTS (QUANTITIES)
       const currentInputs = new Map();
       returnForm.items.forEach(item => {
         if (Number(item.quantity) > 0) {
-          currentInputs.set(item.menu_item_id, item.quantity);
+          currentInputs.set(item.unique_key || item.menu_item_id, item.quantity);
         }
       });
 
-      // 📦 COLLECT ALL ITEMS FROM ALL BATCHES SEPARATELY
+      // 📦 COLLECT ALL REMAINING ITEMS
       let allItems: any[] = [];
-      results.forEach(res => {
-        if (res.data.success) {
-          const saleData = res.data.data;
-          const saleItems = saleData.items || [];
-          saleItems.forEach((i: any) => {
-             // UNIQUE KEY: ITEM ID + SALE ID
+      results.forEach(([saleRes, itemsRes]) => {
+        if (saleRes.data.success && itemsRes.data.success) {
+          const saleData = saleRes.data.data;
+          const remainingItems = itemsRes.data.data; // this comes from getOrderItems, where quantity is remaining_qty
+          
+          remainingItems.forEach((i: any) => {
              const uniqueKey = `${i.menu_item_id}_${saleData.sale_id}`;
              
              allItems.push({
@@ -165,8 +168,7 @@ const FactoryDispatchPage = () => {
                unique_key: uniqueKey,
                sale_id: saleData.sale_id,
                order_number: saleData.order_number,
-               original_quantity: i.quantity_delivered || i.quantity,
-               // RESTORE QUANTITY IF USER HAD ALREADY TYPED SOMETHING FOR THIS SPECIFIC ITEM+BATCH
+               original_quantity: i.quantity, // This is the REMAINING quantity
                quantity: currentInputs.get(uniqueKey) || 0
              });
           });
@@ -1434,17 +1436,22 @@ const FactoryDispatchPage = () => {
                             <div style={{ fontSize: '10px', color: 'var(--primary)', fontWeight: 700, background: 'rgba(1, 86, 44, 0.05)', display: 'inline-block', padding: '2px 6px', borderRadius: '4px', marginTop: '4px' }}>
                                Order: {item.order_number}
                             </div>
-                            <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>Original Qty: {item.original_quantity}</div>
+                            <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>Max Remainder: {item.original_quantity}</div>
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                             <label style={{ fontSize: '11px', fontWeight: 600 }}>RETURNED:</label>
                             <input
                               type="number"
+                              min="0"
+                              max={item.original_quantity}
                               style={{ width: "80px", padding: "8px", borderRadius: '8px', border: '1px solid #e2e8f0' }}
                               value={item.quantity}
                               onChange={(e) => {
+                                let val = Number(e.target.value);
+                                if (val > Number(item.original_quantity)) val = Number(item.original_quantity);
+                                if (val < 0) val = 0;
                                 const n = [...returnForm.items];
-                                n[idx].quantity = e.target.value;
+                                n[idx].quantity = val || "";
                                 setReturnForm({ ...returnForm, items: n });
                               }}
                             />
