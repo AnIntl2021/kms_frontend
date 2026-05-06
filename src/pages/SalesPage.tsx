@@ -571,11 +571,9 @@ const SalesPage = () => {
                                 <button className="dropdown-item" onClick={() => preparePrint(sale, true)} style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '10px 15px', border: 'none', background: 'none', textAlign: 'left', fontSize: '13px', cursor: 'pointer' }}>
                                   <Receipt size={14} color="#f59e0b" /> {t("dot_matrix_print")}
                                 </button>
-                                {(sale.dispatch_status || '').toLowerCase() !== 'delivered' && (
-                                  <button className="dropdown-item" onClick={() => handleEditOrder(sale)} style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '10px 15px', border: 'none', background: 'none', textAlign: 'left', fontSize: '13px', cursor: 'pointer' }}>
-                                    <Edit size={14} color="#0369a1" /> {t("edit_order")}
-                                  </button>
-                                )}
+                                <button className="dropdown-item" onClick={() => handleEditOrder(sale)} style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '10px 15px', border: 'none', background: 'none', textAlign: 'left', fontSize: '13px', cursor: 'pointer' }}>
+                                  <Edit size={14} color="#0369a1" /> {t("edit_order")}
+                                </button>
                                 <div style={{ height: '1px', background: '#f1f5f9' }} />
                                 <button className="dropdown-item" onClick={() => handleReturnOrder(sale.sale_id)} style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '10px 15px', border: 'none', background: 'none', textAlign: 'left', fontSize: '13px', cursor: 'pointer', color: '#ef4444' }}>
                                   <RotateCcw size={14} /> {t("return_order")}

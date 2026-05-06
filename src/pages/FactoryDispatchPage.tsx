@@ -58,6 +58,7 @@ const FactoryDispatchPage = () => {
   const [showReturnEditModal, setShowReturnEditModal] = useState(false);
   const [selectedReturn, setSelectedReturn] = useState<any>(null);
   const [editingReturnId, setEditingReturnId] = useState<number | null>(null);
+  const [editingDispatchId, setEditingDispatchId] = useState<number | null>(null);
   const [returnItems, setReturnItems] = useState<any[]>([]);
 
   const [produceForm, setProduceForm] = useState({
@@ -412,9 +413,15 @@ const FactoryDispatchPage = () => {
   const handleDispatch = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await api.post("/factory/sales", dispatchForm);
-      toast.success(t('goods_dispatched_success'));
+      if (editingDispatchId) {
+        await api.put(`/factory/sales/${editingDispatchId}`, dispatchForm);
+        toast.success(t('order_updated_success'));
+      } else {
+        await api.post("/factory/sales", dispatchForm);
+        toast.success(t('goods_dispatched_success'));
+      }
       setShowDispatchModal(false);
+      setEditingDispatchId(null);
       setDispatchForm({
         vendor_id: "",
         batch_number: "",
@@ -422,6 +429,7 @@ const FactoryDispatchPage = () => {
         items: [],
         payment_method: "credit",
         discount_percentage: 0,
+        salesman_id: "",
         dispatch_date: new Date().toISOString().split("T")[0],
       });
       fetchBaseData();
@@ -679,6 +687,34 @@ const FactoryDispatchPage = () => {
                                   {t('deliver')}
                                 </button>
                               )}
+                               <button 
+                                 onClick={async () => {
+                                   const toastId = toast.loading(t('loading_data'));
+                                   try {
+                                      const res = await api.get(`/factory/sales/${d.sale_id}/items`);
+                                      setDispatchForm({
+                                        vendor_id: String(d.vendor_id),
+                                        batch_number: d.batch_number || '',
+                                        expiry_date: d.expiry_date || '',
+                                        items: res.data.data.map((i: any) => ({ ...i, quantity: i.quantity, price: i.price })),
+                                        payment_method: d.payment_method || 'credit',
+                                        discount_percentage: Number(d.discount_percentage || 0),
+                                        salesman_id: String(d.salesman_id || ''),
+                                        dispatch_date: d.dispatch_date || new Date().toISOString().split("T")[0]
+                                      });
+                                      setEditingDispatchId(d.sale_id);
+                                      setShowDispatchModal(true);
+                                      toast.dismiss(toastId);
+                                   } catch (err) {
+                                      toast.update(toastId, { render: t('failed_load_details'), type: 'error', isLoading: false, autoClose: 3000 });
+                                   }
+                                 }}
+                                 className="btn-icon" 
+                                 style={{ background: '#f0fdf4', color: '#10b981', border: 'none', padding: '6px', cursor: 'pointer', borderRadius: '4px' }}
+                                 title={t('edit_order')}
+                               >
+                                 <Pencil size={16} />
+                               </button>
                                <button 
                                  onClick={() => handleDeleteDispatch(d.sale_id)} 
                                  className="btn-icon" 
