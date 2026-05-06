@@ -3,8 +3,10 @@ import Layout from '../components/Layout';
 import { Settings, Save, Building2, Calculator, Factory } from 'lucide-react';
 import { toast } from 'react-toastify';
 import api from '../api/axios';
+import { useLanguage } from '../hooks/useLanguage';
 
 const SettingsPage = () => {
+  const { t, language } = useLanguage();
   const [activeTab, setActiveTab] = useState('general');
   const [settings, setSettings] = useState<any>({});
   const [loading, setLoading] = useState(true);
@@ -34,16 +36,16 @@ const SettingsPage = () => {
     setIsSaving(true);
     try {
       await api.post('/settings/update', settings);
-      toast.success('System Settings Updated Successfully! ⚙️');
+      toast.success(t('settings_updated_success'));
     } catch (error) {
-      toast.error('Failed to update system configurations.');
+      toast.error(t('failed_update_configs'));
     } finally {
       setIsSaving(false);
     }
   };
 
   const renderTabContent = () => {
-    if (loading) return <div className="loading-container">Gathering system configurations...</div>;
+    if (loading) return <div className="loading-container">{t('gathering_configs')}</div>;
 
     switch (activeTab) {
       case 'general':
@@ -52,28 +54,28 @@ const SettingsPage = () => {
             <div className="settings-card">
               <div className="card-header">
                 <Building2 size={20} />
-                <h3>Business Identity</h3>
+                <h3>{t('business_identity')}</h3>
               </div>
               <div className="card-body">
                 <div className="form-group">
-                  <label>Company Name</label>
+                  <label>{t('company_name_label')}</label>
                   <input 
                     type="text" 
                     value={settings.company_name || ''} 
                     onChange={(e) => handleChange('company_name', e.target.value)}
-                    placeholder="Enter business name"
+                    placeholder={t('enter_business_name')}
                   />
                 </div>
                 <div className="form-group">
-                  <label>Display Address</label>
+                  <label>{t('display_address')}</label>
                   <textarea 
                     value={settings.company_address || ''} 
                     onChange={(e) => handleChange('company_address', e.target.value)}
-                    placeholder="Physical address for labels/invoices"
+                    placeholder={t('physical_address_hint')}
                   />
                 </div>
                 <div className="form-group">
-                  <label>Primary Contact</label>
+                  <label>{t('primary_contact')}</label>
                   <input 
                     type="text" 
                     value={settings.contact_number || ''} 
@@ -91,22 +93,22 @@ const SettingsPage = () => {
              <div className="settings-card">
               <div className="card-header">
                 <Factory size={20} />
-                <h3>Manufacturing Logic</h3>
+                <h3>{t('manufacturing_logic')}</h3>
               </div>
               <div className="card-body">
                 <div className="form-group">
-                  <label>Default Expiry Buffer (Days)</label>
+                  <label>{t('default_expiry_buffer_days')}</label>
                   <div className="input-with-hint">
                     <input 
                       type="number" 
                       value={settings.default_expiry_days || 4} 
                       onChange={(e) => handleChange('default_expiry_days', e.target.value)}
                     />
-                    <span>Automatically sets the [Use By] date based on production date.</span>
+                    <span>{t('auto_expiry_hint')}</span>
                   </div>
                 </div>
                 <div className="info-box">
-                  <p><strong>Note:</strong> Typical shelf life for Fresh 'n' Fast products is 4 days including production day.</p>
+                  <p><strong>{t('note')}:</strong> {t('shelf_life_note')}</p>
                 </div>
               </div>
             </div>
@@ -118,11 +120,11 @@ const SettingsPage = () => {
              <div className="settings-card">
               <div className="card-header">
                 <Calculator size={20} />
-                <h3>Accounting & Localization</h3>
+                <h3>{t('accounting_localization')}</h3>
               </div>
               <div className="card-body">
                 <div className="form-group">
-                  <label>Service Currency Symbol</label>
+                  <label>{t('service_currency_symbol')}</label>
                   <input 
                     type="text" 
                     value={settings.currency_symbol || 'KWD'} 
@@ -130,7 +132,7 @@ const SettingsPage = () => {
                   />
                 </div>
                 <div className="form-group">
-                  <label>GST/VAT Percentage (%)</label>
+                  <label>{t('vat_percentage_label')}</label>
                   <input 
                     type="number" 
                     value={settings.vat_percentage || 0} 
@@ -147,16 +149,16 @@ const SettingsPage = () => {
   };
 
   return (
-    <Layout title="System Settings">
+    <Layout title={t('settings')}>
       <div className="settings-page-container">
         <header className="page-header">
           <div className="header-info">
             <div className="header-icon">
               <Settings size={24} />
             </div>
-            <div>
-              <h1>Global Configuration</h1>
-              <p>Manage system-wide defaults and business information.</p>
+            <div style={{ textAlign: language === 'ar' ? 'right' : 'left' }}>
+              <h1>{t('global_configuration')}</h1>
+              <p>{t('manage_system_defaults_msg')}</p>
             </div>
           </div>
           
@@ -165,7 +167,7 @@ const SettingsPage = () => {
             onClick={handleSave}
             disabled={isSaving}
           >
-            {isSaving ? 'Saving...' : <><Save size={18} /> Update Settings</>}
+            {isSaving ? t('saving') : <><Save size={18} /> {t('update_settings')}</>}
           </button>
         </header>
 
@@ -174,19 +176,19 @@ const SettingsPage = () => {
             className={`tab-btn ${activeTab === 'general' ? 'active' : ''}`}
             onClick={() => setActiveTab('general')}
           >
-            General
+            {t('general_tab')}
           </button>
           <button 
             className={`tab-btn ${activeTab === 'production' ? 'active' : ''}`}
             onClick={() => setActiveTab('production')}
           >
-            Production
+            {t('production_tab')}
           </button>
           <button 
             className={`tab-btn ${activeTab === 'financials' ? 'active' : ''}`}
             onClick={() => setActiveTab('financials')}
           >
-            Financials
+            {t('financials_tab')}
           </button>
         </div>
 

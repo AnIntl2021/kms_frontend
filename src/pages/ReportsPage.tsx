@@ -12,14 +12,17 @@ import {
   ShoppingCart,
   User,
   Users,
-  Truck
+  Truck,
+  X
 } from 'lucide-react';
 import api from '../api/axios';
 import { toast } from 'react-toastify';
 import Chart from 'react-apexcharts';
+import { useLanguage } from '../hooks/useLanguage';
 
 const ReportsPage = () => {
-  const [activeTab, setActiveTab] = useState<'sales' | 'production' | 'wastage'>('sales');
+  const { t, language } = useLanguage();
+  const [activeTab, setActiveTab] = useState<'sales' | 'production' | 'wastage' | 'purchase'>('sales');
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<any[]>([]);
   const [analytics, setAnalytics] = useState<any>(null);
@@ -135,16 +138,18 @@ const ReportsPage = () => {
         d.cost_price,
         (d.quantity_produced * d.cost_price).toFixed(3)
       ]);
-    } else if (activeTab === 'wastage') {
-      headers = ["Date", "Product", "Vendor", "Branch", "Qty Wasted", "Loss (KWD)", "Reason"];
+    } else if (activeTab === 'purchase') {
+      headers = ["PO Number", "Supplier", "Branch", "Date", "Total", "Tax", "Discount", "Final", "Status"];
       rows = data.map(d => [
-        d.report_date,
-        d.product_name,
-        d.vendor_name || 'Internal',
+        d.po_number,
+        d.vendor_name,
         d.branch_name || 'Main',
-        d.quantity,
-        (d.quantity * d.price).toFixed(3),
-        d.reason_en
+        d.report_date,
+        d.total_amount,
+        d.tax_amount,
+        d.discount_amount,
+        d.final_amount,
+        d.status
       ]);
     }
 
@@ -177,6 +182,9 @@ const ReportsPage = () => {
     } else if (activeTab === 'production') {
       return (d.product_name?.toLowerCase().includes(searchStr) || 
               d.batch_number?.toLowerCase().includes(searchStr));
+    } else if (activeTab === 'purchase') {
+      return (d.vendor_name?.toLowerCase().includes(searchStr) || 
+              d.po_number?.toLowerCase().includes(searchStr));
     } else {
       return (d.product_name?.toLowerCase().includes(searchStr) || 
               d.reason_en?.toLowerCase().includes(searchStr) ||
@@ -218,23 +226,23 @@ const ReportsPage = () => {
   };
 
   return (
-    <Layout title="Business Intelligence Reports">
+    <Layout title={t('bi_reports')}>
       <div className="reports-container">
         {/* Report Controls */}
         <div className="reports-header-card">
           <div className="filter-grid">
             <div className="filter-group">
-              <label><Calendar size={14} /> Date Range</label>
+              <label><Calendar size={14} /> {t('date_range')}</label>
               <div className="date-inputs">
                 <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-                <span>to</span>
+                <span>{t('to')}</span>
                 <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
               </div>
             </div>
 
-            {(activeTab === 'sales' || activeTab === 'wastage') && (
+            {(activeTab === 'sales' || activeTab === 'wastage' || activeTab === 'purchase') && (
               <div className="filter-group">
-                <label><User size={14} /> Filter by Customer</label>
+                <label><User size={14} /> {t('filter_by_customer')}</label>
                 <select 
                   className="dropdown-input" 
                   value={selectedVendor} 
@@ -243,53 +251,53 @@ const ReportsPage = () => {
                     setSelectedBranch(''); // Reset branch when vendor changes
                   }}
                 >
-                  <option value="">All Customers</option>
+                  <option value="">{activeTab === 'purchase' ? t('all_suppliers') : t('all_customers')}</option>
                   {vendors.map(v => (
-                    <option key={v.vendor_id} value={v.vendor_id}>{v.name_en}</option>
+                    <option key={v.vendor_id} value={v.vendor_id}>{language === 'ar' ? (v.name_ar || v.name_en) : v.name_en}</option>
                   ))}
                 </select>
               </div>
             )}
 
-            {(activeTab === 'sales' || activeTab === 'wastage') && (
+            {(activeTab === 'sales' || activeTab === 'wastage' || activeTab === 'purchase') && (
               <div className="filter-group">
-                <label><Truck size={14} /> Filter by Branch</label>
+                <label><Truck size={14} /> {t('filter_by_branch')}</label>
                 <select 
                   className="dropdown-input" 
                   value={selectedBranch} 
                   onChange={(e) => setSelectedBranch(e.target.value)}
                   disabled={!selectedVendor}
                 >
-                  <option value="">{selectedVendor ? "All Branches" : "Select Customer First"}</option>
+                  <option value="">{selectedVendor ? t('all_branches') : t('select_customer_first')}</option>
                   {selectedVendor && vendors.find(v => String(v.vendor_id) === String(selectedVendor))?.branches?.map((b: any) => (
-                    <option key={b.branch_id || b.id} value={b.branch_id || b.id}>{b.name_en || b.name}</option>
+                    <option key={b.branch_id || b.id} value={b.branch_id || b.id}>{language === 'ar' ? (b.name_ar || b.name_en || b.name) : (b.name_en || b.name)}</option>
                   ))}
                 </select>
               </div>
             )}
 
-            {(activeTab === 'sales' || activeTab === 'wastage') && (
+            {(activeTab === 'sales' || activeTab === 'wastage' || activeTab === 'purchase') && (
               <div className="filter-group">
-                <label><Users size={14} /> Filter by Salesman</label>
+                <label><Users size={14} /> {t('filter_by_salesman')}</label>
                 <select 
                   className="dropdown-input" 
                   value={selectedSalesman} 
                   onChange={(e) => setSelectedSalesman(e.target.value)}
                 >
-                  <option value="">All Salesmen</option>
+                  <option value="">{t('all_salesmen')}</option>
                   {salesmen.map(s => (
-                    <option key={s.salesman_id} value={s.salesman_id}>{s.name_en}</option>
+                    <option key={s.salesman_id} value={s.salesman_id}>{language === 'ar' ? (s.name_ar || s.name_en) : s.name_en}</option>
                   ))}
                 </select>
               </div>
             )}
 
             <div className="filter-group">
-              <label><Search size={14} /> Quick Search</label>
+              <label><Search size={14} /> {t('quick_search')}</label>
               <div className="search-input-wrapper" style={{ display: 'flex', gap: '8px' }}>
                 <input 
                   type="text" 
-                  placeholder="Filter results..." 
+                  placeholder={t('filter_results_hint')} 
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   style={{ flex: 1 }}
@@ -313,7 +321,7 @@ const ReportsPage = () => {
                       cursor: 'pointer'
                     }}
                   >
-                    Clear All
+                    {t('clear_all')}
                   </button>
                 )}
               </div>
@@ -324,22 +332,25 @@ const ReportsPage = () => {
           <div className="report-tabs-wrapper" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f1f5f9', paddingTop: '1.5rem' }}>
             <div className="report-tabs" style={{ border: 'none', padding: 0 }}>
               <button className={activeTab === 'sales' ? 'active' : ''} onClick={() => setActiveTab('sales')}>
-                <TrendingUp size={18} /> Sales & Revenue
+                <TrendingUp size={18} /> {t('sales_revenue_tab')}
               </button>
               <button className={activeTab === 'production' ? 'active' : ''} onClick={() => setActiveTab('production')}>
-                <Package size={18} /> Production Logs
+                <Package size={18} /> {t('production_logs_tab')}
               </button>
               <button className={activeTab === 'wastage' ? 'active' : ''} onClick={() => setActiveTab('wastage')}>
-                <AlertTriangle size={18} /> Wastage & Loss
+                <AlertTriangle size={18} /> {t('wastage_loss_tab')}
+              </button>
+              <button className={activeTab === 'purchase' ? 'active' : ''} onClick={() => setActiveTab('purchase')}>
+                <ShoppingCart size={18} /> {t('purchase_reports_tab')}
               </button>
             </div>
 
             <div className="report-actions">
               <button className="btn-report-action printer" onClick={handlePrint}>
-                <Printer size={18} /> Print Report
+                <Printer size={18} /> {t('print_report')}
               </button>
               <button className="btn-report-action export" onClick={handleExportCSV}>
-                <Download size={18} /> Export CSV
+                <Download size={18} /> {t('export_csv')}
               </button>
             </div>
           </div>
@@ -351,25 +362,25 @@ const ReportsPage = () => {
             <div className="summary-card revenue">
               <div className="summary-icon"><TrendingUp size={24} /></div>
               <div className="summary-data">
-                <span className="summary-label">Total Revenue</span>
-                <span className="summary-value">{filteredData.reduce((acc, curr) => acc + Number(curr.final_amount || 0), 0).toFixed(3)} د.ك</span>
+                <span className="summary-label">{t('total_revenue')}</span>
+                <span className="summary-value">{filteredData.reduce((acc, curr) => acc + Number(curr.final_amount || 0), 0).toFixed(3)} {t('kd_currency')}</span>
               </div>
             </div>
             <div className="summary-card loss">
               <div className="summary-icon"><AlertTriangle size={24} /></div>
               <div className="summary-data">
-                <span className="summary-label">Total Returns (Loss)</span>
-                <span className="summary-value">{filteredData.reduce((acc, curr) => acc + Number(curr.returns_amount || 0), 0).toFixed(3)} د.ك</span>
+                <span className="summary-label">{t('total_returns_loss')}</span>
+                <span className="summary-value">{filteredData.reduce((acc, curr) => acc + Number(curr.returns_amount || 0), 0).toFixed(3)} {t('kd_currency')}</span>
               </div>
             </div>
             <div className="summary-card profit">
               <div className="summary-icon"><ShoppingCart size={24} /></div>
               <div className="summary-data">
-                <span className="summary-label">Net Profit</span>
+                <span className="summary-label">{t('net_profit')}</span>
                 <span className="summary-value">
                   {(filteredData.reduce((acc, curr) => acc + Number(curr.final_amount || 0), 0) - 
                     filteredData.reduce((acc, curr) => acc + Number(curr.total_cost || 0), 0) -
-                    filteredData.reduce((acc, curr) => acc + Number(curr.returns_amount || 0), 0)).toFixed(3)} د.ك
+                    filteredData.reduce((acc, curr) => acc + Number(curr.returns_amount || 0), 0)).toFixed(3)} {t('kd_currency')}
                 </span>
                 <span className="summary-sublabel">After Production Costs & Returns</span>
               </div>
@@ -382,18 +393,18 @@ const ReportsPage = () => {
           <div className="analytics-dashboard no-print animated slideUp">
             <div className="chart-card large">
               <div className="chart-header">
-                <h3><TrendingUp size={18} /> Revenue vs Net Profit Trend</h3>
+                <h3><TrendingUp size={18} /> {t('revenue_profit_trend')}</h3>
                 <div className="legend-pills">
-                   <span className="pill revenue">Revenue</span>
-                   <span className="pill profit">Profit</span>
+                   <span className="pill revenue">{t('revenue')}</span>
+                   <span className="pill profit">{t('net_profit')}</span>
                 </div>
               </div>
               <div className="chart-container">
                 <Chart 
                   options={trendOptions} 
                   series={[
-                    { name: 'Revenue', data: analytics.dailyTrend.map((d: any) => Number(d.revenue || 0).toFixed(2)) },
-                    { name: 'Net Profit', data: analytics.dailyTrend.map((d: any) => Number(d.profit || 0).toFixed(2)) }
+                    { name: t('revenue'), data: analytics.dailyTrend.map((d: any) => Number(d.revenue || 0).toFixed(2)) },
+                    { name: t('net_profit'), data: analytics.dailyTrend.map((d: any) => Number(d.profit || 0).toFixed(2)) }
                   ]} 
                   type="area" 
                   height={300} 
@@ -403,11 +414,11 @@ const ReportsPage = () => {
 
             <div className="charts-row">
               <div className="chart-card">
-                <h3><User size={18} /> Top Customers by Revenue</h3>
+                <h3><User size={18} /> {t('top_customers_revenue')}</h3>
                 <div className="chart-container">
                   <Chart 
                     options={customerOptions} 
-                    series={[{ name: 'Revenue', data: analytics.topCustomers.map((c: any) => Number(c.revenue || 0).toFixed(2)) }]} 
+                    series={[{ name: t('revenue'), data: analytics.topCustomers.map((c: any) => Number(c.revenue || 0).toFixed(2)) }]} 
                     type="bar" 
                     height={250} 
                   />
@@ -415,7 +426,7 @@ const ReportsPage = () => {
               </div>
 
               <div className="chart-card">
-                <h3><AlertTriangle size={18} /> Wastage Breakdown</h3>
+                <h3><AlertTriangle size={18} /> {t('wastage_breakdown')}</h3>
                 <div className="chart-container">
                   <Chart 
                     options={wastageOptions} 
@@ -434,7 +445,7 @@ const ReportsPage = () => {
           {loading ? (
             <div style={{ padding: '60px', textAlign: 'center' }}>
               <div className="spinner" style={{ margin: '0 auto 15px', width: '40px', height: '40px', border: '3px solid #f1f5f9', borderTopColor: 'var(--primary)', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
-              <p style={{ color: '#64748b', fontWeight: 500 }}>Refreshing Report Data...</p>
+              <p style={{ color: '#64748b', fontWeight: 500 }}>{t('refreshing_report_data')}</p>
             </div>
           ) : (
             <div className="table-responsive">
@@ -442,38 +453,51 @@ const ReportsPage = () => {
                 <thead>
                   {activeTab === 'sales' && (
                     <tr>
-                      <th>Order ID</th>
-                      <th>Customer</th>
-                       <th>Branch</th>
-                      <th>Salesman</th>
-                      <th>Date</th>
-                      <th>Total Amt</th>
-                      <th>Discount</th>
-                      <th>Final Amt</th>
-                      <th>Returns</th>
-                      <th>Net Profit</th>
-                      <th>Status</th>
+                      <th>{t('order_id')}</th>
+                      <th>{t('customer')}</th>
+                       <th>{t('branch')}</th>
+                      <th>{t('salesman')}</th>
+                      <th>{t('date')}</th>
+                      <th>{t('total_amt')}</th>
+                      <th>{t('disc')}</th>
+                      <th>{t('final_amt')}</th>
+                      <th>{t('returns')}</th>
+                      <th>{t('net_profit')}</th>
+                      <th>{t('status')}</th>
                     </tr>
                   )}
                   {activeTab === 'production' && (
                     <tr>
-                      <th>Batch Number</th>
-                      <th>Date</th>
-                      <th>Product</th>
-                      <th>Qty Produced</th>
-                      <th>Cost Price</th>
-                      <th>Total Cost</th>
+                      <th>{t('batch_number_caps')}</th>
+                      <th>{t('date')}</th>
+                      <th>{t('product')}</th>
+                      <th>{t('qty_produced')}</th>
+                      <th>{t('cost_price')}</th>
+                      <th>{t('total_cost')}</th>
                     </tr>
                   )}
                   {activeTab === 'wastage' && (
                     <tr>
-                      <th>Date</th>
-                      <th>Product</th>
-                      <th>Vendor</th>
-                       <th>Branch</th>
-                      <th>Qty</th>
-                      <th>Loss (KWD)</th>
-                      <th>Reason</th>
+                      <th>{t('date')}</th>
+                      <th>{t('product')}</th>
+                      <th>{t('vendor')}</th>
+                       <th>{t('branch')}</th>
+                      <th>{t('qty_wasted_caps')}</th>
+                      <th>{t('loss_value')}</th>
+                      <th>{t('reason')}</th>
+                    </tr>
+                  )}
+                  {activeTab === 'purchase' && (
+                    <tr>
+                      <th>{t('po_number')}</th>
+                      <th>{t('supplier')}</th>
+                      <th>{t('branch')}</th>
+                      <th>{t('date')}</th>
+                      <th>{t('total_amt')}</th>
+                      <th>{t('tax')}</th>
+                      <th>{t('disc')}</th>
+                      <th>{t('final_amt')}</th>
+                      <th>{t('status')}</th>
                     </tr>
                   )}
                 </thead>
@@ -483,9 +507,9 @@ const ReportsPage = () => {
                       {activeTab === 'sales' && (
                         <>
                           <td><strong>FNFI-{100000 + item.sale_id}</strong></td>
-                          <td>{item.vendor_name}</td>
-                           <td>{item.branch_name || 'Main'}</td>
-                          <td><span className="salesman-badge">{item.salesman_name || 'N/A'}</span></td>
+                          <td>{language === 'ar' ? (item.vendor_name_ar || item.vendor_name) : item.vendor_name}</td>
+                           <td>{language === 'ar' ? (item.branch_name_ar || item.branch_name || 'الرئيسي') : (item.branch_name || 'Main')}</td>
+                          <td><span className="salesman-badge">{language === 'ar' ? (item.salesman_name_ar || item.salesman_name || 'N/A') : (item.salesman_name || 'N/A')}</span></td>
                           <td>{item.report_date}</td>
                           <td>{Number(item.total_amount || 0).toFixed(3)}</td>
                           <td><span className="discount-tag">-{item.discount_percentage || 0}%</span></td>
@@ -496,15 +520,15 @@ const ReportsPage = () => {
                               {(Number(item.final_amount || 0) - Number(item.total_cost || 0) - Number(item.returns_amount || 0)).toFixed(3)}
                             </span>
                           </td>
-                          <td><span className={`status-pill ${item.dispatch_status}`}>{item.dispatch_status}</span></td>
+                          <td><span className={`status-pill ${item.dispatch_status}`}>{t(item.dispatch_status)}</span></td>
                         </>
                       )}
                       {activeTab === 'production' && (
                         <>
                           <td><strong>{item.batch_number}</strong></td>
                           <td>{item.report_date}</td>
-                          <td>{item.product_name}</td>
-                          <td>{item.quantity_produced || 0} units</td>
+                          <td>{language === 'ar' ? (item.product_name_ar || item.product_name) : item.product_name}</td>
+                          <td>{item.quantity_produced || 0} {t('dispatch_unit')}</td>
                           <td>{Number(item.cost_price || 0).toFixed(3)}</td>
                           <td>{Number((item.quantity_produced || 0) * (item.cost_price || 0)).toFixed(3)}</td>
                         </>
@@ -512,18 +536,31 @@ const ReportsPage = () => {
                       {activeTab === 'wastage' && (
                         <>
                           <td>{item.report_date}</td>
-                          <td><strong>{item.product_name}</strong></td>
-                          <td>{item.vendor_name || 'Factory'}</td>
-                           <td>{item.branch_name || 'Main'}</td>
+                          <td><strong>{language === 'ar' ? (item.product_name_ar || item.product_name) : item.product_name}</strong></td>
+                          <td>{language === 'ar' ? (item.vendor_name_ar || item.vendor_name || 'المصنع') : (item.vendor_name || 'Factory')}</td>
+                           <td>{language === 'ar' ? (item.branch_name_ar || item.branch_name || 'الرئيسي') : (item.branch_name || 'Main')}</td>
                           <td>{item.quantity || 0}</td>
                           <td><span className="loss-text">{Number((item.quantity || 0) * (item.price || 0)).toFixed(3)}</span></td>
-                          <td>{item.reason_en}</td>
+                          <td>{language === 'ar' ? (item.reason_ar || item.reason_en) : item.reason_en}</td>
+                        </>
+                      )}
+                      {activeTab === 'purchase' && (
+                        <>
+                          <td><strong>{item.po_number}</strong></td>
+                          <td>{language === 'ar' ? (item.vendor_name_ar || item.vendor_name) : item.vendor_name}</td>
+                          <td>{language === 'ar' ? (item.branch_name_ar || item.branch_name || 'الرئيسي') : (item.branch_name || 'Main')}</td>
+                          <td>{item.report_date}</td>
+                          <td>{Number(item.total_amount || 0).toFixed(3)}</td>
+                          <td>{Number(item.tax_amount || 0).toFixed(3)}</td>
+                          <td><span className="discount-tag">-{Number(item.discount_amount || 0).toFixed(3)}</span></td>
+                          <td><span className="profit-text">{Number(item.final_amount || 0).toFixed(3)}</span></td>
+                          <td><span className={`status-pill ${item.status}`}>{t(item.status)}</span></td>
                         </>
                       )}
                     </tr>
                   )) : (
                     <tr>
-                      <td colSpan={10} className="empty-row">No records found for this period.</td>
+                      <td colSpan={11} className="empty-row">{t('no_records_period')}</td>
                     </tr>
                   )}
                 </tbody>
@@ -543,6 +580,7 @@ const ReportsPage = () => {
                    {activeTab === 'sales' ? <><th>ID</th><th>Customer</th><th>Date</th><th>Final</th><th>Returns</th><th>Profit</th></> : null}
                    {activeTab === 'production' ? <><th>Batch</th><th>Date</th><th>Product</th><th>Qty</th><th>Cost</th></> : null}
                    {activeTab === 'wastage' ? <><th>Date</th><th>Product</th><th>Qty</th><th>Loss</th><th>Reason</th></> : null}
+                   {activeTab === 'purchase' ? <><th>PO #</th><th>Supplier</th><th>Date</th><th>Total</th><th>Status</th></> : null}
                 </tr>
              </thead>
              <tbody>
@@ -551,6 +589,7 @@ const ReportsPage = () => {
                       {activeTab === 'sales' && <><td>{item.sale_id}</td><td>{item.vendor_name}</td><td>{item.report_date}</td><td>{item.final_amount}</td><td>{item.returns_amount || 0}</td><td>{(Number(item.final_amount || 0) - Number(item.total_cost || 0) - Number(item.returns_amount || 0)).toFixed(3)}</td></>}
                       {activeTab === 'production' && <><td>{item.batch_number}</td><td>{item.report_date}</td><td>{item.product_name}</td><td>{item.quantity_produced}</td><td>{(item.quantity_produced * item.cost_price).toFixed(3)}</td></>}
                       {activeTab === 'wastage' && <><td>{item.report_date}</td><td>{item.product_name}</td><td>{item.quantity}</td><td>{(item.quantity * item.price).toFixed(3)}</td><td>{item.reason_en}</td></>}
+                      {activeTab === 'purchase' && <><td>{item.po_number}</td><td>{item.vendor_name}</td><td>{item.report_date}</td><td>{item.final_amount}</td><td>{item.status}</td></>}
                    </tr>
                 ))}
              </tbody>
@@ -723,7 +762,7 @@ const ReportsPage = () => {
         .premium-table th { 
           background: #f8fafc; 
           padding: 1.2rem; 
-          text-align: left; 
+          text-align: start; 
           font-size: 0.75rem; 
           text-transform: uppercase; 
           color: #64748b; 
@@ -750,7 +789,7 @@ const ReportsPage = () => {
           .no-print { display: none; }
           .only-print { display: block; padding: 2rem; }
           .print-table { width: 100%; border-collapse: collapse; margin-top: 2rem; }
-          .print-table th, .print-table td { border: 1px solid #ddd; padding: 10px; text-align: left; font-size: 12px; }
+          .print-table th, .print-table td { border: 1px solid #ddd; padding: 10px; text-align: start; font-size: 12px; }
         }
 
         .animated { animation-duration: 0.6s; animation-fill-mode: both; }

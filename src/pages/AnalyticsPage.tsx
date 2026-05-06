@@ -11,8 +11,10 @@ import {
   Download
 } from 'lucide-react';
 import api from '../api/axios';
+import { useLanguage } from '../hooks/useLanguage';
 
 const AnalyticsPage = () => {
+  const { t, language } = useLanguage();
   const [forecasting, setForecasting] = useState<any[]>([]);
   const [health, setHealth] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -39,9 +41,9 @@ const AnalyticsPage = () => {
   
   const handleExport = () => {
     // Generate a simple CSV export for the user
-    const headers = ["Store Name", "7D Waste (KWD)", "7D Revenue (KWD)", "Priority", "Recommendation"];
+    const headers = [t('partner_name'), t('loss_value'), t('revenue'), t('potential'), t('adjustment_recommendation')];
     const rows = forecasting.map(f => [
-      f.vendor_name,
+      language === 'ar' ? (f.vendor_name_ar || f.vendor_name) : f.vendor_name,
       parseFloat(f.loss_kwd).toFixed(3),
       parseFloat(f.recent_sales).toFixed(3),
       f.priority,
@@ -81,66 +83,66 @@ const AnalyticsPage = () => {
               <div key={idx} className="chart-bar-v">
                   <div className="bar-label">{parseFloat(s.recent_sales).toFixed(1)}</div>
                   <div className="bar-fill" style={{ height: `${height}%` }}></div>
-                  <div className="bar-title">{s.vendor_name.substring(0, 8)}..</div>
+                  <div className="bar-title">{language === 'ar' ? (s.vendor_name_ar || s.vendor_name).substring(0, 8) : s.vendor_name.substring(0, 8)}..</div>
               </div>
           );
       });
   };
 
   return (
-    <Layout title="Analytics & Business Intelligence">
+    <Layout title={t('analytics_bi')}>
       <div className="analytics-container">
         {loading ? (
-           <div className="analytics-loading animated fadeIn">
-              <Activity className="spin" size={48} />
-              <p>Calculating Profits & Loss Patterns...</p>
-           </div>
+            <div className="analytics-loading animated fadeIn">
+               <Activity className="spin" size={48} />
+               <p>{t('calculating_profits_loss')}</p>
+            </div>
         ) : (
           <>
             {/* 🩺 FINANCIAL HERO SECTION */}
             <div className="stats-hero-grid animated slideInUp">
                <div className="hero-card health primary-hero">
-                  <div className="card-top">
+                   <div className="card-top">
                     <Activity size={24} />
-                    <span>Manufacturing Health Score</span>
+                    <span>{t('mfg_health_score')}</span>
                   </div>
                   <div className="icon-btn download-app" title="Install Desktop App">
                     <Download size={20} />
                   </div>
-                  <div className="icon-btn notification">
+                   <div className="icon-btn notification">
                     <div className="big-stat">{getEfficiencyScore()}%</div>
-                    <div className="stat-label">System Efficiency Index</div>
+                    <div className="stat-label">{t('system_efficiency_index')}</div>
                   </div>
                   <div className="health-bar-container">
                     <div className="health-bar-fill" style={{ width: `${getEfficiencyScore()}%` }}></div>
                   </div>
-                  <div className="hero-insight">
-                     <p>Your production is optimized. Targeting {getEfficiencyScore() + 5}% next week.</p>
-                  </div>
+                   <div className="hero-insight">
+                      <p>{t('production_optimized_msg').replace('{score}', String(getEfficiencyScore() + 5))}</p>
+                   </div>
                </div>
 
                <div className="hero-card finance-total">
-                   <div className="card-top">
-                     <BadgeCent size={24} />
-                     <span>Profit & Loss Overview (7D)</span>
-                   </div>
+                    <div className="card-top">
+                      <BadgeCent size={24} />
+                      <span>{t('profit_loss_overview_7d')}</span>
+                    </div>
                    <div className="sub-stats">
-                      <div className="sub-stat revenue">
-                         <span className="val">{parseFloat(health?.total_revenue_7d || '0').toFixed(3)} د.ك</span>
-                         <span className="lab">Total Settled Revenue</span>
-                      </div>
-                      <div className="sub-stat loss">
-                         <span className="val">{parseFloat(health?.total_returns_7d || '0').toFixed(3)} د.ك</span>
-                         <span className="lab">Total Returns (Loss)</span>
-                      </div>
-                      <div className="sub-stat profit">
-                         <span className="val" style={{ color: '#0ea5e9' }}>{parseFloat(health?.total_profit_7d || '0').toFixed(3)} د.ك</span>
-                         <span className="lab">Net Profit (After Costs)</span>
-                      </div>
-                      <div className="sub-stat units" style={{ marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid #f1f5f9' }}>
-                         <span className="val" style={{ fontSize: '1rem' }}>{health?.total_wasted || 0} Units / {parseFloat(health?.total_loss_kwd || '0').toFixed(3)} د.ك</span>
-                         <span className="lab">Expired Wastage Potential</span>
-                      </div>
+                       <div className="sub-stat revenue">
+                          <span className="val">{parseFloat(health?.total_revenue_7d || '0').toFixed(3)} {t('kd_currency')}</span>
+                          <span className="lab">{t('total_settled_revenue')}</span>
+                       </div>
+                       <div className="sub-stat loss">
+                          <span className="val">{parseFloat(health?.total_returns_7d || '0').toFixed(3)} {t('kd_currency')}</span>
+                          <span className="lab">{t('total_returns_loss')}</span>
+                       </div>
+                       <div className="sub-stat profit">
+                          <span className="val" style={{ color: '#0ea5e9' }}>{parseFloat(health?.total_profit_7d || '0').toFixed(3)} {t('kd_currency')}</span>
+                          <span className="lab">{t('net_profit_after_costs')}</span>
+                       </div>
+                       <div className="sub-stat units" style={{ marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid #f1f5f9' }}>
+                          <span className="val" style={{ fontSize: '1rem' }}>{health?.total_wasted || 0} {t('units')} / {parseFloat(health?.total_loss_kwd || '0').toFixed(3)} {t('kd_currency')}</span>
+                          <span className="lab">{t('expired_wastage_potential')}</span>
+                       </div>
                    </div>
                </div>
             </div>
@@ -148,94 +150,87 @@ const AnalyticsPage = () => {
             {/* 📊 INTERACTIVE CHART DECK */}
             <div className="chart-deck-grid animated slideInUp delay-100">
                 <div className="chart-card">
-                   <div className="chart-header">
-                      <BarChart2 size={20} />
-                      <h4>Top Revenue Stores (7D Performance)</h4>
-                   </div>
+                    <div className="chart-header">
+                       <BarChart2 size={20} />
+                       <h4>{t('top_revenue_stores_7d')}</h4>
+                    </div>
                    <div className="main-chart-area">
                       {renderProfitBars()}
                    </div>
                 </div>
 
                 <div className="chart-card dark">
-                   <div className="chart-header">
-                      <Zap size={20} className="neon-icon" style={{ color: '#fbbf24' }} />
-                      <h4 style={{ color: 'white' }}>Profit Expansion Deck</h4>
-                   </div>
-                   <div className="deck-body">
-                      <p style={{ color: '#94a3b8' }}>Stores below have high demand with ZERO waste. Add more quantity here to increase revenue.</p>
-                      <div className="opportunity-list">
-                         {forecasting.filter(f => f.adjustmentScore > 0).length > 0 ? (
-                            forecasting.filter(f => f.adjustmentScore > 0).slice(0, 3).map((f, i) => (
-                                <div key={i} className="opp-item">
-                                    <span className="sname">{f.vendor_name}</span>
-                                    <span className="stag neon">+ {f.adjustmentScore}% Potential</span>
-                                </div>
-                            ))
-                         ) : (
-                            <div className="empty-forecasting" style={{ padding: '1rem', textAlign: 'center', opacity: 0.6 }}>
-                               <Info size={24} style={{ marginBottom: '0.5rem' }} />
-                               <p style={{ fontSize: '0.8rem' }}>System is still gathering sales data to identify expansion targets.</p>
-                            </div>
-                         )}
-                      </div>
-                   </div>
+                    <div className="chart-header">
+                       <Zap size={20} color="#fbbf24" />
+                       <h4>{t('optimization_opportunities')}</h4>
+                    </div>
+                    <div className="opportunity-list">
+                        {forecasting.filter(f => f.adjustmentScore > 5).slice(0, 3).map((f, i) => (
+                           <div key={i} className="opp-item">
+                               <div>
+                                   <div style={{ fontWeight: 700 }}>{language === 'ar' ? (f.vendor_name_ar || f.vendor_name) : f.vendor_name}</div>
+                                   <div style={{ fontSize: '11px', opacity: 0.8 }}>{t('sales_vs_stock_ratio')}: {(parseFloat(f.recent_sales) / (parseFloat(f.loss_kwd) || 1)).toFixed(1)}x</div>
+                               </div>
+                               <span className="stag neon">+{f.adjustmentScore}%</span>
+                           </div>
+                        ))}
+                    </div>
                 </div>
             </div>
 
             {/* 🔮 FINANCIAL FORECASTING TABLE */}
             <div className="analytics-main-card animated slideInUp delay-200">
                <div className="card-header">
-                  <div className="header-title">
-                     <Activity size={20} />
-                     <h3>Financial Leak & Growth Forecast</h3>
-                  </div>
-                  <div className="header-actions" style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                      <button className="btn-download" onClick={handleExport} title="Download Full Report">
-                         <Download size={16} />
-                         Export BI Report
-                      </button>
-                      <span className="intelligence-tag">AI Profit Logic Active</span>
+                   <div className="header-title">
+                      <Activity size={20} />
+                      <h3>{t('leak_growth_forecast')}</h3>
                    </div>
+                   <div className="header-actions" style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                       <button className="btn-download" onClick={handleExport} title="Download Full Report">
+                          <Download size={16} />
+                          {t('export_bi_report')}
+                       </button>
+                       <span className="intelligence-tag">{t('ai_profit_logic_active')}</span>
+                    </div>
                </div>
                
                <div className="forecasting-table-wrapper">
                   <table className="analytics-table">
                     <thead>
                       <tr>
-                        <th>Store Name</th>
-                        <th>7D Waste (د.ك)</th>
-                        <th>7D Revenue</th>
-                        <th>Priority</th>
-                        <th>Adjustment Recommendation</th>
+                         <th>{t('store_name')}</th>
+                        <th>{t('7d_waste_kd')}</th>
+                        <th>{t('7d_revenue')}</th>
+                        <th>{t('priority')}</th>
+                        <th>{t('adjustment_recommendation')}</th>
                       </tr>
                     </thead>
                     <tbody>
                       {forecasting.length > 0 ? forecasting.map((store) => (
                         <tr key={store.vendor_id}>
-                          <td><strong>{store.vendor_name}</strong></td>
-                          <td className="loss-cell">
+                          <td><strong>{language === 'ar' ? (store.vendor_name_ar || store.vendor_name) : store.vendor_name}</strong></td>
+                           <td className="loss-cell">
                              {parseFloat(store.loss_kwd || '0') > 0 ? (
-                                <span className="loss-badge">{parseFloat(store.loss_kwd).toFixed(3)} د.ك Lost</span>
+                                <span className="loss-badge">{parseFloat(store.loss_kwd).toFixed(3)} {t('kd_currency')} {t('lost')}</span>
                              ) : (
-                                <span className="no-loss">0 Loss</span>
+                                <span className="no-loss">{t('no_loss')}</span>
                              )}
-                          </td>
-                          <td>{parseFloat(store.recent_sales || '0').toFixed(3)} د.ك</td>
+                           </td>
+                           <td>{parseFloat(store.recent_sales || '0').toFixed(3)} {t('kd_currency')}</td>
                           <td>
                              <span className={`priority-tag ${store.priority.toLowerCase().replace(' ', '-')}`}>
                                 {store.priority}
                              </span>
                           </td>
-                          <td>
+                           <td>
                              <div className={`recommendation-box ${store.actionColor}`}>
                                 {store.recommendation === 'EXPAND INVENTORY' ? <TrendingUp size={16} /> : <TrendingDown size={16} />}
-                                <span>{store.recommendation} ({store.adjustmentScore > 0 ? '+' : ''}{store.adjustmentScore}%)</span>
+                                <span>{t(store.recommendation.toLowerCase().replace(' ', '_'))} ({store.adjustmentScore > 0 ? '+' : ''}{store.adjustmentScore}%)</span>
                              </div>
-                          </td>
+                           </td>
                         </tr>
-                      )) : (
-                        <tr><td colSpan={5} style={{textAlign:'center', padding:'3rem'}}>No data available for analytical forecasting yet.</td></tr>
+                       )) : (
+                        <tr><td colSpan={5} style={{textAlign:'center', padding:'3rem'}}>{t('no_data_analytical_msg')}</td></tr>
                       )}
                     </tbody>
                   </table>
@@ -244,14 +239,14 @@ const AnalyticsPage = () => {
 
             {/* 💡 STRATEGY DECK */}
             <div className="strategy-grid animated slideInUp delay-300">
-               <div className="strategy-card green">
-                  <h4>💡 To Earn Everything Back:</h4>
-                  <p>Increase production for <b>{forecasting.find(f => f.adjustmentScore > 0)?.vendor_name || 'Top Stores'}</b> by 25% today. Their sales velocity is higher than current delivery volumes.</p>
-               </div>
-               <div className="strategy-card red">
-                  <h4>✋ STOP The Leak:</h4>
-                  <p>Reduce delivery for stores with <b>Critical Priority</b> immediately. You are losing approx. {parseFloat(health?.total_loss_kwd || '0').toFixed(1)} د.ك every week just in these locations.</p>
-               </div>
+                <div className="strategy-card green">
+                   <h4>💡 {t('earn_everything_back')}</h4>
+                   <p>Increase production for <b>{forecasting.find(f => f.adjustmentScore > 0)?.vendor_name || 'Top Stores'}</b> by 25% today. Their sales velocity is higher than current delivery volumes.</p>
+                </div>
+                <div className="strategy-card red">
+                   <h4>✋ {t('stop_the_leak')}</h4>
+                   <p>Reduce delivery for stores with <b>Critical Priority</b> immediately. You are losing approx. {parseFloat(health?.total_loss_kwd || '0').toFixed(1)} {t('kd_currency')} every week just in these locations.</p>
+                </div>
             </div>
           </>
         )}
@@ -325,7 +320,7 @@ const AnalyticsPage = () => {
         .card-header { padding: 1.5rem 2rem; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; }
         .intelligence-tag { background: #eff6ff; color: #2563eb; padding: 0.4rem 1rem; border-radius: 99px; font-size: 0.75rem; font-weight: 700; border: 1px solid #dbeafe; }
         .analytics-table { width: 100%; border-collapse: collapse; }
-        .analytics-table th { text-align: left; padding: 1.2rem 2rem; background: #f8fafc; color: #64748b; font-weight: 600; font-size: 0.85rem; text-transform: uppercase; border-bottom: 1px solid #f1f5f9; }
+        .analytics-table th { text-align: start; padding: 1.2rem 2rem; background: #f8fafc; color: #64748b; font-weight: 600; font-size: 0.85rem; text-transform: uppercase; border-bottom: 1px solid #f1f5f9; }
         .analytics-table td { padding: 1.5rem 2rem; border-bottom: 1px solid #f1f5f9; }
 
         .recommendation-box { display: flex; align-items: center; gap: 0.6rem; font-weight: 700; color: white; padding: 0.6rem 1rem; border-radius: 8px; width: fit-content; font-size: 0.8rem; }

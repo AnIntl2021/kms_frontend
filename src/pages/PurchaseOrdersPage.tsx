@@ -3,10 +3,11 @@ import Layout from '../components/Layout';
 import api from '../api/axios';
 import { Plus, X, Trash2, PlusCircle, Package, Truck, Calendar, CreditCard, StickyNote, Hash, MoreHorizontal, ShoppingBag, ArrowRight, PackageCheck } from 'lucide-react';
 import { toast } from 'react-toastify';
-import Swal from 'sweetalert2';
 import './PurchaseOrdersPage.css';
+import { useLanguage } from '../hooks/useLanguage';
 
 const PurchaseOrdersPage = () => {
+  const { t, language } = useLanguage();
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -97,7 +98,7 @@ const PurchaseOrdersPage = () => {
       await api.post('/purchases', { ...formData, po_number: poNum, final_amount: totals.final });
       setIsModalOpen(false); 
       fetchOrders(); 
-      toast.success('Purchase Order Created Successfully! 🧾');
+      toast.success(t('purchase_order_success'));
     } catch (err) { 
       toast.error('Failed to save purchase order.'); 
     }
@@ -106,18 +107,18 @@ const PurchaseOrdersPage = () => {
   const handleReceive = async (purchaseId: number) => {
     try {
       const confirm = await Swal.fire({
-        title: 'Receive Goods?',
-        text: 'This will confirm the delivery and INCREMENT your inventory stock!',
+        title: t('receive_goods_q'),
+        text: t('receive_goods_msg'),
         icon: 'question',
         showCancelButton: true,
         confirmButtonColor: '#01562c',
         cancelButtonColor: '#ff4444',
-        confirmButtonText: 'Yes, Receive & Stock'
+        confirmButtonText: t('yes_receive_stock')
       });
 
       if (confirm.isConfirmed) {
         await api.post(`/purchases/${purchaseId}/receive`);
-        toast.success('Inventory Updated Successfully! 🚛');
+        toast.success(t('inventory_updated_success'));
         fetchOrders();
       }
     } catch (error: any) {
@@ -126,7 +127,7 @@ const PurchaseOrdersPage = () => {
   };
 
   return (
-    <Layout title="Purchase Management">
+    <Layout title={t('purchase_management')}>
       <div className="inventory-container">
         
         {/* Main List Section */}
@@ -142,8 +143,8 @@ const PurchaseOrdersPage = () => {
           border: '1px solid #f1f5f9'
         }}>
           <div>
-            <h2 className="text-3xl font-extrabold text-[#01562c]" style={{ margin: 0 }}>Purchase Orders</h2>
-            <p className="text-slate-500 font-medium" style={{ margin: 0 }}>Track and manage your procurement operations.</p>
+            <h2 className="text-3xl font-extrabold text-[#01562c]" style={{ margin: 0 }}>{t('purchase_orders')}</h2>
+            <p className="text-slate-500 font-medium" style={{ margin: 0 }}>{t('track_procurement_msg')}</p>
           </div>
           <button 
             className="btn-add hover:scale-105 transition-all" 
@@ -163,7 +164,7 @@ const PurchaseOrdersPage = () => {
               setIsModalOpen(true); 
             }}
           >
-            <Plus size={18} className="inline mr-2" /> CREATE PURCHASE
+            <Plus size={18} className="inline mr-2" /> {t('create_purchase')}
           </button>
         </div>
 
@@ -172,31 +173,31 @@ const PurchaseOrdersPage = () => {
             <table className="w-full">
               <thead className="bg-[#f8fafc]">
                 <tr>
-                  <th className="px-8 py-5 text-left text-xs font-bold text-[#01562c] uppercase">PO Number</th>
-                  <th className="px-8 py-5 text-left text-xs font-bold text-[#01562c] uppercase">Vendor</th>
-                  <th className="px-8 py-5 text-left text-xs font-bold text-[#01562c] uppercase">Branch</th>
-                  <th className="px-8 py-5 text-left text-xs font-bold text-[#01562c] uppercase">Date</th>
-                  <th className="px-8 py-5 text-left text-xs font-bold text-[#01562c] uppercase">Final Total</th>
-                  <th className="px-8 py-5 text-center text-xs font-bold text-[#01562c] uppercase">Status</th>
-                  <th className="px-8 py-5 text-center text-xs font-bold text-[#01562c] uppercase">Action</th>
+                  <th className="px-8 py-5 text-start text-xs font-bold text-[#01562c] uppercase">{t('po_number')}</th>
+                  <th className="px-8 py-5 text-start text-xs font-bold text-[#01562c] uppercase">{t('vendor')}</th>
+                  <th className="px-8 py-5 text-start text-xs font-bold text-[#01562c] uppercase">{t('branch')}</th>
+                  <th className="px-8 py-5 text-start text-xs font-bold text-[#01562c] uppercase">{t('date')}</th>
+                  <th className="px-8 py-5 text-start text-xs font-bold text-[#01562c] uppercase">{t('final_total')}</th>
+                  <th className="px-8 py-5 text-center text-xs font-bold text-[#01562c] uppercase">{t('status')}</th>
+                  <th className="px-8 py-5 text-center text-xs font-bold text-[#01562c] uppercase">{t('actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {loading ? (
-                  <tr><td colSpan={7} className="text-center py-20 text-slate-400">Loading orders...</td></tr>
+                  <tr><td colSpan={7} className="text-center py-20 text-slate-400">{t('loading_data')}</td></tr>
                 ) : orders.length === 0 ? (
-                  <tr><td colSpan={7} className="text-center py-20 text-slate-400 font-medium font-italic">No purchase orders found.</td></tr>
+                  <tr><td colSpan={7} className="text-center py-20 text-slate-400 font-medium font-italic">{t('no_new_alerts')}</td></tr>
                 ) : (
                   orders.map(o => (
                     <tr key={o.purchase_id} className="hover:bg-slate-50 transition-all cursor-default">
                       <td className="px-8 py-5 font-bold text-[#01562c]"><Hash size={12} className="inline mr-1 opacity-50"/>{o.po_number}</td>
-                      <td className="px-8 py-5 font-bold text-slate-800">{o.vendor_name}</td>
-                      <td className="px-8 py-5 text-slate-500 font-medium">{o.branch_name}</td>
+                      <td className="px-8 py-5 font-bold text-slate-800">{language === 'ar' ? (o.vendor_name_ar || o.vendor_name) : o.vendor_name}</td>
+                      <td className="px-8 py-5 text-slate-500 font-medium">{language === 'ar' ? (o.branch_name_ar || o.branch_name) : o.branch_name}</td>
                       <td className="px-8 py-5 text-slate-500">{new Date(o.date || o.created_at).toLocaleDateString()}</td>
                       <td className="px-8 py-5 font-black text-[#01562c] text-lg">{Number(o.final_amount).toFixed(3)}</td>
                       <td className="px-8 py-5 text-center">
                         <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase ${o.status === 'received' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
-                          {o.status}
+                          {t(o.status)}
                         </span>
                       </td>
                       <td className="px-8 py-5 text-center">
@@ -229,7 +230,7 @@ const PurchaseOrdersPage = () => {
           <div className="po-modal-card" style={{ maxHeight: '95vh', overflowY: 'auto' }}>
             
             <header className="po-header">
-              <h2><ShoppingBag /> ADD NEW PURCHASE ORDER</h2>
+              <h2><ShoppingBag /> {t('add_new_po')}</h2>
               <div className="po-close-icon" onClick={() => setIsModalOpen(false)}>
                 <X size={20} />
               </div>
@@ -241,40 +242,40 @@ const PurchaseOrdersPage = () => {
               <div className="po-section-card">
                 <div className="po-fields-grid">
                   <div className="po-field-group">
-                    <label><Truck size={14} className="inline mr-2" /> Vendor Account</label>
+                    <label><Truck size={14} className="inline mr-2" /> {t('vendor_account')}</label>
                     <select required className="po-select" value={formData.vendor_id} onChange={e => setFormData({...formData, vendor_id: e.target.value, branch_id: ''})}>
-                      <option value="">Select Vendor Account</option>
-                      {vendors.map(v => <option key={v.vendor_id} value={v.vendor_id}>{v.name_en}</option>)}
+                      <option value="">{t('select_vendor_account')}</option>
+                      {vendors.filter(v => v.type === 'supplier').map(v => <option key={v.vendor_id} value={v.vendor_id}>{language === 'ar' ? (v.name_ar || v.name_en) : v.name_en}</option>)}
                     </select>
                   </div>
                   <div className="po-field-group">
-                    <label><ArrowRight size={14} className="inline mr-2" /> Target Branch / Node</label>
+                    <label><ArrowRight size={14} className="inline mr-2" /> {t('target_branch_node')}</label>
                     <select required className="po-select font-bold" value={formData.branch_id} onChange={e => setFormData({...formData, branch_id: e.target.value})}>
-                      <option value="">Select Delivery Node</option>
-                      <option value="main">Main / Central Node</option>
+                      <option value="">{t('select_delivery_node')}</option>
+                      <option value="main">{t('main_central_node')}</option>
                       {vendors.find(v => String(v.vendor_id) === String(formData.vendor_id))?.branches?.map((br: any) => (
-                        <option key={br.branch_id} value={br.branch_id}>{br.name_en}</option>
+                        <option key={br.branch_id} value={br.branch_id}>{language === 'ar' ? (br.name_ar || br.name_en) : br.name_en}</option>
                       ))}
                     </select>
                   </div>
                   <div className="po-field-group">
-                    <label><Hash size={14} className="inline mr-2" /> Order Number</label>
-                    <input type="text" className="po-input" value={formData.po_number} onChange={e => setFormData({...formData, po_number: e.target.value})} placeholder="Auto-generated if empty" />
+                    <label><Hash size={14} className="inline mr-2" /> {t('po_number')}</label>
+                    <input type="text" className="po-input" value={formData.po_number} onChange={e => setFormData({...formData, po_number: e.target.value})} placeholder={t('internal_notes_hint')} />
                   </div>
                   <div className="po-field-group">
-                    <label><Calendar size={14} className="inline mr-2" /> Purchase Date</label>
+                    <label><Calendar size={14} className="inline mr-2" /> {t('purchase_date')}</label>
                     <input type="date" className="po-input" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} />
                   </div>
                   <div className="po-field-group">
-                    <label><CreditCard size={14} className="inline mr-2" /> Bill Type</label>
+                    <label><CreditCard size={14} className="inline mr-2" /> {t('bill_type')}</label>
                     <select className="po-select" value={formData.invoice_type} onChange={e => setFormData({...formData, invoice_type: e.target.value})}>
-                      <option value="tax_invoice">Tax Invoice</option>
-                      <option value="simplified">Simplified Bill</option>
+                      <option value="tax_invoice">{t('tax_invoice')}</option>
+                      <option value="simplified">{t('simplified_bill')}</option>
                     </select>
                   </div>
                   <div className="po-field-group">
-                    <label><StickyNote size={14} className="inline mr-2" /> Order Notes</label>
-                    <input type="text" className="po-input" value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} placeholder="Internal notes..." />
+                    <label><StickyNote size={14} className="inline mr-2" /> {t('order_notes')}</label>
+                    <input type="text" className="po-input" value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} placeholder={t('internal_notes_hint')} />
                   </div>
                 </div>
               </div>
@@ -282,22 +283,22 @@ const PurchaseOrdersPage = () => {
               {/* Items Table Card */}
               <div className="po-section-card po-table-container">
                 <div className="po-table-header">
-                  <h3><Package size={18} className="inline mr-2" /> LINE ITEMS LIST</h3>
-                  <span className="text-xs font-bold text-slate-400 uppercase">{formData.items.length} Products Added</span>
+                  <h3><Package size={18} className="inline mr-2" /> {t('line_items_list')}</h3>
+                  <span className="text-xs font-bold text-slate-400 uppercase">{formData.items.length} {t('products_added')}</span>
                 </div>
                 
                 <div className="overflow-auto" style={{ maxHeight: '40vh' }}>
                   <table className="po-table">
                     <thead>
                       <tr>
-                        <th style={{ width: '25%' }}>PRODUCT NAME</th>
-                        <th style={{ width: '12%' }}>VARIANT</th>
-                        <th style={{ width: '12%' }}>PACKAGE</th>
-                        <th style={{ width: '10%' }}>PRICE</th>
-                        <th style={{ width: '8%' }}>QTY</th>
-                        <th style={{ width: '10%' }}>SUBTOTAL</th>
-                        <th style={{ width: '10%' }}>DISC.</th>
-                        <th style={{ width: '10%' }}>NET FINAL</th>
+                        <th style={{ width: '25%' }}>{t('product_name')}</th>
+                        <th style={{ width: '12%' }}>{t('variant')}</th>
+                        <th style={{ width: '12%' }}>{t('package')}</th>
+                        <th style={{ width: '10%' }}>{t('price')}</th>
+                        <th style={{ width: '8%' }}>{t('qty')}</th>
+                        <th style={{ width: '10%' }}>{t('subtotal')}</th>
+                        <th style={{ width: '10%' }}>{t('disc')}</th>
+                        <th style={{ width: '10%' }}>{t('net_final')}</th>
                         <th style={{ width: '3%' }}></th>
                       </tr>
                     </thead>
@@ -310,24 +311,24 @@ const PurchaseOrdersPage = () => {
                                // Reset package when item changes
                                updateItem(idx, 'package_id', '');
                             }}>
-                              <option value="">Choose item...</option>
-                              {inventoryItems.map(i => <option key={i.inventory_item_id} value={i.inventory_item_id}>{i.name_en} ({i.unit_en})</option>)}
+                              <option value="">{t('choose_item')}</option>
+                              {inventoryItems.map(i => <option key={i.inventory_item_id} value={i.inventory_item_id}>{language === 'ar' ? (i.name_ar || i.name_en) : i.name_en} ({language === 'ar' ? (i.unit_ar || i.unit_en) : i.unit_en})</option>)}
                             </select>
                           </td>
                           <td><select disabled className="po-table-input opacity-40"><option>N/A</option></select></td>
                           <td>
                             <select className="po-table-input" value={it.package_id} onChange={e => updateItem(idx, 'package_id', e.target.value)}>
-                              <option value="">Base Unit ({inventoryItems.find(i => String(i.inventory_item_id) === String(it.inventory_item_id))?.unit_en || '...' })</option>
+                              <option value="">{t('base_unit')} ({inventoryItems.find(i => String(i.inventory_item_id) === String(it.inventory_item_id))?.[language === 'ar' ? 'unit_ar' : 'unit_en'] || '...' })</option>
                               {allPackages.filter((p: any) => String(p.inventory_item_id) === String(it.inventory_item_id)).map((p: any) => (
-                                <option key={p.package_id} value={p.package_id}>{p.name_en} (x{Number(p.multiplier)})</option>
+                                <option key={p.package_id} value={p.package_id}>{language === 'ar' ? (p.name_ar || p.name_en) : p.name_en} (x{Number(p.multiplier)})</option>
                               ))}
                             </select>
                           </td>
-                          <td><input type="number" step="0.001" className="po-table-input text-right font-bold" value={it.unit_price} onChange={e => updateItem(idx, 'unit_price', e.target.value)} /></td>
-                          <td><input type="number" className="po-table-input text-right font-bold" value={it.quantity} onChange={e => updateItem(idx, 'quantity', e.target.value)} /></td>
-                          <td className="text-right text-slate-500 font-bold">{Number(it.amount).toFixed(3)}</td>
-                          <td><input type="number" step="0.001" className="po-table-input text-right" value={it.discount_amount} onChange={e => updateItem(idx, 'discount_amount', e.target.value)} /></td>
-                          <td className="text-right font-black text-[#01562c]">{Number(it.final_amount).toFixed(3)}</td>
+                          <td><input type="number" step="0.001" className="po-table-input text-end font-bold" value={it.unit_price} onChange={e => updateItem(idx, 'unit_price', e.target.value)} /></td>
+                          <td><input type="number" className="po-table-input text-end font-bold" value={it.quantity} onChange={e => updateItem(idx, 'quantity', e.target.value)} /></td>
+                          <td className="text-end text-slate-500 font-bold">{Number(it.amount).toFixed(3)}</td>
+                          <td><input type="number" step="0.001" className="po-table-input text-end" value={it.discount_amount} onChange={e => updateItem(idx, 'discount_amount', e.target.value)} /></td>
+                          <td className="text-end font-black text-[#01562c]">{Number(it.final_amount).toFixed(3)}</td>
                           <td className="text-center">
                             <Trash2 size={16} className="po-delete-row" onClick={() => setFormData({...formData, items: formData.items.filter((_, i) => i !== idx)})} />
                           </td>
@@ -338,37 +339,37 @@ const PurchaseOrdersPage = () => {
                 </div>
 
                 <div className="po-add-row" onClick={() => setFormData({...formData, items: [...formData.items, {...initialItem}]})}>
-                  <PlusCircle size={18} /> ADD NEW LINE ITEM
+                  <PlusCircle size={18} /> {t('add_new_line_item')}
                 </div>
               </div>
 
               {/* Footer Totals Section */}
               <div className="po-footer-grid">
                 <div className="po-section-card">
-                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Internal Communication</h4>
-                  <textarea className="po-note-area" placeholder="Write any specific requirements or delivery instructions here..."></textarea>
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">{t('internal_communication')}</h4>
+                  <textarea className="po-note-area" placeholder={t('write_requirements_hint')}></textarea>
                 </div>
                 
                 <div className="po-totals-card">
                   <div className="po-total-row">
-                    <span>Sub-Total Summary</span>
-                    <span>{totals.subtotal.toFixed(3)} د.ك</span>
+                    <span>{t('subtotal_summary')}</span>
+                    <span>{totals.subtotal.toFixed(3)} {t('kd_currency')}</span>
                   </div>
                   <div className="po-total-row">
-                    <span>Overall Discount</span>
+                    <span>{t('overall_discount')}</span>
                     <div className="flex items-center gap-2">
-                      <input type="number" className="w-24 text-right p-1 rounded-lg border border-slate-200" value={formData.discount_amount} onChange={e => setFormData({...formData, discount_amount: Number(e.target.value)})} />
-                      <span className="text-xs font-bold text-[#01562c]">د.ك</span>
+                      <input type="number" className="w-24 text-end p-1 rounded-lg border border-slate-200" value={formData.discount_amount} onChange={e => setFormData({...formData, discount_amount: Number(e.target.value)})} />
+                      <span className="text-xs font-bold text-[#01562c]">{t('kd_currency')}</span>
                     </div>
                   </div>
                   <div className="po-total-row grand">
-                    <span>Grand Total Due</span>
-                    <span>{totals.final.toFixed(3)} <small className="text-xs font-bold">د.ك</small></span>
+                    <span>{t('grand_total_due')}</span>
+                    <span>{totals.final.toFixed(3)} <small className="text-xs font-bold">{t('kd_currency')}</small></span>
                   </div>
 
                   <div className="po-actions">
-                    <button type="button" className="btn-cancel" onClick={() => setIsModalOpen(false)}>CANCEL</button>
-                    <button type="submit" className="btn-confirm">CONFIRM & SAVE <ArrowRight size={18} className="inline ml-1" /></button>
+                    <button type="button" className="btn-cancel" onClick={() => setIsModalOpen(false)}>{t('cancel')}</button>
+                    <button type="submit" className="btn-confirm">{t('confirm_save')} <ArrowRight size={18} className="inline ml-1" /></button>
                   </div>
                 </div>
               </div>

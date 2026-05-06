@@ -31,6 +31,7 @@ import PrePrintedInvoice from '../components/PrePrintedInvoice';
 import './InventoryPage.css';
 import { toast } from 'react-toastify';
 import SearchableSelect from '../components/SearchableSelect';
+import { useLanguage } from '../hooks/useLanguage';
 
 interface SaleOrder {
   sale_id: number;
@@ -47,6 +48,7 @@ interface SaleOrder {
 }
 
 const SalesPage = () => {
+  const { t, language } = useLanguage();
   const [sales, setSales] = useState<SaleOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -189,7 +191,7 @@ const SalesPage = () => {
       });
       setIsEditModalOpen(true);
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to load order items for editing.");
+      toast.error(error.response?.data?.message || t("failed_load_order_items"));
     }
   };
 
@@ -197,7 +199,7 @@ const SalesPage = () => {
     if (!editingOrder) return;
     try {
       await api.put(`/factory/sales/${editingOrder.sale_id}`, editingOrder);
-      toast.success("Order fully updated and stock reconciled!");
+      toast.success(t("order_updated_success"));
       setIsEditModalOpen(false);
       fetchSales();
     } catch (error: any) {
@@ -219,7 +221,7 @@ const SalesPage = () => {
   const handleUpdateStatus = async (saleId: number, nextStatus: string) => {
     try {
       await api.put(`/sales/${saleId}/status`, { dispatch_status: nextStatus });
-      toast.success(`Order status is now ${nextStatus.toUpperCase()}! 📦`);
+      toast.success(t("order_status_now").replace('{val}', nextStatus.toUpperCase()));
       fetchSales();
     } catch (error) {
       toast.error('Failed to update order status.');
@@ -229,7 +231,7 @@ const SalesPage = () => {
   const handleUpdatePayment = async (saleId: number, nextPayment: string) => {
     try {
       await api.put(`/sales/${saleId}/payment-status`, { payment_status: nextPayment });
-      toast.success(`Payment status marked as ${nextPayment.toUpperCase()}! 💰`);
+      toast.success(t("payment_status_marked").replace('{val}', nextPayment.toUpperCase()));
       fetchSales();
     } catch (error) {
       toast.error('Failed to update payment status.');
@@ -239,18 +241,18 @@ const SalesPage = () => {
   const handleReturnOrder = async (saleId: number) => {
     console.warn('--- 🔄 INITIATING RETURN FOR ORDER #:', saleId);
     if (!saleId) {
-       toast.error('Invalid Sale ID detected.');
+       toast.error(t('invalid_sale_id'));
        return;
     }
 
-    if (!window.confirm(`Are you sure you want to RETURN Order #${saleId}? This will RESTORE the ingredient stock to the inventory. 🔄`)) return;
+    if (!window.confirm(t('return_confirm_q').replace('{val}', String(saleId)))) return;
     
     try {
       console.warn('📡 SENDING RETURN SIGNAL TO BACKEND...');
       const response = await api.post(`/sales/${saleId}/return`);
       console.warn('✅ BACKEND RESPONSE:', response.data);
       
-      toast.info(`Order FNFI-${100000 + saleId} has been returned. Stock levels restored! 🔄`);
+      toast.info(t('order_returned_success').replace('{val}', String(100000 + saleId)));
       fetchSales();
     } catch (error: any) {
       console.error('❌ RETURN ERROR TRACE:', error);
@@ -262,7 +264,7 @@ const SalesPage = () => {
     if (!window.confirm("Are you sure you want to delete this order?")) return;
     try {
       await api.delete(`/factory/sales/${saleId}`);
-      toast.success("Order deleted successfully! 🗑️");
+      toast.success(t("order_deleted_success"));
       fetchSales();
     } catch (e) {
       toast.error("Failed to delete order.");
@@ -270,9 +272,9 @@ const SalesPage = () => {
   };
 
   const handleCreateOrder = async () => {
-    if (selectedItems.length === 0) return toast.warning('Cart is empty.');
-    if (formData.vendor_id && !formData.branch_id) return toast.warning('Please select a target branch.');
-    if (formData.vendor_id && !formData.batch_number) return toast.warning('Please select a production batch for distribution.');
+    if (selectedItems.length === 0) return toast.warning(t('cart_empty_warning'));
+    if (formData.vendor_id && !formData.branch_id) return toast.warning(t('select_branch_warning'));
+    if (formData.vendor_id && !formData.batch_number) return toast.warning(t('select_batch_warning'));
 
     try {
       setLoading(true);
@@ -281,10 +283,10 @@ const SalesPage = () => {
         items: selectedItems.map(i => ({ menu_item_id: i.menu_item_id, quantity: i.quantity, price: i.price }))
       });
       setIsModalOpen(false);
-      setFormData({ customer_name: '', vendor_id: '', branch_id: '', batch_number: '', expiry_date: '', payment_status: 'credit', dispatch_status: 'pending' });
+      setFormData({ customer_name: '', vendor_id: '', branch_id: '', batch_number: '', expiry_date: '', payment_status: 'credit', dispatch_status: 'pending', salesman_id: '' });
       setSelectedItems([]);
       fetchSales();
-      toast.success('Sale & Branch Segregation Recorded! 💹');
+      toast.success(t('sale_recorded_success'));
     } catch (error) {
       toast.error('Failed to record sale.');
     }
@@ -370,22 +372,22 @@ const SalesPage = () => {
   };
 
   return (
-    <Layout title="Sales & Dispatch Center">
+    <Layout title={t("sales_dispatch_center")}>
       <div className="inventory-container">
         {/* Sales Performance Metrics */}
         <div className="inventory-metrics">
           <div className="metric-card">
             <div className="metric-icon bg-green"><BadgeCent size={24} /></div>
             <div className="metric-details">
-               <span>Today's Revenue</span>
-               <h3>{stats.totalRevenue.toFixed(3)} د.ك</h3>
+               <span>{t("todays_revenue")}</span>
+               <h3>{stats.totalRevenue.toFixed(3)} {t("kd_currency")}</h3>
               <p className="trend positive"><TrendingUp size={12} /> +12.5% vs yesterday</p>
             </div>
           </div>
           <div className="metric-card">
             <div className="metric-icon bg-orange"><Clock size={24} /></div>
             <div className="metric-details">
-              <span>Pending Dispatch</span>
+              <span>{t("pending_dispatch")}</span>
               <h3>{stats.pendingDispatch}</h3>
               <p className="trend warning">Needs attention</p>
             </div>
@@ -393,7 +395,7 @@ const SalesPage = () => {
           <div className="metric-card">
             <div className="metric-icon bg-blue"><Package size={24} /></div>
             <div className="metric-details">
-              <span>Total Orders</span>
+              <span>{t("total_orders")}</span>
               <h3>{stats.todayOrders}</h3>
               <p className="trend neutral">Live tracking</p>
             </div>
@@ -401,7 +403,7 @@ const SalesPage = () => {
           <div className="metric-card">
             <div className="metric-icon bg-purple"><CheckCircle2 size={24} /></div>
             <div className="metric-details">
-              <span>Completed Transfers</span>
+              <span>{t("completed_transfers")}</span>
               <h3>{stats.completed}</h3>
               <p className="trend positive">High efficiency</p>
             </div>
@@ -413,7 +415,7 @@ const SalesPage = () => {
             <Search size={18} className="search-icon" />
             <input 
               type="text" 
-              placeholder="Search by Order ID or Customer Name..." 
+              placeholder={t("search_sales_hint")} 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -425,13 +427,13 @@ const SalesPage = () => {
               onChange={(e) => setStatusFilter(e.target.value)}
               style={{ background: 'white', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '0 1rem' }}
             >
-              <option value="all">All Status</option>
-              <option value="pending">Pending</option>
-              <option value="dispatched">Dispatched</option>
-              <option value="delivered">Delivered</option>
+              <option value="all">{t("all_status")}</option>
+              <option value="pending">{t("pending")}</option>
+              <option value="dispatched">{t("dispatched")}</option>
+              <option value="delivered">{t("delivered")}</option>
             </select>
             <button className="btn-add" onClick={() => setIsModalOpen(true)} style={{ background: 'var(--primary)', color: 'white' }}>
-               <ShoppingCart size={18} /> NEW DIRECT SALE
+               <ShoppingCart size={18} /> {t("new_direct_sale")}
             </button>
           </div>
         </div>
@@ -441,15 +443,15 @@ const SalesPage = () => {
             <table>
               <thead>
                 <tr>
-                  <th>Order Info</th>
-                  <th>Customer</th>
-                  <th>Dispatch Date</th>
-                  <th>Amount</th>
-                  <th>Discount (%)</th>
-                  <th>Total Amount</th>
-                  <th>Payment</th>
-                  <th>Dispatch Status</th>
-                  <th className="text-right">Actions</th>
+                  <th>{t("order_info")}</th>
+                  <th>{t("customer")}</th>
+                  <th>{t("dispatch_date")}</th>
+                  <th>{t("amount")}</th>
+                  <th>{t("discount_percent")}</th>
+                  <th>{t("total_amount")}</th>
+                  <th>{t("payment")}</th>
+                  <th>{t("dispatch_status")}</th>
+                  <th className="text-end">{t("actions")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -460,7 +462,7 @@ const SalesPage = () => {
                     <td>
                       <div className="item-info">
                         <strong>FNFI-{100000 + (sale.sale_id || 0)}</strong>
-                        <span>{sale.items_count || 0} items included</span>
+                        <span>{sale.items_count || 0} {t("items_included")}</span>
                       </div>
                     </td>
                     <td>
@@ -481,9 +483,9 @@ const SalesPage = () => {
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column' }}>
                            <span style={{ fontWeight: 700 }}>{sale.customer_name}</span>
-                           {(sale as any).branch_name && (
+                            {(sale as any).branch_name && (
                              <span style={{ fontSize: '11px', color: 'var(--primary)', fontWeight: 600 }}>
-                               { (sale as any).branch_name } Branch
+                               {language === 'ar' ? ((sale as any).branch_name_ar || (sale as any).branch_name) : (sale as any).branch_name} {t("branch")}
                              </span>
                            )}
                            {((sale as any).branch_phone || (sale as any).client_phone) && (
@@ -507,7 +509,7 @@ const SalesPage = () => {
                           {Number(sale.discount_percentage || 0) > 0 ? `${Number(sale.discount_percentage).toFixed(2)}%` : '-'}
                        </span>
                     </td>
-                    <td><strong style={{ fontSize: '15px', color: 'var(--primary)' }}>{Number(sale.final_amount || sale.total_amount).toFixed(3)} د.ك</strong></td>
+                    <td><strong style={{ fontSize: '15px', color: 'var(--primary)' }}>{Number(sale.final_amount || sale.total_amount).toFixed(3)} {t("kd_currency")}</strong></td>
                     <td>
                       <select 
                         className={getStatusBadge(sale.payment_status)} 
@@ -527,7 +529,7 @@ const SalesPage = () => {
                         {sale.dispatch_status === 'delivered' && <CheckCircle2 size={14} color="#10b981" />}
                       </div>
                     </td>
-                    <td className="text-right">
+                    <td className="text-end">
                       <div className="row-actions" style={{ position: 'relative', display: 'flex', gap: '8px', justifyContent: 'flex-end', alignItems: 'center' }}>
                          {/* Core Quick Actions (Visible) */}
                          <button className="btn-icon-sm" style={{color: '#64748b'}} title="View Details" onClick={(e) => { e.stopPropagation(); handleViewOrder(sale); }}><Eye size={16} /></button>
@@ -564,24 +566,24 @@ const SalesPage = () => {
                                 marginTop: '5px'
                               }}>
                                 <button className="dropdown-item" onClick={() => preparePrint(sale, false)} style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '10px 15px', border: 'none', background: 'none', textAlign: 'left', fontSize: '13px', cursor: 'pointer' }}>
-                                  <Printer size={14} color="#054c2d" /> Standard PDF Print
+                                  <Printer size={14} color="#054c2d" /> {t("standard_pdf_print")}
                                 </button>
                                 <button className="dropdown-item" onClick={() => preparePrint(sale, true)} style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '10px 15px', border: 'none', background: 'none', textAlign: 'left', fontSize: '13px', cursor: 'pointer' }}>
-                                  <Receipt size={14} color="#f59e0b" /> Dot Matrix Print
+                                  <Receipt size={14} color="#f59e0b" /> {t("dot_matrix_print")}
                                 </button>
                                 {(sale.dispatch_status || '').toLowerCase() !== 'delivered' && (
                                   <button className="dropdown-item" onClick={() => handleEditOrder(sale)} style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '10px 15px', border: 'none', background: 'none', textAlign: 'left', fontSize: '13px', cursor: 'pointer' }}>
-                                    <Edit size={14} color="#0369a1" /> Edit Order
+                                    <Edit size={14} color="#0369a1" /> {t("edit_order")}
                                   </button>
                                 )}
                                 <div style={{ height: '1px', background: '#f1f5f9' }} />
                                 <button className="dropdown-item" onClick={() => handleReturnOrder(sale.sale_id)} style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '10px 15px', border: 'none', background: 'none', textAlign: 'left', fontSize: '13px', cursor: 'pointer', color: '#ef4444' }}>
-                                  <RotateCcw size={14} /> Return Order
+                                  <RotateCcw size={14} /> {t("return_order")}
                                 </button>
                                 <button className="dropdown-item" onClick={() => handleDeleteOrder(sale.sale_id)} style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '10px 15px', border: 'none', background: 'none', textAlign: 'left', fontSize: '13px', cursor: 'pointer', color: '#be123c', fontWeight: 600 }}>
-                                  <Trash2 size={14} /> Delete Order
+                                  <Trash2 size={14} /> {t("delete_order")}
                                 </button>
-                              </div>
+                                </div>
                             )}
                          </div>
                       </div>
@@ -600,36 +602,36 @@ const SalesPage = () => {
               <div className="modal-header">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                   <Eye size={24} color="var(--primary)" />
-                  <h3 style={{ margin: 0 }}>Order Details FNFI-{100000 + (detailOrder.sale_id || 0)}</h3>
+                  <h3 style={{ margin: 0 }}>{t("order_details")} FNFI-{100000 + (detailOrder.sale_id || 0)}</h3>
                 </div>
                 <button className="btn-close" onClick={() => setIsDetailModalOpen(false)}><X size={20} /></button>
               </div>
               <div className="modal-body" style={{ padding: '2rem' }}>
                  <div style={{ background: '#f8fafc', padding: '1.5rem', borderRadius: '16px', marginBottom: '1.5rem', border: '1px solid #e2e8f0' }}>
-                    <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>Customer: <b>{detailOrder.customer_name}</b></p>
-                    <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#64748b' }}>Dispatch Batch: <b style={{ color: 'var(--primary)' }}>{detailOrder.batch_number || 'N/A'}</b></p>
-                    <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#64748b' }}>Date: {detailOrder.order_date}</p>
+                    <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>{t("customer")}: <b>{detailOrder.customer_name}</b></p>
+                    <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#64748b' }}>{t("batch_code")}: <b style={{ color: 'var(--primary)' }}>{detailOrder.batch_number || 'N/A'}</b></p>
+                    <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#64748b' }}>{t("date")}: {detailOrder.order_date}</p>
                  </div>
                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                     {detailOrder.items?.map((item: any) => (
                        <div key={item.sale_item_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'white', padding: '1rem', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
-                          <div><p style={{ margin: 0, fontWeight: 700 }}>{item.name_en}</p><p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>Quantity: {item.quantity}</p></div>
-                          <p style={{ margin: 0, fontWeight: 800, color: 'var(--primary)' }}>{Number(item.price * item.quantity).toFixed(3)} د.ك</p>
+                           <div><p style={{ margin: 0, fontWeight: 700 }}>{language === 'ar' ? (item.name_ar || item.name_en) : item.name_en}</p><p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>{t("quantity")}: {item.quantity}</p></div>
+                           <p style={{ margin: 0, fontWeight: 800, color: 'var(--primary)' }}>{Number(item.price * item.quantity).toFixed(3)} {t("kd_currency")}</p>
                        </div>
                     ))}
                  </div>
                  <div style={{ marginTop: '2rem', borderTop: '2px dashed #e2e8f0', paddingTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                       <span style={{ fontSize: '14px', color: '#64748b' }}>Subtotal</span>
-                       <span style={{ fontWeight: 700 }}>{Number(detailOrder.items?.reduce((s: any, i: any) => s + (i.price * i.quantity), 0) || 0).toFixed(3)} د.ك</span>
+                       <span style={{ fontSize: '14px', color: '#64748b' }}>{t("subtotal")}</span>
+                       <span style={{ fontWeight: 700 }}>{Number(detailOrder.items?.reduce((s: any, i: any) => s + (i.price * i.quantity), 0) || 0).toFixed(3)} {t("kd_currency")}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#ef4444' }}>
-                       <span style={{ fontSize: '14px' }}>Discount {Number(detailOrder.discount_percentage) > 0 && `(${detailOrder.discount_percentage}%)`}</span>
-                       <span style={{ fontWeight: 700 }}>-{Number(detailOrder.discount_amount || 0).toFixed(3)} د.ك</span>
+                       <span style={{ fontSize: '14px' }}>{t("discount")} {Number(detailOrder.discount_percentage) > 0 && `(${detailOrder.discount_percentage}%)`}</span>
+                       <span style={{ fontWeight: 700 }}>-{Number(detailOrder.discount_amount || 0).toFixed(3)} {t("kd_currency")}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid #f1f5f9' }}>
-                       <h3 style={{ margin: 0 }}>Net Total</h3>
-                       <h2 style={{ margin: 0, color: 'var(--primary)', fontWeight: 900 }}>{Number(detailOrder.total_amount).toFixed(3)} د.ك</h2>
+                       <h3 style={{ margin: 0 }}>{t("net_total")}</h3>
+                       <h2 style={{ margin: 0, color: 'var(--primary)', fontWeight: 900 }}>{Number(detailOrder.total_amount).toFixed(3)} {t("kd_currency")}</h2>
                     </div>
                  </div>
               </div>
@@ -645,7 +647,7 @@ const SalesPage = () => {
              <div className="modal-header">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                   <ShoppingCart size={24} color="var(--primary)" />
-                  <h3 style={{ margin: 0 }}>Record Distribution Sale</h3>
+                  <h3 style={{ margin: 0 }}>{t("record_distribution_sale")}</h3>
                 </div>
                 <button className="btn-close" onClick={() => setIsModalOpen(false)}><X size={20} /></button>
              </div>
@@ -653,38 +655,38 @@ const SalesPage = () => {
                  <div style={{ display: 'flex', flexWrap: 'nowrap', gap: '2rem' }}>
                     <div style={{ flex: '0 0 500px', background: '#f8fafc', padding: '1.25rem', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
                        <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-                         <label style={{ fontWeight: 700, fontSize: '11px', color: '#64748b' }}>DISTRIBUTION PARTNER *</label>
+                         <label style={{ fontWeight: 700, fontSize: '11px', color: '#64748b' }}>{t("distribution_partner_caps")}</label>
                          <SearchableSelect
                            options={vendors
                              .filter(v => v.type === 'client' || v.type === 'supplier')
-                             .map(v => ({ value: v.vendor_id, label: v.name_en }))}
+                             .map(v => ({ value: v.vendor_id, label: language === 'ar' ? (v.name_ar || v.name_en) : v.name_en }))}
                            value={formData.vendor_id}
                            onChange={(val) => {
                              const v = vendors.find(v => String(v.vendor_id) === String(val));
                              setFormData({...formData, vendor_id: String(val), branch_id: '', customer_name: v?.name_en || ''});
                            }}
-                           placeholder="Choose Client..."
+                           placeholder={t("choose_client")}
                          />
                        </div>
   
                        <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-                         <label style={{ fontWeight: 700, fontSize: '11px', color: '#64748b' }}>DELIVERY BRANCH NODE *</label>
+                         <label style={{ fontWeight: 700, fontSize: '11px', color: '#64748b' }}>{t("delivery_branch_node_caps")}</label>
                          <SearchableSelect
                            options={[
-                             { value: 'main', label: 'Main Corporate Hub' },
+                             { value: 'main', label: t('main_corporate_hub') },
                              ...(vendors.find(v => String(v.vendor_id) === String(formData.vendor_id))?.branches?.map((br: any) => ({
                                value: br.branch_id,
-                               label: br.name_en
+                               label: language === 'ar' ? (br.name_ar || br.name_en) : br.name_en
                              })) || [])
                            ]}
                            value={formData.branch_id}
                            onChange={(val) => setFormData({...formData, branch_id: String(val)})}
-                           placeholder="Select Destination..."
+                           placeholder={t("select_destination")}
                          />
                        </div>
   
                        <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-                         <label style={{ fontWeight: 700, fontSize: '11px', color: '#64748b' }}>PRODUCTION BATCH *</label>
+                         <label style={{ fontWeight: 700, fontSize: '11px', color: '#64748b' }}>{t("production_batch_caps")}</label>
                          <SearchableSelect
                            options={productionLogs.map(p => ({
                              value: p.batch_number,
@@ -695,17 +697,17 @@ const SalesPage = () => {
                              const b = productionLogs.find(p => p.batch_number === val);
                              setFormData({...formData, batch_number: String(val), expiry_date: b?.expiry_date || ''});
                            }}
-                           placeholder="Choose Batch..."
+                           placeholder={t("choose_batch")}
                          />
                        </div>
 
                        <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-                          <label style={{ fontWeight: 700, fontSize: '11px', color: '#64748b' }}>ASSIGN SALESMAN</label>
+                          <label style={{ fontWeight: 700, fontSize: '11px', color: '#64748b' }}>{t("assign_salesman_caps")}</label>
                           <SearchableSelect
-                            options={salesmen.map(s => ({ value: s.salesman_id, label: s.name_en }))}
+                            options={salesmen.map(s => ({ value: s.salesman_id, label: language === 'ar' ? (s.name_ar || s.name_en) : s.name_en }))}
                             value={formData.salesman_id}
                             onChange={(val) => setFormData({...formData, salesman_id: String(val)})}
-                            placeholder="Choose Salesman..."
+                            placeholder={t("choose_salesman")}
                           />
                         </div>
 
@@ -726,7 +728,7 @@ const SalesPage = () => {
                     </div>
                  </div>
                  <button onClick={() => handleCreateOrder()} style={{ marginTop: '2rem', width: '100%', padding: '1rem', background: '#054c2d', color: 'white', borderRadius: '14px', fontWeight: 800, fontSize: '15px' }}>
-                   FINALIZE DISTRIBUTION & RECORD SALE
+                   {t("finalize_distribution")}
                  </button>
               </div>
            </div>
@@ -746,28 +748,28 @@ const SalesPage = () => {
                <div style={{ display: 'flex', flexWrap: 'nowrap', gap: '2rem' }}>
                   <div style={{ flex: '0 0 500px', background: '#f8fafc', padding: '1.25rem', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
                     <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-                       <label style={{ fontWeight: 700, fontSize: '11px', color: '#64748b' }}>DISTRIBUTION PARTNER</label>
+                       <label style={{ fontWeight: 700, fontSize: '11px', color: '#64748b' }}>{t("distribution_partner_caps")}</label>
                        <SearchableSelect
                          options={vendors
                            .filter(v => v.type === 'client' || v.type === 'supplier')
-                           .map(v => ({ value: v.vendor_id, label: v.name_en }))}
+                           .map(v => ({ value: v.vendor_id, label: language === 'ar' ? (v.name_ar || v.name_en) : v.name_en }))}
                          value={editingOrder.vendor_id}
                          onChange={(val) => {
                            const v = vendors.find(v => String(v.vendor_id) === String(val));
                            setEditingOrder({...editingOrder, vendor_id: String(val), customer_name: v?.name_en || ''});
                          }}
-                         placeholder="Choose Client..."
+                         placeholder={t("choose_client")}
                        />
                     </div>
 
                     <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-                       <label style={{ fontWeight: 700, fontSize: '11px', color: '#64748b' }}>DELIVERY BRANCH NODE</label>
+                       <label style={{ fontWeight: 700, fontSize: '11px', color: '#64748b' }}>{t("delivery_branch_node_caps")}</label>
                        <SearchableSelect
                          options={[
                            { value: 'main', label: 'Main Corporate Hub' },
                            ...(vendors.find(v => String(v.vendor_id) === String(editingOrder.vendor_id))?.branches?.map((br: any) => ({
                              value: br.branch_id,
-                             label: br.name_en
+                             label: language === 'ar' ? (br.name_ar || br.name_en) : br.name_en
                            })) || [])
                          ]}
                          value={editingOrder.branch_id}
@@ -777,7 +779,7 @@ const SalesPage = () => {
                     </div>
 
                     <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-                       <label style={{ fontWeight: 700, fontSize: '11px', color: '#64748b' }}>PRODUCTION BATCH</label>
+                       <label style={{ fontWeight: 700, fontSize: '11px', color: '#64748b' }}>{t("production_batch_caps")}</label>
                        <SearchableSelect
                          options={productionLogs.map(p => ({
                            value: p.batch_number,
@@ -788,22 +790,22 @@ const SalesPage = () => {
                            const b = productionLogs.find(p => p.batch_number === val);
                            setEditingOrder({...editingOrder, batch_number: String(val), expiry_date: b?.expiry_date || ''});
                          }}
-                         placeholder="Choose Batch..."
+                         placeholder={t("choose_batch")}
                        />
                     </div>
 
                     <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-                      <label style={{ fontWeight: 700, fontSize: '11px', color: '#64748b' }}>ASSIGN SALESMAN</label>
+                      <label style={{ fontWeight: 700, fontSize: '11px', color: '#64748b' }}>{t("assign_salesman_caps")}</label>
                       <SearchableSelect
-                        options={salesmen.map(s => ({ value: s.salesman_id, label: s.name_en }))}
+                        options={salesmen.map(s => ({ value: s.salesman_id, label: language === 'ar' ? (s.name_ar || s.name_en) : s.name_en }))}
                         value={editingOrder.salesman_id}
                         onChange={(val) => setEditingOrder({...editingOrder, salesman_id: String(val)})}
-                        placeholder="Choose Salesman..."
+                        placeholder={t("choose_salesman")}
                       />
                     </div>
 
                     <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-                       <label style={{ fontWeight: 700, fontSize: '11px', color: '#64748b' }}>DISCOUNT PERCENTAGE (%)</label>
+                       <label style={{ fontWeight: 700, fontSize: '11px', color: '#64748b' }}>{t("discount_percentage_caps")}</label>
                        <input 
                          type="number" 
                          style={{ padding: '0.8rem', borderRadius: '12px', border: '1px solid #e2e8f0', width: '100%', marginTop: '5px', fontWeight: 700 }}
@@ -812,11 +814,11 @@ const SalesPage = () => {
                        />
                     </div>
 
-                    <h5 style={{ margin: '1rem 0 0.5rem 0' }}>Current Cart: {editingOrder.items.length} Products</h5>
+                    <h5 style={{ margin: '1rem 0 0.5rem 0' }}>{t("current_cart")}: {editingOrder.items.length} {t("products")}</h5>
                     <div style={{ maxHeight: '150px', overflowY: 'auto', background: 'white', borderRadius: '10px', padding: '10px', border: '1px solid #eef2f6' }}>
                        {editingOrder.items.map(item => (
                          <div key={item.menu_item_id} style={{ fontSize: '12px', display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #f1f5f9' }}>
-                           <span><b>{item.name_en}</b> x {item.quantity}</span>
+                           <span><b>{language === 'ar' ? (item.name_ar || item.name_en) : item.name_en}</b> x {item.quantity}</span>
                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                              <button onClick={() => {
                                const updated = editingOrder.items.map(i => i.menu_item_id === item.menu_item_id ? {...i, quantity: Math.max(1, i.quantity - 1)} : i);
@@ -826,7 +828,7 @@ const SalesPage = () => {
                                const updated = editingOrder.items.map(i => i.menu_item_id === item.menu_item_id ? {...i, quantity: i.quantity + 1} : i);
                                setEditingOrder({...editingOrder, items: updated});
                              }} style={{ width: '24px', height: '24px', borderRadius: '6px', border: '1px solid #ddd', background: 'white', cursor: 'pointer' }}>+</button>
-                             <button onClick={() => setEditingOrder({...editingOrder, items: editingOrder.items.filter(i => i.menu_item_id !== item.menu_item_id)})} style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '10px', cursor: 'pointer', fontWeight: 800, marginLeft: '5px' }}>REMOVE</button>
+                             <button onClick={() => setEditingOrder({...editingOrder, items: editingOrder.items.filter(i => i.menu_item_id !== item.menu_item_id)})} style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '10px', cursor: 'pointer', fontWeight: 800, marginLeft: '5px' }}>{t("remove")}</button>
                            </div>
                          </div>
                        ))}
@@ -834,12 +836,12 @@ const SalesPage = () => {
                   </div>
 
                   <div style={{ flex: '1 1 300px' }}>
-                     <h5 style={{ fontSize: '13px', color: '#64748b', marginBottom: '1rem' }}>Add More Products</h5>
+                     <h5 style={{ fontSize: '13px', color: '#64748b', marginBottom: '1rem' }}>{t("add_more_products")}</h5>
                      <div style={{ maxHeight: '350px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', paddingRight: '5px' }}>
                       {menuItems.map(item => (
                         <div key={item.menu_item_id} onClick={() => addItemToEditOrder(item)} style={{ cursor: 'pointer', padding: '12px 15px', background: 'white', border: '1px solid #e2e8f0', borderRadius: '12px', fontSize: '13px', fontWeight: 600, transition: 'all 0.2s ease', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span>{item.name_en}</span>
-                          <span style={{ fontSize: '11px', color: 'var(--primary)' }}>{Number(item.price).toFixed(3)} KWD</span>
+                          <span>{language === 'ar' ? (item.name_ar || item.name_en) : item.name_en}</span>
+                          <span style={{ fontSize: '11px', color: 'var(--primary)' }}>{Number(item.price).toFixed(3)} {t("kwd")}</span>
                         </div>
                       ))}
                     </div>
@@ -847,8 +849,8 @@ const SalesPage = () => {
                </div>
                
                <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
-                  <button onClick={() => setIsEditModalOpen(false)} style={{ flex: 1, padding: '1rem', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '14px', fontWeight: 700 }}>Cancel Changes</button>
-                  <button onClick={() => handleUpdateOrder()} style={{ flex: 2, padding: '1rem', background: 'var(--primary)', color: 'white', border: 'none', borderRadius: '14px', fontWeight: 800, boxShadow: '0 4px 15px rgba(1, 86, 44, 0.2)' }}>SAVE & SYNC ORDER</button>
+                  <button onClick={() => setIsEditModalOpen(false)} style={{ flex: 1, padding: '1rem', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '14px', fontWeight: 700 }}>{t("cancel_changes")}</button>
+                  <button onClick={() => handleUpdateOrder()} style={{ flex: 2, padding: '1rem', background: 'var(--primary)', color: 'white', border: 'none', borderRadius: '14px', fontWeight: 800, boxShadow: '0 4px 15px rgba(1, 86, 44, 0.2)' }}>{t("save_sync_order")}</button>
                </div>
             </div>
           </div>

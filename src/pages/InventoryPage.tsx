@@ -18,6 +18,7 @@ import {
 import { toast } from 'react-toastify';
 import Swal from 'sweetalert2';
 import './InventoryPage.css';
+import { useLanguage } from '../hooks/useLanguage';
 
 interface InventoryItem {
   inventory_item_id: number;
@@ -34,6 +35,7 @@ interface InventoryItem {
 }
 
 const InventoryPage = () => {
+  const { t, language } = useLanguage();
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -59,25 +61,25 @@ const InventoryPage = () => {
 
   const handleDelete = async (id: number) => {
     const { isConfirmed } = await Swal.fire({
-      title: 'Are you sure?',
-      text: "You won't be able to revert this data!",
+      title: t('are_you_sure'),
+      text: t('revert_msg'),
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#ef4444',
       cancelButtonColor: '#94a3b8',
-      confirmButtonText: 'Yes, delete it!'
+      confirmButtonText: t('yes_delete')
     });
 
     if (isConfirmed) {
       try {
         const response = await api.delete(`/inventory/${id}`);
         if (response.data.success) {
-          toast.success('Inventory item deleted successfully! 🗑️');
+          toast.success(t('deleted_success'));
           fetchInventory();
         }
       } catch (error) {
         console.error('Delete error:', error);
-        toast.error('Failed to delete item. It might be linked to existing recipes.');
+        toast.error(t('delete_fail'));
       }
     }
   };
@@ -104,28 +106,28 @@ const InventoryPage = () => {
   }, 0);
 
   return (
-    <Layout title="Inventory & Stock">
+    <Layout title={t('inventory_stock')}>
       <div className="inventory-container">
         {/* Metric Cards */}
         <div className="inventory-metrics">
           <div className="metric-card">
             <div className="metric-icon bg-green"><Package size={24} /></div>
             <div className="metric-details">
-              <span>Total Items</span>
+              <span>{t('total_items')}</span>
               <h3>{totalItems}</h3>
             </div>
           </div>
           <div className="metric-card">
             <div className="metric-icon bg-orange"><AlertTriangle size={24} /></div>
             <div className="metric-details">
-              <span>Low Stock</span>
+              <span>{t('low_stock')}</span>
               <h3 className={lowStockItems > 0 ? 'text-danger' : ''}>{lowStockItems}</h3>
             </div>
           </div>
           <div className="metric-card">
             <div className="metric-icon bg-blue"><TrendingUp size={24} /></div>
             <div className="metric-details">
-              <span>Total Value (د.ك)</span>
+              <span>{t('total_value_kd')}</span>
               <h3>{totalValue.toFixed(3)}</h3>
             </div>
           </div>
@@ -137,14 +139,14 @@ const InventoryPage = () => {
             <Search size={18} className="search-icon" />
             <input 
               type="text" 
-              placeholder="Search by SKU, Name..." 
+              placeholder={t('search_sku_name')} 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
           <div className="action-buttons">
-            <button className="btn-filter"><Filter size={18} /> Filter</button>
-            <button className="btn-add" onClick={() => setIsModalOpen(true)}><Plus size={18} /> Add Stock Item</button>
+            <button className="btn-filter"><Filter size={18} /> {t('filter')}</button>
+            <button className="btn-add" onClick={() => setIsModalOpen(true)}><Plus size={18} /> {t('add_stock_item')}</button>
           </div>
         </div>
 
@@ -154,44 +156,44 @@ const InventoryPage = () => {
             <table>
               <thead>
                 <tr>
-                  <th>Item Details</th>
-                  <th>SKU</th>
-                  <th>Category</th>
-                  <th>Current Stock</th>
-                  <th>Min Level</th>
-                  <th>Cost Price</th>
-                  <th>Status</th>
-                  <th>Actions</th>
+                  <th>{t('item_details')}</th>
+                  <th>{t('sku')}</th>
+                  <th>{t('category')}</th>
+                  <th>{t('current_stock')}</th>
+                  <th>{t('min_level')}</th>
+                  <th>{t('cost_price')}</th>
+                  <th>{t('status')}</th>
+                  <th>{t('actions')}</th>
                 </tr>
               </thead>
               <tbody>
                 {loading && safeItems.length === 0 ? (
-                  <tr><td colSpan={8} style={{textAlign: 'center', padding: '3rem'}}>Loading stock...</td></tr>
+                  <tr><td colSpan={8} style={{textAlign: 'center', padding: '3rem'}}>{t('loading_stock')}</td></tr>
                 ) : safeItems.length === 0 ? (
-                  <tr><td colSpan={8} style={{textAlign: 'center', padding: '3rem'}}>No stock items found.</td></tr>
+                  <tr><td colSpan={8} style={{textAlign: 'center', padding: '3rem'}}>{t('no_stock_items')}</td></tr>
                 ) : safeItems.map(item => (
                   <tr key={item.inventory_item_id}>
                     <td>
                       <div className="item-info">
-                        <strong>{item.name_en}</strong>
-                        <span>{item.name_ar || item.name_en}</span>
+                        <strong>{language === 'ar' ? (item.name_ar || item.name_en) : item.name_en}</strong>
+                        <span>{language === 'ar' ? item.name_en : (item.name_ar || item.name_en)}</span>
                       </div>
                     </td>
                     <td><span className="sku-badge">{item.sku}</span></td>
-                    <td>{item.category_name_en || 'Uncategorized'}</td>
-                    <td>{item.current_stock} {item.unit_en}</td>
-                    <td>{item.min_stock_level} {item.unit_en}</td>
-                    <td>{Number(item.dynamic_cost_price || item.cost_price || 0).toFixed(3)} د.ك</td>
+                    <td>{(language === 'ar' ? item.category_name_en : item.category_name_en) || 'Uncategorized'}</td>
+                    <td>{item.current_stock} {language === 'ar' ? (item.unit_ar || item.unit_en) : item.unit_en}</td>
+                    <td>{item.min_stock_level} {language === 'ar' ? (item.unit_ar || item.unit_en) : item.unit_en}</td>
+                    <td>{Number(item.dynamic_cost_price || item.cost_price || 0).toFixed(3)} {t('kd_currency')}</td>
                     <td>
                       <span className={`status-badge ${Number(item.current_stock) <= Number(item.min_stock_level) ? 'low' : 'healthy'}`}>
-                        {Number(item.current_stock) <= Number(item.min_stock_level) ? 'Low Stock' : 'Healthy'}
+                        {Number(item.current_stock) <= Number(item.min_stock_level) ? t('low_stock') : t('healthy')}
                       </span>
                     </td>
-                    <td className="text-right">
+                    <td className="text-end">
                       <div className="row-actions">
-                        <button className="btn-icon-sm" onClick={() => setAdjustItem(item)} title="Adjust Stock"><PackagePlus size={16} /></button>
-                        <button className="btn-icon-sm" onClick={() => setEditItem(item)} title="Edit Item"><Edit size={16} /></button>
-                        <button className="btn-icon-sm" onClick={() => handleDelete(item.inventory_item_id)} title="Delete" style={{ color: '#ef4444' }}><Trash2 size={16} /></button>
+                        <button className="btn-icon-sm" onClick={() => setAdjustItem(item)} title={t('adjust_stock')}><PackagePlus size={16} /></button>
+                        <button className="btn-icon-sm" onClick={() => setEditItem(item)} title={t('edit_item')}><Edit size={16} /></button>
+                        <button className="btn-icon-sm" onClick={() => handleDelete(item.inventory_item_id)} title={t('delete')} style={{ color: '#ef4444' }}><Trash2 size={16} /></button>
                       </div>
                     </td>
                   </tr>

@@ -265,7 +265,7 @@ table {
 }
 
 thead th {
-  text-align: left;
+  text-align: start;
   padding: 1.25rem 1.5rem;
   font-size: 0.85rem;
   font-weight: 700;
@@ -351,7 +351,7 @@ tbody td {
   color: #1a1a1a;
 }
 
-.text-right { text-align: right; }
+.text-right, .text-end { text-align: end; }
 .text-center { text-align: center; }
 .py-5 { padding-top: 3rem; padding-bottom: 3rem; }
 

@@ -25,8 +25,9 @@ import {
 } from 'lucide-react';
 import './Layout.css';
 import logo from '../assets/logo.jpeg';
-import AIAssistant from './AIAssistant';
 import api from '../api/axios';
+import { useLanguage } from '../hooks/useLanguage';
+import AIAssistant from './AIAssistant';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -39,6 +40,7 @@ const Layout: React.FC<LayoutProps> = ({ children, title }) => {
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
   const { admin, logout } = useAuthStore();
+  const { language, setLanguage, t, isRTL } = useLanguage();
   const location = useLocation();
 
   useEffect(() => {
@@ -82,21 +84,21 @@ const Layout: React.FC<LayoutProps> = ({ children, title }) => {
   }, [logout]);
 
   const navItems = [
-    { name: 'Dashboard', path: '/dashboard', icon: <LayoutDashboard size={20} />, section: 'Main' },
-    { name: 'Inventory & Stock', path: '/inventory', icon: <Package size={20} />, section: 'Main' },
-    { name: 'Categories', path: '/categories', icon: <FolderTree size={20} />, section: 'Main' },
-    { name: 'Menu & Premix', path: '/menu', icon: <Utensils size={20} />, section: 'Main' },
-    { name: 'Wastage & Expiry', path: '/wastage', icon: <AlertTriangle size={20} />, section: 'Main' },
-    { name: 'Vendors & Clients', path: '/vendors', icon: <Store size={20} />, section: 'Operations' },
-    { name: 'Purchase Orders', path: '/purchases', icon: <ShoppingCart size={20} />, section: 'Operations' },
-    { name: 'Production & Distribution', path: '/factory-dispatch', icon: <Zap size={20} />, section: 'Operations' },
-    { name: 'Direct Sales (POS)', path: '/sales', icon: <Truck size={20} />, section: 'Operations' },
-    { name: 'Analytics & Forecasts', path: '/analytics', icon: <BarChart2 size={20} />, section: 'Operations' },
-    { name: 'Reports & BI', path: '/reports', icon: <FileText size={20} />, section: 'Operations' },
-    { name: 'Accounts', path: '/accounts', icon: <Wallet size={20} />, section: 'Operations' },
-    { name: 'Sales Team', path: '/salesmen', icon: <Users size={20} />, section: 'Operations' },
-    { name: 'Administration', path: '/administration', icon: <ShieldCheck size={20} />, section: 'Admin' },
-    { name: 'Settings', path: '/settings', icon: <Settings size={20} />, section: 'Admin' },
+    { name: t('dashboard'), path: '/dashboard', icon: <LayoutDashboard size={20} />, section: 'Main' },
+    { name: t('inventory_stock'), path: '/inventory', icon: <Package size={20} />, section: 'Main' },
+    { name: t('categories'), path: '/categories', icon: <FolderTree size={20} />, section: 'Main' },
+    { name: t('menu_premix'), path: '/menu', icon: <Utensils size={20} />, section: 'Main' },
+    { name: t('wastage_expiry'), path: '/wastage', icon: <AlertTriangle size={20} />, section: 'Main' },
+    { name: t('vendors_clients'), path: '/vendors', icon: <Store size={20} />, section: 'Operations' },
+    { name: t('purchase_orders'), path: '/purchases', icon: <ShoppingCart size={20} />, section: 'Operations' },
+    { name: t('production_distribution'), path: '/factory-dispatch', icon: <Zap size={20} />, section: 'Operations' },
+    { name: t('direct_sales'), path: '/sales', icon: <Truck size={20} />, section: 'Operations' },
+    { name: t('analytics_forecasts'), path: '/analytics', icon: <BarChart2 size={20} />, section: 'Operations' },
+    { name: t('reports_bi'), path: '/reports', icon: <FileText size={20} />, section: 'Operations' },
+    { name: t('accounts'), path: '/accounts', icon: <Wallet size={20} />, section: 'Operations' },
+    { name: t('sales_team'), path: '/salesmen', icon: <Users size={20} />, section: 'Operations' },
+    { name: t('administration'), path: '/administration', icon: <ShieldCheck size={20} />, section: 'Admin' },
+    { name: t('settings'), path: '/settings', icon: <Settings size={20} />, section: 'Admin' },
   ];
 
   const getRoleDisplayName = (role: string) => {
@@ -122,7 +124,7 @@ const Layout: React.FC<LayoutProps> = ({ children, title }) => {
         <nav className="sidebar-nav">
           {['Main', 'Operations', 'Admin'].map((section) => (
             <div key={section} className="nav-section">
-              <div className="section-label">{section}</div>
+              <div className="section-label">{t(section.toLowerCase())}</div>
               {navItems.filter(item => item.section === section).map((item) => (
                 <Link 
                   key={item.name} 
@@ -145,12 +147,12 @@ const Layout: React.FC<LayoutProps> = ({ children, title }) => {
               <div className="user-name">{admin?.firstName || admin?.username || 'Admin'}</div>
               <div className="user-role">{getRoleDisplayName(admin?.role || 'staff')}</div>
             </div>
-            <button className="logout-btn" onClick={logout} title="Logout">
+            <button className="logout-btn" onClick={logout} title={t('logout')}>
               <LogOut size={18} />
             </button>
           </div>
           <div className="powered-by">
-            Powered by <b>An International</b>
+            {t('powered_by')} <b>An International</b>
           </div>
         </div>
       </aside>
@@ -168,9 +170,27 @@ const Layout: React.FC<LayoutProps> = ({ children, title }) => {
           </div>
 
           <div className="topbar-right">
+            <button 
+              className="lang-toggle" 
+              onClick={() => setLanguage(language === 'en' ? 'ar' : 'en')}
+              style={{
+                background: 'rgba(1, 86, 44, 0.1)',
+                color: 'var(--primary)',
+                border: 'none',
+                padding: '8px 12px',
+                borderRadius: '8px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                marginRight: isRTL ? '0' : '15px',
+                marginLeft: isRTL ? '15px' : '0'
+              }}
+            >
+              {language === 'en' ? 'العربية' : 'English'}
+            </button>
+
             <div className="search-bar">
               <Search size={18} />
-              <input type="text" placeholder="Search operations..." />
+              <input type="text" placeholder={t('search_operations')} />
             </div>
             
             {/* 🔔 DYNAMIC NOTIFICATION HUB */}
@@ -185,14 +205,14 @@ const Layout: React.FC<LayoutProps> = ({ children, title }) => {
               </div>
 
               {notifOpen && (
-                <div className="notif-dropdown" style={{ position: 'absolute', top: '100%', right: 0, width: '300px', background: 'white', borderRadius: '15px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', z_index: 1000, marginTop: '10px', padding: '10px', border: '1px solid #eee' }}>
+                <div className="notif-dropdown" style={{ position: 'absolute', top: '100%', right: 0, width: '300px', background: 'white', borderRadius: '15px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', zIndex: 1000, marginTop: '10px', padding: '10px', border: '1px solid #eee' }}>
                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px', borderBottom: '1px solid #eee', marginBottom: '10px' }}>
-                      <strong style={{ fontSize: '14px' }}>Notifications</strong>
-                      <button onClick={clearAllNotifs} style={{ border: 'none', background: 'none', color: 'var(--primary)', fontSize: '11px', cursor: 'pointer', fontWeight: 700 }}>Clear All</button>
+                      <strong style={{ fontSize: '14px' }}>{t('notifications')}</strong>
+                      <button onClick={clearAllNotifs} style={{ border: 'none', background: 'none', color: 'var(--primary)', fontSize: '11px', cursor: 'pointer', fontWeight: 700 }}>{t('clear_all')}</button>
                    </div>
                    <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
                       {notifications.length === 0 ? (
-                        <div style={{ padding: '20px', textAlign: 'center', color: '#94a3b8', fontSize: '12px' }}>No new alerts. You're all caught up! ✨</div>
+                        <div style={{ padding: '20px', textAlign: 'center', color: '#94a3b8', fontSize: '12px' }}>{t('no_new_alerts')}</div>
                       ) : notifications.map((n: any) => (
                         <div 
                           key={n.notification_id} 
@@ -212,7 +232,7 @@ const Layout: React.FC<LayoutProps> = ({ children, title }) => {
               )}
             </div>
 
-            <div className="user-initial" onClick={logout} title="Logout">
+            <div className="user-initial" onClick={logout} title={t('logout')}>
               {(admin?.username?.[0] || 'A').toUpperCase()}
             </div>
           </div>

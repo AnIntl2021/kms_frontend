@@ -9,10 +9,11 @@ import {
   Globe
 } from 'lucide-react';
 import api from '../api/axios';
+import { useLanguage } from '../hooks/useLanguage';
 
 const AIAssistant = () => {
+  const { language: lang, setLanguage: setLang } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
-  const [lang, setLang] = useState<'en' | 'ar'>('en');
   const [messages, setMessages] = useState<{role: 'user' | 'bot', text: string}[]>([]);
   const [input, setInput] = useState('');
   const [mode, setMode] = useState<'chat' | 'guide' | 'complaint' | 'forecast'>('chat');
@@ -208,7 +209,7 @@ const AIAssistant = () => {
                 onClick={() => setLang(lang === 'en' ? 'ar' : 'en')}
                 style={{ fontSize: '11px', fontWeight: 700, background: 'rgba(255,255,255,0.2)', padding: '4px 10px', borderRadius: '8px', color: 'white' }}
               >
-                <Globe size={12} style={{ display: 'inline', marginRight: '4px' }} /> {t.lang_btn}
+                 {t.lang_btn}
               </button>
               <button onClick={() => setIsOpen(false)} style={{ color: 'white', opacity: 0.8 }}><X size={22} /></button>
             </div>

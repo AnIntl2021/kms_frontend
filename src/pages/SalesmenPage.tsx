@@ -16,6 +16,7 @@ import {
 import api from '../api/axios';
 import { toast } from 'react-toastify';
 import Swal from 'sweetalert2';
+import { useLanguage } from '../hooks/useLanguage';
 
 interface Salesman {
   salesman_id: number;
@@ -30,6 +31,7 @@ interface Salesman {
 }
 
 const SalesmenPage = () => {
+  const { t, language } = useLanguage();
   const [salesmen, setSalesmen] = useState<Salesman[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -66,7 +68,7 @@ const SalesmenPage = () => {
       
       setSalesmen(combined);
     } catch (error) {
-      toast.error('Failed to load salesmen data.');
+      toast.error(t('failed_load_data'));
     } finally {
       setLoading(false);
     }
@@ -77,10 +79,10 @@ const SalesmenPage = () => {
     try {
       if (editingId) {
         await api.put(`/salesmen/${editingId}`, formData);
-        toast.success('Salesman updated successfully! 👔');
+        toast.success(t('salesman_updated_success'));
       } else {
         await api.post('/salesmen', formData);
-        toast.success('New salesman recruited! 🚀');
+        toast.success(t('new_salesman_success'));
       }
       setIsModalOpen(false);
       resetForm();
@@ -92,19 +94,19 @@ const SalesmenPage = () => {
 
   const handleDelete = async (id: number) => {
     const result = await Swal.fire({
-      title: 'Are you sure?',
-      text: "This salesman will be removed from active duty!",
+      title: t('remove_salesman_q'),
+      text: t('remove_salesman_msg'),
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#3b82f6',
       cancelButtonColor: '#ef4444',
-      confirmButtonText: 'Yes, delete!'
+      confirmButtonText: t('yes_delete')
     });
 
     if (result.isConfirmed) {
       try {
         await api.delete(`/salesmen/${id}`);
-        toast.success('Salesman removed.');
+        toast.success(t('salesman_removed'));
         fetchSalesmen();
       } catch (error) {
         toast.error('Delete failed.');
@@ -143,7 +145,7 @@ const SalesmenPage = () => {
   );
 
   return (
-    <Layout title="Sales Team Management">
+    <Layout title={t('sales_team_management')}>
       <div className="salesmen-container">
         
         {/* Executive Stats Bar */}
@@ -151,22 +153,22 @@ const SalesmenPage = () => {
            <div className="metric-glass">
               <div className="icon-box blue"><TrendingUp size={24} /></div>
               <div className="text-box">
-                 <span>Active Team</span>
-                 <h3>{salesmen.filter(s => s.status === 'active').length} Members</h3>
+                 <span>{t('active_team')}</span>
+                 <h3>{salesmen.filter(s => s.status === 'active').length} {t('members')}</h3>
               </div>
            </div>
            <div className="metric-glass">
               <div className="icon-box gold"><Award size={24} /></div>
               <div className="text-box">
-                 <span>Top Performer</span>
-                 <h3>{salesmen.length > 0 ? salesmen.reduce((prev, curr) => (prev.total_revenue! > curr.total_revenue! ? prev : curr)).name_en : 'N/A'}</h3>
+                 <span>{t('top_performer')}</span>
+                 <h3>{salesmen.length > 0 ? (language === 'ar' ? (salesmen.reduce((prev, curr) => (prev.total_revenue! > curr.total_revenue! ? prev : curr)).name_ar || salesmen.reduce((prev, curr) => (prev.total_revenue! > curr.total_revenue! ? prev : curr)).name_en) : salesmen.reduce((prev, curr) => (prev.total_revenue! > curr.total_revenue! ? prev : curr)).name_en) : 'N/A'}</h3>
               </div>
            </div>
            <div className="metric-glass">
               <div className="icon-box green"><TrendingUp size={24} /></div>
               <div className="text-box">
-                 <span>Team Revenue</span>
-                 <h3>{salesmen.reduce((acc, curr) => acc + Number(curr.total_revenue || 0), 0).toFixed(3)} KWD</h3>
+                 <span>{t('team_revenue')}</span>
+                 <h3>{salesmen.reduce((acc, curr) => acc + Number(curr.total_revenue || 0), 0).toFixed(3)} {t('kd_currency')}</h3>
               </div>
            </div>
         </div>
@@ -177,13 +179,13 @@ const SalesmenPage = () => {
             <Search size={18} />
             <input 
               type="text" 
-              placeholder="Search by name or phone..." 
+              placeholder={t('search_salesman_hint')} 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
           <button className="btn-recruit" onClick={() => { resetForm(); setIsModalOpen(true); }}>
-            <UserPlus size={18} /> Recruit Salesman
+            <UserPlus size={18} /> {t('recruit_salesman')}
           </button>
         </div>
 
@@ -203,7 +205,7 @@ const SalesmenPage = () => {
                   </div>
                   <div className="status-indicator">
                      <span className={`status-dot ${salesman.status}`}></span>
-                     {salesman.status}
+                     {t(salesman.status)}
                   </div>
                   <div className="card-actions">
                      <button className="btn-icon" onClick={() => handleEdit(salesman)}><Edit2 size={16} /></button>
@@ -212,7 +214,7 @@ const SalesmenPage = () => {
                </div>
                
                <div className="card-body">
-                  <h3>{salesman.name_en}</h3>
+                  <h3>{language === 'ar' ? (salesman.name_ar || salesman.name_en) : salesman.name_en}</h3>
                   <p className="ar-name">{salesman.name_ar}</p>
                   
                   <div className="contact-info">
@@ -222,15 +224,15 @@ const SalesmenPage = () => {
 
                   <div className="performance-stats">
                      <div className="stat-item">
-                        <label>Revenue</label>
-                        <strong>{Number(salesman.total_revenue || 0).toFixed(3)} KWD</strong>
+                        <label>{t('revenue')}</label>
+                        <strong>{Number(salesman.total_revenue || 0).toFixed(3)} {t('kd_currency')}</strong>
                      </div>
                      <div className="stat-item">
-                        <label>Orders</label>
+                        <label>{t('orders')}</label>
                         <strong>{salesman.total_orders || 0}</strong>
                      </div>
                      <div className="stat-item">
-                        <label>Commission</label>
+                        <label>{t('commission')}</label>
                         <strong>{salesman.commission_rate}%</strong>
                      </div>
                   </div>
@@ -240,13 +242,13 @@ const SalesmenPage = () => {
                   <div className="progress-bar">
                      <div className="fill" style={{ width: `${Math.min(100, (salesman.total_revenue || 0) / 10)}%` }}></div>
                   </div>
-                  <span>Monthly Target Progress</span>
+                  <span>{t('monthly_target_progress')}</span>
                </div>
             </div>
           )) : (
             <div className="empty-team">
                <Filter size={48} />
-               <p>No salesmen found matching your criteria.</p>
+               <p>{t('no_salesmen_found')}</p>
             </div>
           )}
         </div>
@@ -259,7 +261,7 @@ const SalesmenPage = () => {
             <div className="modal-header">
                <div className="header-title">
                   <UserPlus size={24} />
-                  <h3>{editingId ? 'Update Salesman Profile' : 'Recruit New Salesman'}</h3>
+                  <h3>{editingId ? t('update_salesman_profile') : t('recruit_new_salesman')}</h3>
                </div>
                <button className="btn-close" onClick={() => setIsModalOpen(false)}><X size={20} /></button>
             </div>
@@ -267,7 +269,7 @@ const SalesmenPage = () => {
             <form onSubmit={handleSubmit} className="modal-body">
                <div className="form-grid">
                   <div className="form-group">
-                     <label>Full Name (English) *</label>
+                     <label>{t('full_name_en_star')}</label>
                      <input 
                         type="text" 
                         required 
@@ -277,7 +279,7 @@ const SalesmenPage = () => {
                      />
                   </div>
                   <div className="form-group">
-                     <label>الاسم بالكامل (عربي)</label>
+                     <label>{t('full_name_ar')}</label>
                      <input 
                         type="text" 
                         value={formData.name_ar} 
@@ -286,7 +288,7 @@ const SalesmenPage = () => {
                      />
                   </div>
                   <div className="form-group">
-                     <label>Phone Number</label>
+                     <label>{t('phone_number')}</label>
                      <input 
                         type="tel" 
                         value={formData.phone} 
@@ -295,7 +297,7 @@ const SalesmenPage = () => {
                      />
                   </div>
                   <div className="form-group">
-                     <label>Email Address</label>
+                     <label>{t('email_address')}</label>
                      <input 
                         type="email" 
                         value={formData.email} 
@@ -304,7 +306,7 @@ const SalesmenPage = () => {
                      />
                   </div>
                   <div className="form-group">
-                     <label>Commission Rate (%)</label>
+                     <label>{t('commission_rate_percent')}</label>
                      <input 
                         type="number" 
                         step="0.1" 
@@ -313,21 +315,21 @@ const SalesmenPage = () => {
                      />
                   </div>
                   <div className="form-group">
-                     <label>Employment Status</label>
+                     <label>{t('employment_status')}</label>
                      <select 
                         value={formData.status} 
                         onChange={e => setFormData({...formData, status: e.target.value as any})}
                      >
-                        <option value="active">Active</option>
-                        <option value="inactive">Inactive / On Leave</option>
+                        <option value="active">{t('active')}</option>
+                        <option value="inactive">{t('inactive_on_leave')}</option>
                      </select>
                   </div>
                </div>
 
                <div className="modal-actions">
-                  <button type="button" className="btn-secondary" onClick={() => setIsModalOpen(false)}>Cancel</button>
+                  <button type="button" className="btn-secondary" onClick={() => setIsModalOpen(false)}>{t('cancel')}</button>
                   <button type="submit" className="btn-primary">
-                     {editingId ? 'Save Changes' : 'Confirm Recruitment'}
+                     {editingId ? t('save_changes') : t('confirm_recruitment')}
                   </button>
                </div>
             </form>

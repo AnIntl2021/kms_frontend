@@ -3,6 +3,8 @@ import Layout from "../components/Layout";
 import api from "../api/axios";
 import { useReactToPrint } from "react-to-print";
 import FullInvoicePrint from "../components/FullInvoicePrint";
+import SearchableSelect from "../components/SearchableSelect";
+import { toast } from "react-toastify";
 import {
   Truck,
   Zap,
@@ -21,9 +23,8 @@ import {
   Pencil,
 } from "lucide-react";
 import "./InventoryPage.css";
-import { toast } from "react-toastify";
-import SearchableSelect from "../components/SearchableSelect";
 import Swal from "sweetalert2";
+import { useLanguage } from "../hooks/useLanguage";
 
 interface Vendor {
   vendor_id: number;
@@ -37,8 +38,8 @@ interface MenuItem {
   current_stock: number;
   price: number;
 }
-
 const FactoryDispatchPage = () => {
+  const { t, language } = useLanguage();
   const [activeTab, setActiveTab] = useState<
     "produce" | "dispatch" | "returns"
   >("dispatch");
@@ -83,7 +84,7 @@ const FactoryDispatchPage = () => {
   });
 
   const printReturn = async (returnRecord: any) => {
-    const toastId = toast.loading('Preparing document for print...');
+    const toastId = toast.loading(t('preparing_print_doc'));
     try {
       const res = await api.get(`/factory/returns/${returnRecord.return_id}/items`);
       if (res.data.success) {
@@ -102,10 +103,10 @@ const FactoryDispatchPage = () => {
           handlePrintAction();
         }, 300);
       } else {
-        toast.update(toastId, { render: 'Failed to fetch print data', type: 'error', isLoading: false, autoClose: 3000 });
+        toast.update(toastId, { render: t('failed_fetch_print_data'), type: 'error', isLoading: false, autoClose: 3000 });
       }
     } catch (error) {
-      toast.update(toastId, { render: 'API Error: Failed to load return items', type: 'error', isLoading: false, autoClose: 3000 });
+      toast.update(toastId, { render: 'API Error', type: 'error', isLoading: false, autoClose: 3000 });
     }
   };
 
@@ -135,7 +136,7 @@ const FactoryDispatchPage = () => {
       return;
     }
 
-    const toastId = toast.loading('Aggregating items from selected dispatches...');
+    const toastId = toast.loading(t('aggregating_items'));
     try {
       // 🚀 FETCH BOTH ORIGINAL SALE DATA AND REMAINING QUANTITIES
       const results = await Promise.all(
@@ -256,13 +257,13 @@ const FactoryDispatchPage = () => {
   const handleProduceSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (produceForm.items.length === 0)
-      return toast.warning("Please add items to the production batch.");
+      return toast.warning(t('add_items_warning'));
     if (!produceForm.expiry_date)
-      return toast.warning("Missing expiry date for the batch.");
+      return toast.warning(t('missing_expiry_warning'));
 
     try {
       await api.post("/factory/production/batch", produceForm);
-      toast.success("Production Batch Recorded Successfully! 🏭");
+      toast.success(t('production_batch_success'));
       setShowProduceModal(false);
       setProduceForm({
         production_date: new Date().toISOString().split("T")[0],
@@ -286,20 +287,20 @@ const FactoryDispatchPage = () => {
 
   const handleDeleteProduction = async (id: number) => {
     const result = await Swal.fire({
-      title: "Delete Production Batch?",
-      text: "This action cannot be undone and will NOT restore used stock automatically.",
+      title: t('delete_production_q'),
+      text: t('delete_production_msg'),
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#be123c",
       cancelButtonColor: "#64748b",
-      confirmButtonText: "Yes, Delete Batch",
+      confirmButtonText: t('yes_delete')
     });
 
     if (!result.isConfirmed) return;
 
     try {
       await api.delete(`/factory/production/batch/${id}`);
-      toast.success("Production batch deleted! 🗑️");
+      toast.success(t('production_deleted_success'));
       fetchBaseData();
     } catch (e) {
       toast.error("Failed to delete production batch.");
@@ -308,20 +309,20 @@ const FactoryDispatchPage = () => {
 
   const handleDeleteDispatch = async (id: number) => {
     const result = await Swal.fire({
-      title: "Delete Dispatch Order?",
-      text: "Are you sure you want to permanently delete this distribution record?",
+      title: t('delete_dispatch_q'),
+      text: t('delete_dispatch_msg'),
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#be123c",
       cancelButtonColor: "#64748b",
-      confirmButtonText: "Yes, Delete Order",
+      confirmButtonText: t('yes_delete')
     });
 
     if (!result.isConfirmed) return;
 
     try {
       await api.delete(`/factory/sales/${id}`);
-      toast.success("Dispatch order deleted! 🗑️");
+      toast.success(t('dispatch_deleted_success'));
       fetchBaseData();
     } catch (e) {
       toast.error("Failed to delete dispatch order.");
@@ -333,7 +334,7 @@ const FactoryDispatchPage = () => {
     try {
       const res = await api.put(`/factory/dispatches/${id}/status`, { status });
       if (res.data.success) {
-        toast.update(toastId, { render: `Order marked as ${status}! ✅`, type: "success", isLoading: false, autoClose: 3000 });
+        toast.update(toastId, { render: t('order_marked_delivered'), type: "success", isLoading: false, autoClose: 3000 });
         await fetchBaseData();
       } else {
         toast.update(toastId, { render: res.data.message || "Failed to update status", type: "error", isLoading: false, autoClose: 3000 });
@@ -374,7 +375,7 @@ const FactoryDispatchPage = () => {
             expiry_date: i.expiry_date || null
           }))
         });
-        toast.success("Return record updated successfully! ✨");
+        toast.success(t('return_updated_success'));
       } else {
         await api.post("/factory/returns", {
           ...returnForm,
@@ -388,7 +389,7 @@ const FactoryDispatchPage = () => {
             expiry_date: i.expiry_date || null
           }))
         });
-        toast.success("Returns Processed & Wastage Recorded! 🔄");
+        toast.success(t('return_processed_success'));
       }
       setShowReturnModal(false);
       setEditingReturnId(null);
@@ -412,7 +413,7 @@ const FactoryDispatchPage = () => {
     e.preventDefault();
     try {
       await api.post("/factory/sales", dispatchForm);
-      toast.success("Goods Dispatched & Linked to Batch! 🚛");
+      toast.success(t('goods_dispatched_success'));
       setShowDispatchModal(false);
       setDispatchForm({
         vendor_id: "",
@@ -441,7 +442,7 @@ const FactoryDispatchPage = () => {
   };
 
   return (
-    <Layout title="Production & Distribution Hub">
+    <Layout title={t('production_distribution_hub')}>
       <div className="inventory-container">
         {/* Tabs */}
         <div
@@ -470,7 +471,7 @@ const FactoryDispatchPage = () => {
               cursor: "pointer",
             }}
           >
-            <Truck size={20} /> Client Distribution
+            <Truck size={20} /> {t('client_distribution')}
           </button>
           <button
             onClick={() => setActiveTab("produce")}
@@ -489,7 +490,7 @@ const FactoryDispatchPage = () => {
               cursor: "pointer",
             }}
           >
-            <Zap size={20} /> Batch Production
+            <Zap size={20} /> {t('batch_production')}
           </button>
           <button
             onClick={() => setActiveTab("returns")}
@@ -508,7 +509,7 @@ const FactoryDispatchPage = () => {
               cursor: "pointer",
             }}
           >
-            <TrendingDown size={20} /> Returns & Wastage
+            <TrendingDown size={20} /> {t('returns_wastage')}
           </button>
         </div>
 
@@ -518,7 +519,7 @@ const FactoryDispatchPage = () => {
             <Search size={18} className="search-icon" />
             <input
               type="text"
-              placeholder="Search orders or batches..."
+              placeholder={t('search_orders_batches')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -526,27 +527,27 @@ const FactoryDispatchPage = () => {
           <div className="action-buttons">
             <button
               className="btn-add"
-              style={{ background: "var(--primary)" }}
+               style={{ background: "var(--primary)" }}
               onClick={() => setShowProduceModal(true)}
             >
-              <Plus size={18} /> New Production Batch
+              <Plus size={18} /> {t('new_production_batch')}
             </button>
             <button
               className="btn-add"
-              style={{ background: "#0369a1" }}
+               style={{ background: "#0369a1" }}
               onClick={() => setShowDispatchModal(true)}
             >
-              <Truck size={18} /> Create Dispatch
+              <Truck size={18} /> {t('create_dispatch')}
             </button>
             <button
               className="btn-add"
               style={{ background: "#be123c" }}
               onClick={() => {
                 fetchBaseData();
-                setShowReturnModal(true);
+                 setShowReturnModal(true);
               }}
             >
-              <RotateCcw size={18} /> Process Sales Return
+              <RotateCcw size={18} /> {t('process_sales_return')}
             </button>
           </div>
         </div>
@@ -567,11 +568,11 @@ const FactoryDispatchPage = () => {
             >
               <strong>
                 {activeTab === "dispatch"
-                  ? "Internal Distribution"
-                  : "Factory Production History"}
+                  ? t("internal_distribution")
+                  : activeTab === "returns" ? t("returns_wastage") : t("factory_production_history")}
               </strong>
               <span style={{ fontSize: "12px", color: "#64748b" }}>
-                Real-time Traceability
+                {t("real_time_traceability")}
               </span>
             </div>
 
@@ -580,30 +581,30 @@ const FactoryDispatchPage = () => {
                 <thead>
                   {activeTab === "dispatch" ? (
                     <tr>
-                      <th>SO #</th>
-                      <th>Distribution Partner</th>
-                      <th>Salesman</th>
-                      <th>Status</th>
-                      <th>Dispatch Date</th>
-                      <th className="text-right">Action</th>
+                      <th>{t("so_number")}</th>
+                      <th>{t("distribution_partner")}</th>
+                      <th>{t("salesman")}</th>
+                      <th>{t("status")}</th>
+                      <th>{t("dispatch_date")}</th>
+                      <th className="text-end">{t("actions")}</th>
                     </tr>
                   ) : activeTab === "returns" ? (
                     <tr>
-                      <th>Return ID</th>
-                      <th>Client Name</th>
-                      <th>Reason</th>
-                      <th>Return Date</th>
-                      <th className="text-right">Wastage Value (Loss)</th>
-                      <th className="text-center">Actions</th>
+                      <th>{t("return_id")}</th>
+                      <th>{t("client_name")}</th>
+                      <th>{t("reason")}</th>
+                      <th>{t("return_date")}</th>
+                      <th className="text-end">{t("wastage_value_loss")}</th>
+                      <th className="text-center">{t("actions")}</th>
                     </tr>
                   ) : (
                     <tr>
-                      <th>Batch Code</th>
-                      <th>Mfd Date</th>
-                      <th>Exp Date</th>
-                      <th>Line Count</th>
-                      <th className="text-right">Batch Size</th>
-                      <th className="text-right">Action</th>
+                      <th>{t("batch_code")}</th>
+                      <th>{t("mfd_date")}</th>
+                      <th>{t("exp_date")}</th>
+                      <th>{t("line_count")}</th>
+                      <th className="text-end">{t("batch_size")}</th>
+                      <th className="text-end">{t("actions")}</th>
                     </tr>
                   )}
                 </thead>
@@ -612,7 +613,7 @@ const FactoryDispatchPage = () => {
                     dispatches.length === 0 ? (
                       <tr>
                         <td colSpan={5} className="text-center py-4">
-                          No distributions found.
+                          {t("no_distributions_found")}
                         </td>
                       </tr>
                     ) : (
@@ -621,12 +622,12 @@ const FactoryDispatchPage = () => {
                           <td>
                             <div style={{ fontWeight: 800, color: 'var(--primary)', marginBottom: '4px' }}>{d.order_number}</div>
                             <div style={{ fontSize: '11px', color: '#64748b', background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px', display: 'inline-block' }}>
-                               Batch: {d.batch_number || 'N/A'}
+                               {t('batch')}: {d.batch_number || 'N/A'}
                             </div>
                           </td>
                           <td>
                             <div style={{ fontWeight: 700 }}>
-                              {d.client_name}
+                              {language === 'ar' ? (d.client_name_ar || d.client_name) : d.client_name}
                             </div>
                             {d.branch_name && (
                               <div
@@ -635,22 +636,22 @@ const FactoryDispatchPage = () => {
                                   color: "var(--primary)",
                                 }}
                               >
-                                {d.branch_name} Branch
+                                {language === 'ar' ? (d.branch_name_ar || d.branch_name) : d.branch_name} {t('branch')}
                               </div>
                             )}
                           </td>
                           <td>
-                             <div style={{ fontSize: '13px', fontWeight: 600 }}>{d.salesman_name || '---'}</div>
+                             <div style={{ fontSize: '13px', fontWeight: 600 }}>{language === 'ar' ? (d.salesman_name_ar || d.salesman_name) : (d.salesman_name || '---')}</div>
                           </td>
                           <td>
                             <span
                               className={`status-badge ${d.dispatch_status === "pending" ? "low" : (d.dispatch_status === "in_transit" || d.dispatch_status === "dispatched") ? "warning" : "healthy"}`}
                             >
-                              {d.dispatch_status === "in_transit" ? "dispatched" : d.dispatch_status}
+                              {t(d.dispatch_status === "in_transit" ? "dispatched" : d.dispatch_status)}
                             </span>
                           </td>
                           <td>{d.dispatch_date}</td>
-                          <td className="text-right">
+                          <td className="text-end">
                             <div
                               style={{
                                 display: "flex",
@@ -662,7 +663,7 @@ const FactoryDispatchPage = () => {
                               <span
                                 style={{ fontWeight: 700, marginRight: "5px" }}
                               >
-                                {Number(d.total_amount).toFixed(3)} KWD
+                                {Number(d.total_amount).toFixed(3)} {t('kd_currency')}
                               </span>
                               {(d.dispatch_status === "in_transit" || d.dispatch_status === "dispatched") && (
                                 <button
@@ -675,7 +676,7 @@ const FactoryDispatchPage = () => {
                                     fontSize: "10px",
                                   }}
                                 >
-                                  Deliver
+                                  {t('deliver')}
                                 </button>
                               )}
                                <button 
@@ -694,7 +695,7 @@ const FactoryDispatchPage = () => {
                     returnsHistory.length === 0 ? (
                       <tr>
                         <td colSpan={5} className="text-center py-4">
-                          No returns recorded.
+                          {t('no_returns_recorded')}
                         </td>
                       </tr>
                     ) : (
@@ -706,9 +707,9 @@ const FactoryDispatchPage = () => {
                             </span>
                           </td>
                           <td>
-                            <div style={{ fontWeight: 700 }}>{r.client_name}</div>
+                            <div style={{ fontWeight: 700 }}>{language === 'ar' ? (r.client_name_ar || r.client_name) : r.client_name}</div>
                             {r.branch_name && (
-                              <div style={{ fontSize: '11px', color: 'var(--primary)' }}>{r.branch_name} Branch</div>
+                              <div style={{ fontSize: '11px', color: 'var(--primary)' }}>{language === 'ar' ? (r.branch_name_ar || r.branch_name) : r.branch_name} {t('branch')}</div>
                             )}
                           </td>
                           <td>
@@ -720,13 +721,13 @@ const FactoryDispatchPage = () => {
                                 color: "#be123c",
                               }}
                             >
-                              {r.reason}
+                              {t(r.reason.toLowerCase().replace(/ \/ /g, '_').replace(/ /g, '_')) || r.reason}
                             </span>
                           </td>
                           <td>{new Date(r.created_at).toLocaleDateString()}</td>
-                          <td className="text-right">
+                          <td className="text-end">
                             <strong style={{ color: '#be123c' }}>
-                              {Number(r.total_credit_amount).toFixed(3)} KWD
+                              {Number(r.total_credit_amount).toFixed(3)} {t('kd_currency')}
                             </strong>
                           </td>
                           <td className="text-center">
@@ -867,10 +868,10 @@ const FactoryDispatchPage = () => {
                             </span>
                           </td>
                           <td>{p.total_items} types</td>
-                          <td className="text-right">
+                          <td className="text-end">
                                <strong>{p.total_qty} units</strong>
                            </td>
-                           <td className="text-right">
+                           <td className="text-end">
                              <button 
                                onClick={() => handleDeleteProduction(p.production_id)} 
                                className="btn-icon"
@@ -1099,7 +1100,7 @@ const FactoryDispatchPage = () => {
                     </label>
                     <SearchableSelect
                       options={vendors
-                        .filter((v) => v.type === "client" || v.type === "supplier")
+                        .filter((v) => v.type === "client")
                         .map((v: any) => ({ value: v.vendor_id, label: v.name_en }))}
                       value={dispatchForm.vendor_id}
                       onChange={(val) => {
@@ -1344,7 +1345,7 @@ const FactoryDispatchPage = () => {
                     <div className="form-group">
                       <label><Building2 size={14} /> Source Client / Partner</label>
                       <SearchableSelect
-                        options={vendors.map(v => ({ value: v.vendor_id, label: v.name_en }))}
+                        options={vendors.filter(v => v.type === 'client').map(v => ({ value: v.vendor_id, label: v.name_en }))}
                         value={returnForm.vendor_id}
                         onChange={(val) => {
                           setReturnForm({...returnForm, vendor_id: String(val), sale_ids: [], items: []});

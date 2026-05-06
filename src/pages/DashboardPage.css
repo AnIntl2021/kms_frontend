@@ -291,7 +291,7 @@
 .alert-item {
   padding: 1.25rem;
   border-radius: 18px;
-  border-left: 6px solid;
+  border-inline-start: 6px solid;
   display: flex;
   gap: 1rem;
 }

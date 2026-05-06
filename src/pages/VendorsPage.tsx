@@ -14,6 +14,7 @@ import {
 import './InventoryPage.css'; 
 import { toast } from 'react-toastify';
 import Swal from 'sweetalert2';
+import { useLanguage } from '../hooks/useLanguage';
 
 interface Vendor {
   vendor_id: number;
@@ -30,6 +31,7 @@ interface Vendor {
 }
 
 const VendorsPage = () => {
+  const { t, language } = useLanguage();
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -83,8 +85,8 @@ const VendorsPage = () => {
 
   const handleDelete = async (id: number) => {
     const confirm = await Swal.fire({
-      title: 'Remove Partner?',
-      text: 'Are you sure you want to remove this vendor/client?',
+      title: t('remove_partner_q'),
+      text: t('remove_partner_msg'),
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#ef4444'
@@ -105,10 +107,10 @@ const VendorsPage = () => {
     try {
       if (editingVendor) {
         await api.put(`/vendors/${editingVendor.vendor_id}`, formData);
-        toast.success('Partner Updated Successfully! 🤝');
+        toast.success(t('partner_updated'));
       } else {
         await api.post('/vendors', formData);
-        toast.success('New Partner Registered! 🏢');
+        toast.success(t('partner_registered'));
       }
       setShowModal(false);
       setEditingVendor(null);
@@ -122,15 +124,15 @@ const VendorsPage = () => {
   const filtered = vendors.filter(v => v.name_en.toLowerCase().includes(searchTerm.toLowerCase()));
 
   return (
-    <Layout title="Vendors & Distribution Clients">
+    <Layout title={t('vendors_dist_clients')}>
       <div className="inventory-container">
         <div className="inventory-actions">
            <div className="search-group">
             <Search size={18} className="search-icon" />
-            <input type="text" placeholder="Search suppliers or clients..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}/>
+            <input type="text" placeholder={t('search_partners_hint')} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}/>
            </div>
            <button className="btn-add" onClick={() => setShowModal(true)}>
-             <Plus size={18} /> Add New Partner
+             <Plus size={18} /> {t('add_new_partner')}
            </button>
         </div>
 
@@ -139,22 +141,22 @@ const VendorsPage = () => {
             <table>
               <thead>
                 <tr>
-                  <th>Partner Name</th>
-                  <th>Contact Details</th>
-                  <th>Type</th>
-                  <th>Default Discount</th>
-                  <th>Status</th>
-                  <th className="text-right">Actions</th>
+                  <th>{t('partner_name')}</th>
+                  <th>{t('contact_details')}</th>
+                  <th>{t('type')}</th>
+                  <th>{t('default_discount')}</th>
+                  <th>{t('status')}</th>
+                  <th className="text-end">{t('actions')}</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={6} className="text-center py-5">Loading records...</td></tr>
+                  <tr><td colSpan={6} className="text-center py-5">{t('loading_data')}</td></tr>
                 ) : filtered.map(v => (
                   <tr key={v.vendor_id}>
                     <td>
                       <div className="item-info">
-                        <strong>{v.name_en}</strong>
+                        <strong>{language === 'ar' ? (v.name_ar || v.name_en) : v.name_en}</strong>
                         <span style={{ fontSize: '12px' }}>{v.name_ar}</span>
                       </div>
                     </td>
@@ -180,8 +182,8 @@ const VendorsPage = () => {
                         <span style={{ color: '#94a3b8' }}>N/A</span>
                       )}
                     </td>
-                    <td><span className={`status-badge ${v.status === 'active' ? 'healthy' : 'low'}`}>{v.status}</span></td>
-                    <td className="text-right">
+                    <td><span className={`status-badge ${v.status === 'active' ? 'healthy' : 'low'}`}>{t(v.status)}</span></td>
+                    <td className="text-end">
                        <div className="row-actions">
                           <button className="btn-icon-sm" onClick={() => handleEdit(v)} style={{color: 'var(--primary)'}}><Edit3 size={16}/></button>
                           <button className="btn-icon-sm" onClick={() => handleDelete(v.vendor_id)} style={{color: '#ef4444'}}><Trash2 size={16}/></button>
@@ -199,31 +201,31 @@ const VendorsPage = () => {
         <div className="modal-overlay">
           <div className="modal-content" style={{ maxWidth: '600px' }}>
             <div className="modal-header">
-              <h3><Store size={22} style={{ color: 'var(--primary)', marginRight: '10px' }} /> {editingVendor ? 'Update Partner' : 'Register Partner'}</h3>
+              <h3><Store size={22} style={{ color: 'var(--primary)', marginRight: '10px' }} /> {editingVendor ? t('update_partner') : t('register_partner')}</h3>
               <button className="btn-close" onClick={() => { setShowModal(false); setEditingVendor(null); setFormData({ name_en: '', name_ar: '', contact_person: '', email: '', phone: '', address: '', type: 'supplier', status: 'active', default_discount: 0, branches: [] }); }}><X /></button>
             </div>
             <form onSubmit={handleSubmit}>
               <div className="modal-body">
                 <div className="form-grid">
                   <div className="form-group">
-                    <label>Name (English)</label>
+                    <label>{t('item_name_en')}</label>
                     <input type="text" required value={formData.name_en} onChange={e => setFormData({...formData, name_en: e.target.value})} />
                   </div>
                   <div className="form-group">
-                    <label>Name (Arabic)</label>
+                    <label>{t('item_name_ar')}</label>
                     <input type="text" dir="rtl" value={formData.name_ar} onChange={e => setFormData({...formData, name_ar: e.target.value})} />
                   </div>
                 </div>
                 <div className="form-grid">
                    <div className="form-group">
-                      <label>Partner Type</label>
+                      <label>{t('partner_type')}</label>
                       <select value={formData.type} onChange={e => setFormData({...formData, type: e.target.value as any})} required>
-                        <option value="supplier">Supplier (Inbound Goods)</option>
-                        <option value="client">Distribution Client (Outbound Sales)</option>
+                        <option value="supplier">{t('supplier_inbound')}</option>
+                        <option value="client">{t('client_outbound')}</option>
                       </select>
                    </div>
                    <div className="form-group">
-                      <label>Contact Person</label>
+                      <label>{t('contact_person')}</label>
                       <input type="text" value={formData.contact_person} onChange={e => setFormData({...formData, contact_person: e.target.value})} />
                    </div>
                 </div>
@@ -243,12 +245,12 @@ const VendorsPage = () => {
                     </div>
                   )}
                   <div className="form-group">
-                    <label>Email Address</label>
+                    <label>{t('email_address')}</label>
                     <input type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
                   </div>
                 </div>
                 <div className="form-group">
-                  <label>Phone</label>
+                  <label>{t('phone')}</label>
                   <input type="text" required value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} />
                 </div>
 
@@ -256,7 +258,7 @@ const VendorsPage = () => {
                 <div style={{ marginTop: '20px', borderTop: '1px dashed #e2e8f0', paddingTop: '15px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                     <h4 style={{ margin: 0, fontSize: '14px', color: '#64748b', display: 'flex', alignItems: 'center' }}>
-                      <Store size={14} style={{ marginRight: '5px' }} /> Branches & Delivery Locations
+                      <Store size={14} style={{ marginRight: '5px' }} /> {t('branches_locations')}
                     </h4>
                     <button 
                       type="button" 
@@ -267,7 +269,7 @@ const VendorsPage = () => {
                         branches: [...(prev.branches || []), { name_en: '', address: '', phone: '' }] 
                       }))}
                     >
-                      + Add New Branch
+                      {t('add_new_branch')}
                     </button>
                   </div>
 
@@ -278,7 +280,7 @@ const VendorsPage = () => {
                         marginBottom: '8px', padding: '10px', background: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' 
                       }}>
                         <input 
-                          placeholder="Branch Name" 
+                          placeholder={t('branch_name')} 
                           value={br.name_en} 
                           style={{ fontSize: '12px', padding: '6px' }}
                           onChange={(e) => {
@@ -288,7 +290,7 @@ const VendorsPage = () => {
                           }}
                         />
                         <input 
-                          placeholder="Address" 
+                          placeholder={t('address')} 
                           value={br.address} 
                           style={{ fontSize: '12px', padding: '6px' }}
                           onChange={(e) => {
@@ -298,7 +300,7 @@ const VendorsPage = () => {
                           }}
                         />
                         <input 
-                          placeholder="Phone" 
+                          placeholder={t('phone')} 
                           value={br.phone} 
                           style={{ fontSize: '12px', padding: '6px' }}
                           onChange={(e) => {
@@ -320,14 +322,14 @@ const VendorsPage = () => {
                       </div>
                     ))}
                     {(!formData.branches || formData.branches.length === 0) && (
-                      <p style={{ fontSize: '12px', color: '#94a3b8', textAlign: 'center', margin: '10px 0' }}>No branches defined yet. Click '+ Add New Branch' to start segregating locations.</p>
+                      <p style={{ fontSize: '12px', color: '#94a3b8', textAlign: 'center', margin: '10px 0' }}>{t('no_branches_msg')}</p>
                     )}
                   </div>
                 </div>
               </div>
               <div className="modal-footer">
-                <button type="button" className="btn-secondary" onClick={() => { setShowModal(false); setEditingVendor(null); setFormData({ name_en: '', name_ar: '', contact_person: '', email: '', phone: '', address: '', type: 'supplier', status: 'active', default_discount: 0, branches: [] }); }}>Cancel</button>
-                <button type="submit" className="btn-primary">Save Partner & Network</button>
+                <button type="button" className="btn-secondary" onClick={() => { setShowModal(false); setEditingVendor(null); setFormData({ name_en: '', name_ar: '', contact_person: '', email: '', phone: '', address: '', type: 'supplier', status: 'active', default_discount: 0, branches: [] }); }}>{t('cancel')}</button>
+                <button type="submit" className="btn-primary">{t('save_partner_network')}</button>
               </div>
             </form>
           </div>

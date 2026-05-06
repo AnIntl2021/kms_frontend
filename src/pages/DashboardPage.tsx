@@ -11,12 +11,14 @@ import {
   ArrowRight,
   AlertCircle
 } from 'lucide-react';
-import './DashboardPage.css';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/useAuthStore';
+import { useLanguage } from '../hooks/useLanguage';
+import './DashboardPage.css';
 
 const DashboardPage = () => {
   const { admin } = useAuthStore();
+  const { t, language } = useLanguage();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState({
@@ -46,7 +48,7 @@ const DashboardPage = () => {
       const wastage = wasteRes.data.data || [];
 
       const totalInvValue = inventory.reduce((acc: number, curr: any) => acc + (Number(curr.current_stock) * Number(curr.cost_price)), 0);
-      const todaySales = sales.filter((s: any) => s.order_date.includes(new Date().toISOString().split('T')[0]));
+      const todaySales = sales.filter((s: any) => s.order_date?.includes(new Date().toISOString().split('T')[0]));
       const revenueToday = todaySales.reduce((acc: number, curr: any) => acc + Number(curr.total_amount), 0);
       const activeOrders = sales.filter((s: any) => s.dispatch_status === 'pending' || s.dispatch_status === 'dispatched').length;
       
@@ -69,56 +71,56 @@ const DashboardPage = () => {
 
   const metrics = [
     { 
-      label: 'Inventory Value', 
+      label: t('inventory_value'), 
       value: data.inventoryValue.toFixed(3), 
-      unit: 'د.ك', 
+      unit: t('kd_currency'), 
       icon: <Layers size={24} />, 
       color: '#004d40', 
-      trend: 'Real-time', 
+      trend: t('real_time'), 
       isUp: true 
     },
     { 
-      label: 'Active Orders', 
+      label: t('active_orders'), 
       value: String(data.activeOrders), 
-      unit: 'Dispatch', 
+      unit: t('dispatch_unit'), 
       icon: <Truck size={24} />, 
       color: '#1565c0', 
-      trend: 'Live', 
+      trend: t('live'), 
       isUp: true 
     },
     { 
-      label: 'Daily Revenue', 
+      label: t('daily_revenue'), 
       value: data.dailyRevenue.toFixed(3), 
-      unit: 'د.ك', 
+      unit: t('kd_currency'), 
       icon: <Wallet size={24} />, 
       color: '#6a1b9a', 
-      trend: 'Today', 
+      trend: t('today'), 
       isUp: true 
     },
     { 
-      label: 'System Waste', 
+      label: t('system_waste'), 
       value: data.wastePercentage.toFixed(2), 
       unit: '%', 
       icon: <Trash2 size={24} />, 
       color: '#d32f2f', 
-      trend: 'Audit', 
+      trend: t('audit'), 
       isUp: false 
     },
   ];
 
   return (
-    <Layout title="Operations Hub">
+    <Layout title={t('operations_hub')}>
       <div className="dashboard-wrapper">
         
         <div className="dashboard-header-section">
           <div className="welcome-msg">
-            <h2>مرحبا, {admin?.firstName || admin?.username}</h2>
-            <p>Your real-time operations overview at a glance.</p>
+            <h2>{t('welcome')}, {admin?.firstName || admin?.username}</h2>
+            <p>{t('real_time_overview')}</p>
           </div>
           <div className="quick-actions">
             <button className="btn-action primary" onClick={() => navigate('/inventory')}>
               <Plus size={18} />
-              Stock In
+              {t('stock_in')}
             </button>
           </div>
         </div>
@@ -146,32 +148,32 @@ const DashboardPage = () => {
         <div className="dashboard-content-grid">
           <div className="card-panel">
             <div className="panel-header">
-              <h3>Low Stock Alerts</h3>
-              <button className="btn-action" onClick={() => navigate('/inventory')}>View Full Inventory <ChevronRight size={14} /></button>
+              <h3>{t('low_stock_alerts')}</h3>
+              <button className="btn-action" onClick={() => navigate('/inventory')}>{t('view_full_inventory')} <ChevronRight size={14} /></button>
             </div>
             
             <div className="product-card-grid">
               {data.lowStockItems.length > 0 ? data.lowStockItems.map((item, i) => (
-                <div key={i} className="product-card" style={{borderLeft: '4px solid #ef4444'}}>
+                <div key={i} className="product-card" style={{borderInlineStart: '4px solid #ef4444'}}>
                   <div className="product-card-header">
-                    <div className="product-icon" style={{background: '#fee2e2', color: '#dc2626'}}>{item.name_en[0]}</div>
+                    <div className="product-icon" style={{background: '#fee2e2', color: '#dc2626'}}>{(language === 'ar' ? item.name_ar : item.name_en)?.[0]}</div>
                     <div className="product-status-dot dot-critical" style={{background: '#ef4444'}}></div>
                   </div>
                   <div className="product-card-body">
-                    <h5>{item.name_en}</h5>
+                    <h5>{language === 'ar' ? (item.name_ar || item.name_en) : item.name_en}</h5>
                     <p>SKU: {item.sku}</p>
                   </div>
                   <div className="product-card-footer">
                     <div>
-                      <span className="stock-label">Stock Level</span>
-                      <span className="stock-pill" style={{background: '#fee2e2', color: '#991b1b'}}>{item.current_stock} {item.unit_en}</span>
+                      <span className="stock-label">{t('stock_level')}</span>
+                      <span className="stock-pill" style={{background: '#fee2e2', color: '#991b1b'}}>{item.current_stock} {language === 'ar' ? (item.unit_ar || item.unit_en) : item.unit_en}</span>
                     </div>
                     <ArrowRight size={16} color="#dc2626" />
                   </div>
                 </div>
               )) : (
                 <div className="empty-state-text" style={{padding: '2rem', color: '#059669', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px'}}>
-                  <CheckCircle size={20} /> All stock levels are healthy!
+                  <CheckCircle size={20} /> {t('all_stock_healthy')}
                 </div>
               )}
             </div>
@@ -180,22 +182,22 @@ const DashboardPage = () => {
           <div className="alerts-panel">
             <div className="card-panel" style={{height: '100%', background: '#f8fafc'}}>
               <div className="panel-header">
-                <h3>Operational Pulse</h3>
-                <span className="badge" style={{position: 'static', background: 'var(--primary)', color: 'white'}}>{data.activeOrders} Orders Live</span>
+                <h3>{t('operational_pulse')}</h3>
+                <span className="badge" style={{position: 'static', background: 'var(--primary)', color: 'white'}}>{data.activeOrders} {t('orders_live')}</span>
               </div>
               
               <div className="alert-card-grid" style={{display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem'}}>
-                 {data.activeOrders > 0 ? (
+                  {data.activeOrders > 0 ? (
                     <div style={{background: 'white', padding: '1rem', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', gap: '1rem', alignItems: 'center'}}>
                        <Truck color="var(--primary)" />
                        <div>
-                          <p style={{fontSize: '13px', margin: 0, fontWeight: 700}}>Dispatch Required</p>
-                          <p style={{fontSize: '11px', margin: 0, color: '#64748b'}}>{data.activeOrders} orders are currently in the dispatch queue.</p>
+                          <p style={{fontSize: '13px', margin: 0, fontWeight: 700}}>{t('dispatch_required')}</p>
+                          <p style={{fontSize: '11px', margin: 0, color: '#64748b'}}>{data.activeOrders} {t('dispatch_queue_msg')}</p>
                        </div>
                     </div>
                  ) : (
                     <div className="empty-state-text" style={{padding: '1rem', color: '#64748b', fontSize: '0.9rem'}}>
-                       No pending dispatches at this moment.
+                       {t('no_pending_dispatches')}
                     </div>
                  )}
                  
@@ -203,8 +205,8 @@ const DashboardPage = () => {
                     <div style={{background: '#fff7ed', padding: '1rem', borderRadius: '12px', border: '1px solid #ffedd5', display: 'flex', gap: '1rem', alignItems: 'center'}}>
                        <AlertCircle color="#ea580c" />
                        <div>
-                          <p style={{fontSize: '13px', margin: 0, fontWeight: 700, color: '#9a3412'}}>High Waste Warning</p>
-                          <p style={{fontSize: '11px', margin: 0, color: '#c2410c'}}>Wastage is currently {data.wastePercentage.toFixed(1)}% of inventory value.</p>
+                          <p style={{fontSize: '13px', margin: 0, fontWeight: 700, color: '#9a3412'}}>{t('high_waste_warning')}</p>
+                          <p style={{fontSize: '11px', margin: 0, color: '#c2410c'}}>{t('waste_percentage_curr_msg').replace('{val}', data.wastePercentage.toFixed(1))}</p>
                        </div>
                     </div>
                  )}

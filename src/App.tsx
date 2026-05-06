@@ -19,19 +19,21 @@ import ReportsPage from './pages/ReportsPage';
 import SalesmenPage from './pages/SalesmenPage';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { LanguageProvider, useLanguage } from './hooks/useLanguage';
 
-function App() {
+function AppContent() {
   const { isAuthenticated } = useAuthStore();
+  const { isRTL } = useLanguage();
 
   return (
     <>
       <ToastContainer
-        position="top-right"
+        position={isRTL ? "top-left" : "top-right"}
         autoClose={3000}
         hideProgressBar={false}
         newestOnTop
         closeOnClick
-        rtl={false}
+        rtl={isRTL}
         pauseOnFocusLoss
         draggable
         pauseOnHover
@@ -69,6 +71,14 @@ function App() {
       </Routes>
       </Router>
     </>
+  );
+}
+
+function App() {
+  return (
+    <LanguageProvider>
+      <AppContent />
+    </LanguageProvider>
   );
 }
 

@@ -15,6 +15,7 @@ import {
   MoreHorizontal
 } from 'lucide-react';
 import './InventoryPage.css';
+import { useLanguage } from '../hooks/useLanguage';
 
 interface Transaction {
   transaction_id: number;
@@ -27,6 +28,7 @@ interface Transaction {
 }
 
 const AccountsPage = () => {
+  const { t } = useLanguage();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -59,40 +61,40 @@ const AccountsPage = () => {
   const expenseTotal = transactions.reduce((acc, curr) => curr.type === 'expense' ? acc + Number(curr.amount) : acc, 0);
 
   return (
-    <Layout title="Accounts & Finance">
+    <Layout title={t('accounts_finance')}>
       <div className="inventory-container">
         {/* Financial Overview Metrics */}
         <div className="inventory-metrics">
           <div className="metric-card">
             <div className="metric-icon bg-green"><Wallet size={24} /></div>
             <div className="metric-details">
-              <span>Total Revenue</span>
-              <h3>{Number(incomeTotal).toFixed(3)} KWD</h3>
-              <p className="trend positive" style={{visibility: loading ? 'hidden' : 'visible'}}><TrendingUp size={12} /> Live tracking</p>
+              <span>{t('total_revenue')}</span>
+              <h3>{Number(incomeTotal).toFixed(3)} {t('kd_currency')}</h3>
+              <p className="trend positive" style={{visibility: loading ? 'hidden' : 'visible'}}><TrendingUp size={12} /> {t('live_tracking')}</p>
             </div>
           </div>
           <div className="metric-card">
             <div className="metric-icon bg-red" style={{ background: '#fee2e2', color: '#dc2626' }}><TrendingDown size={24} /></div>
             <div className="metric-details">
-              <span>Total Expenses</span>
-              <h3>{Number(expenseTotal).toFixed(3)} KWD</h3>
-              <p className="trend warning" style={{visibility: loading ? 'hidden' : 'visible'}}>Expenditures</p>
+              <span>{t('total_expenses')}</span>
+              <h3>{Number(expenseTotal).toFixed(3)} {t('kd_currency')}</h3>
+              <p className="trend warning" style={{visibility: loading ? 'hidden' : 'visible'}}>{t('expenditures')}</p>
             </div>
           </div>
           <div className="metric-card">
             <div className="metric-icon bg-blue"><BadgeCent size={24} /></div>
             <div className="metric-details">
-              <span>Net Profit</span>
-              <h3>{(Number(incomeTotal) - Number(expenseTotal)).toFixed(3)} د.ك</h3>
-              <p className="trend positive" style={{visibility: loading ? 'hidden' : 'visible'}}>Current Balance</p>
+              <span>{t('net_profit')}</span>
+              <h3>{(Number(incomeTotal) - Number(expenseTotal)).toFixed(3)} {t('kd_currency')}</h3>
+              <p className="trend positive" style={{visibility: loading ? 'hidden' : 'visible'}}>{t('current_balance')}</p>
             </div>
           </div>
           <div className="metric-card">
             <div className="metric-icon bg-orange" style={{ background: '#ffedd5', color: '#ea580c' }}><ArrowUpRight size={24} /></div>
             <div className="metric-details">
-              <span>Estimated Tax</span>
-              <h3>{((Number(incomeTotal) - Number(expenseTotal)) * 0.05).toFixed(3)} د.ك</h3>
-              <p className="trend neutral" style={{visibility: loading ? 'hidden' : 'visible'}}>Auto-calculated</p>
+              <span>{t('estimated_tax')}</span>
+              <h3>{((Number(incomeTotal) - Number(expenseTotal)) * 0.05).toFixed(3)} {t('kd_currency')}</h3>
+              <p className="trend neutral" style={{visibility: loading ? 'hidden' : 'visible'}}>{t('auto_calculated')}</p>
             </div>
           </div>
         </div>
@@ -102,13 +104,13 @@ const AccountsPage = () => {
            <div className="search-group">
             <Calendar size={18} className="search-icon" />
             <span style={{ marginLeft: '10px', fontSize: '13px', color: '#64748b', fontWeight: 600 }}>
-              {new Date().toLocaleString('default', { month: 'long', year: 'numeric' })} Fiscal Period
+              {new Date().toLocaleString('default', { month: 'long', year: 'numeric' })} {t('fiscal_period')}
             </span>
            </div>
            <div className="action-buttons">
-              <button className="btn-filter"><Filter size={18} /> Financial Filter</button>
-              <button className="btn-add" onClick={fetchData}><Download size={18} /> Export Statements</button>
-              <button className="btn-add" style={{ background: 'var(--primary)' }}><Plus size={18} /> Record Entry</button>
+              <button className="btn-filter"><Filter size={18} /> {t('financial_filter')}</button>
+              <button className="btn-add" onClick={fetchData}><Download size={18} /> {t('export_statements')}</button>
+              <button className="btn-add" style={{ background: 'var(--primary)' }}><Plus size={18} /> {t('record_entry')}</button>
            </div>
         </div>
 
@@ -118,49 +120,49 @@ const AccountsPage = () => {
             <table>
               <thead>
                 <tr>
-                  <th>Transaction ID</th>
-                  <th>Category / Purpose</th>
-                  <th>Reference</th>
-                  <th>Date</th>
-                  <th>Amount (د.ك)</th>
-                  <th>Status</th>
-                  <th className="text-right">Action</th>
+                  <th>{t('transaction_id')}</th>
+                  <th>{t('category_purpose')}</th>
+                  <th>{t('reference')}</th>
+                  <th>{t('date')}</th>
+                  <th>{t('amount_kd')}</th>
+                  <th>{t('status')}</th>
+                  <th className="text-end">{t('actions')}</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                   <tr><td colSpan={7} className="text-center py-5">Syncing financial records...</td></tr>
+                   <tr><td colSpan={7} className="text-center py-5">{t('syncing_financial_records')}</td></tr>
                 ) : transactions.length === 0 ? (
-                   <tr><td colSpan={7} className="text-center py-5">No financial records found.</td></tr>
-                ) : transactions.map(t => (
-                  <tr key={`${t.type}-${t.transaction_id}`}>
+                   <tr><td colSpan={7} className="text-center py-5">{t('no_financial_records')}</td></tr>
+                ) : transactions.map(tr => (
+                  <tr key={`${tr.type}-${tr.transaction_id}`}>
                     <td>
                       <div className="item-info">
-                        <strong>TXN-{String(t.transaction_id).padStart(4, '0')}</strong>
-                        <span style={{ fontSize: '10px', display: 'flex', alignItems: 'center', gap: '3px', color: t.type === 'income' ? '#16a34a' : '#dc2626' }}>
-                           {t.type === 'income' ? <ArrowUpRight size={10}/> : <ArrowDownLeft size={10}/>}
-                           {t.type.toUpperCase()}
+                        <strong>TXN-{String(tr.transaction_id).padStart(4, '0')}</strong>
+                        <span style={{ fontSize: '10px', display: 'flex', alignItems: 'center', gap: '3px', color: tr.type === 'income' ? '#16a34a' : '#dc2626' }}>
+                           {tr.type === 'income' ? <ArrowUpRight size={10}/> : <ArrowDownLeft size={10}/>}
+                           {tr.type.toUpperCase()}
                         </span>
                       </div>
                     </td>
                     <td>
-                      <div style={{ fontWeight: 600 }}>{t.category}</div>
+                      <div style={{ fontWeight: 600 }}>{tr.category}</div>
                     </td>
                     <td>
                       <div style={{ background: '#f8fafc', padding: '4px 10px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '11px', color: '#64748b' }}>
-                        {t.reference}
+                        {tr.reference}
                       </div>
                     </td>
-                    <td>{t.date}</td>
+                    <td>{tr.date}</td>
                     <td>
-                       <strong style={{ color: t.type === 'income' ? '#054c2d' : '#991b1b', fontSize: '15px' }}>
-                         {t.type === 'income' ? '+' : '-'}{Number(t.amount).toFixed(3)}
+                       <strong style={{ color: tr.type === 'income' ? '#054c2d' : '#991b1b', fontSize: '15px' }}>
+                         {tr.type === 'income' ? '+' : '-'}{Number(tr.amount).toFixed(3)}
                        </strong>
                     </td>
                     <td>
-                      <span className={getStatusBadge(t.status)}>{t.status}</span>
+                      <span className={getStatusBadge(tr.status)}>{t(tr.status)}</span>
                     </td>
-                    <td className="text-right">
+                    <td className="text-end">
                        <button className="btn-more"><MoreHorizontal size={18} /></button>
                     </td>
                   </tr>

@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import './InventoryPage.css';
 import { toast } from 'react-toastify';
+import { useLanguage } from '../hooks/useLanguage';
 
 interface WastageRecord {
   wastage_id: number;
@@ -31,6 +32,7 @@ interface WastageRecord {
 }
 
 const WastagePage = () => {
+  const { t, language } = useLanguage();
   const [records, setRecords] = useState<WastageRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -102,7 +104,7 @@ const WastagePage = () => {
       setIsModalOpen(false);
       fetchWastage();
       setFormData({ inventory_item_id: '', menu_item_id: '', quantity: '', reason: '', notes: '' });
-      toast.success('Wastage Report Submitted! 📉');
+      toast.success(t('wastage_report_success'));
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Report submission failed.');
     }
@@ -128,7 +130,7 @@ const WastagePage = () => {
   };
 
   return (
-    <Layout title="Wastage & Spoilage Tracking">
+    <Layout title={t('wastage_tracking')}>
       <div className="inventory-container">
         
         {/* Performance Metrics Section */}
@@ -136,33 +138,33 @@ const WastagePage = () => {
           <div className="metric-card">
             <div className="metric-icon bg-red" style={{ background: '#fee2e2', color: '#dc2626' }}><Trash2 size={24} /></div>
             <div className="metric-details">
-              <span>Today's Loss</span>
-              <h3>{stats.todayValue.toFixed(3)} KWD</h3>
-              <p className="trend critical"><AlertTriangle size={12} /> Needs monitoring</p>
+              <span>{t('todays_loss')}</span>
+              <h3>{stats.todayValue.toFixed(3)} {t('kd_currency')}</h3>
+              <p className="trend critical"><AlertTriangle size={12} /> {t('needs_monitoring')}</p>
             </div>
           </div>
           <div className="metric-card">
             <div className="metric-icon bg-orange" style={{ background: '#ffedd5', color: '#ea580c' }}><BarChart size={24} /></div>
             <div className="metric-details">
-              <span>Total Month Loss</span>
-              <h3>{stats.totalValue.toFixed(3)} KWD</h3>
+              <span>{t('total_month_loss')}</span>
+              <h3>{stats.totalValue.toFixed(3)} {t('kd_currency')}</h3>
               <p className="trend warning"><TrendingUp size={12} /> +2% vs Feb</p>
             </div>
           </div>
           <div className="metric-card">
             <div className="metric-icon bg-blue" style={{ background: '#eff6ff', color: '#2563eb' }}><Package size={24} /></div>
             <div className="metric-details">
-              <span>Wastage Events</span>
+              <span>{t('wastage_events')}</span>
               <h3>{stats.count}</h3>
-              <p className="trend neutral">System logs</p>
+              <p className="trend neutral">{t('system_logs')}</p>
             </div>
           </div>
           <div className="metric-card">
             <div className="metric-icon bg-purple" style={{ background: '#f5f3ff', color: '#7c3aed' }}><AlertTriangle size={24} /></div>
             <div className="metric-details">
-              <span>Primary Reason</span>
-              <h3>{stats.highReason}</h3>
-              <p className="trend warning">Operational focus</p>
+              <span>{t('primary_reason')}</span>
+              <h3>{t(stats.highReason.toLowerCase()) || stats.highReason}</h3>
+              <p className="trend warning">{t('operational_focus')}</p>
             </div>
           </div>
         </div>
@@ -173,15 +175,15 @@ const WastagePage = () => {
             <Search size={18} className="search-icon" />
             <input 
               type="text" 
-              placeholder="Search by SKU, Product Name..." 
+              placeholder={t('search_wastage_hint')} 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
           <div className="action-buttons">
-            <button className="btn-filter"><Filter size={18} /> Reason Filter</button>
+            <button className="btn-filter"><Filter size={18} /> {t('reason_filter')}</button>
             <button className="btn-add" onClick={() => setIsModalOpen(true)} style={{ background: '#dc2626', borderColor: '#dc2626' }}>
-              <Trash2 size={18} /> REPORT WASTAGE
+              <Trash2 size={18} /> {t('report_wastage')}
             </button>
           </div>
         </div>
@@ -192,45 +194,45 @@ const WastagePage = () => {
             <table>
               <thead>
                 <tr>
-                  <th>Product Information</th>
-                  <th>Reason</th>
-                  <th>Quantity / Unit</th>
-                  <th>Loss Value</th>
-                  <th>Date Recorded</th>
-                  <th>Reported By</th>
-                  <th className="text-right">Actions</th>
+                  <th>{t('product_information')}</th>
+                  <th>{t('reason')}</th>
+                  <th>{t('quantity_unit')}</th>
+                  <th>{t('loss_value')}</th>
+                  <th>{t('date_recorded')}</th>
+                  <th>{t('reported_by')}</th>
+                  <th className="text-end">{t('actions')}</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={7} className="text-center py-5">Syncing wastage logs...</td></tr>
+                  <tr><td colSpan={7} className="text-center py-5">{t('syncing_wastage_logs')}</td></tr>
                 ) : filteredRecords.length === 0 ? (
-                  <tr><td colSpan={7} className="text-center py-5">No wastage records found. Good job!</td></tr>
+                  <tr><td colSpan={7} className="text-center py-5">{t('no_wastage_records')}</td></tr>
                 ) : filteredRecords.map(record => (
                   <tr key={record.wastage_id}>
                     <td>
                       <div className="item-info">
-                        <strong>{(record as any).item_name_en || (record as any).menu_name_en || (record as any).product_name_en || record.item_name}</strong>
+                        <strong>{language === 'ar' ? ((record as any).item_name_ar || (record as any).menu_name_ar || (record as any).product_name_ar || record.item_name) : ((record as any).item_name_en || (record as any).menu_name_en || (record as any).product_name_en || record.item_name)}</strong>
                         <span className="sku-badge" style={{ fontSize: '10px' }}>{record.sku || 'N/A'}</span>
                       </div>
                     </td>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <div style={{ width: 8, height: 8, borderRadius: '50%', background: (record as any).reason_en === 'Expired' ? '#dc2626' : '#f59e0b' }}></div>
-                        <span style={{ fontWeight: 600, color: '#475569' }}>{(record as any).reason_en || record.reason}</span>
+                        <span style={{ fontWeight: 600, color: '#475569' }}>{language === 'ar' ? ((record as any).reason_ar || record.reason) : ((record as any).reason_en || record.reason)}</span>
                       </div>
                     </td>
                     <td>
                       <strong>{record.quantity} {record.unit || 'units'}</strong>
                     </td>
                     <td>
-                      <strong style={{ color: '#dc2626' }}>{Number(record.total_wasted_value || 0).toFixed(3)} KWD</strong>
+                      <strong style={{ color: '#dc2626' }}>{Number(record.total_wasted_value || 0).toFixed(3)} {t('kd_currency')}</strong>
                     </td>
                     <td>{record.date || ((record as any).created_at ? new Date((record as any).created_at).toLocaleDateString() : new Date().toLocaleDateString())}</td>
                     <td>
                       <span style={{ fontSize: '13px', color: '#64748b' }}>{(record as any).admin_name || record.reporter || 'Admin'}</span>
                     </td>
-                    <td className="text-right">
+                    <td className="text-end">
                        <button className="btn-icon-sm" title="View Audit Trail"><FileText size={16} /></button>
                     </td>
                   </tr>
@@ -240,9 +242,9 @@ const WastagePage = () => {
           </div>
           
           <div style={{ padding: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #f1f5f9' }}>
-            <span style={{ fontSize: '13px', color: '#64748b' }}>Showing {filteredRecords.length} records in this fiscal period.</span>
+            <span style={{ fontSize: '13px', color: '#64748b' }}>{t('showing')} {filteredRecords.length} {t('records_in_this_period')}</span>
             <button className="btn-icon-sm" style={{ padding: '0.5rem 1.5rem', width: 'auto', borderRadius: '10px' }}>
-              Load More <ChevronRight size={14} />
+              {t('load_more')} <ChevronRight size={14} />
             </button>
           </div>
         </div>
@@ -255,7 +257,7 @@ const WastagePage = () => {
             <div className="modal-header" style={{ background: '#fef2f2', borderBottom: '1px solid #fee2e2' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 <div style={{ background: '#dc2626', color: 'white', padding: '10px', borderRadius: '12px' }}><Trash2 size={24} /></div>
-                <h3 style={{ color: '#991b1b', margin: 0 }}>Report Product Loss</h3>
+                <h3 style={{ color: '#991b1b', margin: 0 }}>{t('report_product_loss')}</h3>
               </div>
               <button className="btn-close" onClick={() => setIsModalOpen(false)}><X size={20} /></button>
             </div>
@@ -265,14 +267,14 @@ const WastagePage = () => {
                  <div style={{ display: 'flex', gap: '20px', marginBottom: '10px' }}>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
                       <input type="radio" checked={itemType === 'inventory'} onChange={() => setItemType('inventory')} />
-                      Raw Material (Inventory)
+                      {t('raw_material_inventory')}
                     </label>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}>
                       <input type="radio" checked={itemType === 'menu'} onChange={() => setItemType('menu')} />
-                      Finished Product (Menu Item)
+                      {t('finished_product_menu')}
                     </label>
                  </div>
-                 <label style={{ fontWeight: 700, fontSize: '12px', color: '#64748b', textTransform: 'uppercase' }}>SELECT DAMAGED ITEM *</label>
+                 <label style={{ fontWeight: 700, fontSize: '12px', color: '#64748b', textTransform: 'uppercase' }}>{t('select_damaged_item')}</label>
                  {itemType === 'inventory' ? (
                    <select 
                       style={{ background: '#f8fafc', padding: '1rem', border: '1px solid #e2e8f0', borderRadius: '14px', width: '100%', fontSize: '15px' }}
@@ -280,7 +282,7 @@ const WastagePage = () => {
                       value={formData.inventory_item_id} 
                       onChange={(e) => setFormData({...formData, inventory_item_id: e.target.value})}
                     >
-                      <option value="">-- Choose Stock Item --</option>
+                      <option value="">{t('choose_stock_item')}</option>
                       {inventoryItems.map(item => (
                         <option key={item.inventory_item_id} value={item.inventory_item_id}>
                           {item.name_en} ({item.sku}) - {item.current_stock} {item.unit_en} available
@@ -294,7 +296,7 @@ const WastagePage = () => {
                       value={formData.menu_item_id} 
                       onChange={(e) => setFormData({...formData, menu_item_id: e.target.value})}
                     >
-                      <option value="">-- Choose Menu Item --</option>
+                      <option value="">{t('choose_menu_item')}</option>
                       {menuItems.map(item => (
                         <option key={item.menu_item_id} value={item.menu_item_id}>
                           {item.name_en} - {item.current_stock} units available
@@ -306,7 +308,7 @@ const WastagePage = () => {
 
                <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
                  <div className="form-group">
-                    <label style={{ fontWeight: 700, fontSize: '12px', color: '#64748b', textTransform: 'uppercase' }}>QUANTITY WASTED *</label>
+                    <label style={{ fontWeight: 700, fontSize: '12px', color: '#64748b', textTransform: 'uppercase' }}>{t('quantity_wasted')}</label>
                     <input 
                       type="number" 
                       step="any" 
@@ -318,38 +320,38 @@ const WastagePage = () => {
                     />
                  </div>
                  <div className="form-group">
-                    <label style={{ fontWeight: 700, fontSize: '12px', color: '#64748b', textTransform: 'uppercase' }}>REASON *</label>
+                    <label style={{ fontWeight: 700, fontSize: '12px', color: '#64748b', textTransform: 'uppercase' }}>{t('reason_star')}</label>
                     <select 
                       style={{ background: '#f8fafc', padding: '1rem', border: '1px solid #e2e8f0', borderRadius: '14px', width: '100%' }}
                       required 
                       value={formData.reason} 
                       onChange={(e) => setFormData({...formData, reason: e.target.value})}
                     >
-                      <option value="">-- Select Reason --</option>
-                      <option value="Expired">Expired (Spoilage)</option>
-                      <option value="Damaged">Damaged / Dropped</option>
-                      <option value="Spilled">Kitchen Spill</option>
-                      <option value="Defected">Defected Batch</option>
-                      <option value="Sample">Operational Sample</option>
+                      <option value="">{t('select_reason')}</option>
+                      <option value="Expired">{t('expired_spoilage')}</option>
+                      <option value="Damaged">{t('damaged_dropped')}</option>
+                      <option value="Spilled">{t('kitchen_spill')}</option>
+                      <option value="Defected">{t('defected_batch')}</option>
+                      <option value="Sample">{t('operational_sample')}</option>
                     </select>
                  </div>
                </div>
 
                <div className="form-group" style={{ marginBottom: '2rem' }}>
-                  <label style={{ fontWeight: 700, fontSize: '12px', color: '#64748b', textTransform: 'uppercase' }}>INTERNAL AUDIT NOTES</label>
+                  <label style={{ fontWeight: 700, fontSize: '12px', color: '#64748b', textTransform: 'uppercase' }}>{t('internal_audit_notes')}</label>
                   <textarea 
                     rows={3} 
                     style={{ padding: '1rem', border: '1px solid #e2e8f0', borderRadius: '14px', width: '100%', resize: 'none' }}
-                    placeholder="Provide details for management audit..."
+                    placeholder={t('provide_audit_details')}
                     value={formData.notes}
                     onChange={(e) => setFormData({...formData, notes: e.target.value})}
                   />
                </div>
 
                <div className="modal-footer" style={{ borderTop: 'none', padding: 0 }}>
-                 <button type="button" className="btn-secondary" style={{ flex: 1, padding: '1rem', borderRadius: '14px' }} onClick={() => setIsModalOpen(false)}>Cancel</button>
+                 <button type="button" className="btn-secondary" style={{ flex: 1, padding: '1rem', borderRadius: '14px' }} onClick={() => setIsModalOpen(false)}>{t('cancel')}</button>
                  <button type="submit" className="btn-primary" style={{ flex: 2, padding: '1rem', borderRadius: '14px', background: '#dc2626', boxShadow: '0 4px 12px rgba(220, 38, 38, 0.2)' }}>
-                    Record Waste Transfer
+                    {t('record_waste_transfer')}
                  </button>
                </div>
             </form>
