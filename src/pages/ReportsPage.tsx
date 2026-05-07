@@ -22,7 +22,7 @@ import { useLanguage } from '../hooks/useLanguage';
 
 const ReportsPage = () => {
   const { t, language } = useLanguage();
-  const [activeTab, setActiveTab] = useState<'sales' | 'production' | 'wastage' | 'purchase'>('sales');
+  const [activeTab, setActiveTab] = useState<'sales' | 'production' | 'wastage' | 'purchase' | 'products'>('sales');
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<any[]>([]);
   const [analytics, setAnalytics] = useState<any>(null);
@@ -151,6 +151,16 @@ const ReportsPage = () => {
         d.final_amount,
         d.status
       ]);
+    } else if (activeTab === 'products') {
+      headers = ["Item Name", "Category", "Total Qty Sold", "Revenue (KWD)", "Total Cost", "Net Profit"];
+      rows = data.map(d => [
+        d.product_name,
+        d.category || 'General',
+        d.total_quantity,
+        Number(d.total_revenue).toFixed(3),
+        Number(d.total_cost).toFixed(3),
+        Number(d.total_profit).toFixed(3)
+      ]);
     }
 
     const csvContent = "data:text/csv;charset=utf-8," 
@@ -185,6 +195,9 @@ const ReportsPage = () => {
     } else if (activeTab === 'purchase') {
       return (d.vendor_name?.toLowerCase().includes(searchStr) || 
               d.po_number?.toLowerCase().includes(searchStr));
+    } else if (activeTab === 'products') {
+      return (d.product_name?.toLowerCase().includes(searchStr) || 
+              d.category?.toLowerCase().includes(searchStr));
     } else {
       return (d.product_name?.toLowerCase().includes(searchStr) || 
               d.reason_en?.toLowerCase().includes(searchStr) ||
@@ -343,6 +356,9 @@ const ReportsPage = () => {
               <button className={activeTab === 'purchase' ? 'active' : ''} onClick={() => setActiveTab('purchase')}>
                 <ShoppingCart size={18} /> {t('purchase_reports_tab')}
               </button>
+              <button className={activeTab === 'products' ? 'active' : ''} onClick={() => setActiveTab('products')}>
+                <Package size={18} /> {t('product_performance_tab')}
+              </button>
             </div>
 
             <div className="report-actions">
@@ -383,6 +399,44 @@ const ReportsPage = () => {
                     filteredData.reduce((acc, curr) => acc + Number(curr.returns_amount || 0), 0)).toFixed(3)} {t('kd_currency')}
                 </span>
                 <span className="summary-sublabel">After Production Costs & Returns</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {!loading && activeTab === 'products' && filteredData.length > 0 && (
+          <div className="report-summary-grid animated fadeIn">
+            <div className="summary-card revenue">
+              <div className="summary-icon"><Package size={24} /></div>
+              <div className="summary-data">
+                <span className="summary-label">{t('top_selling_hero')}</span>
+                <span className="summary-value" style={{ fontSize: '1.2rem' }}>
+                  {(language === 'ar' ? (filteredData[0]?.product_name_ar || filteredData[0]?.product_name) : filteredData[0]?.product_name) || '---'}
+                </span>
+                <span className="summary-sublabel">{filteredData[0]?.total_quantity || 0} {t('dispatch_unit')} Sold</span>
+              </div>
+            </div>
+            <div className="summary-card profit">
+              <div className="summary-icon"><TrendingUp size={24} /></div>
+              <div className="summary-data">
+                <span className="summary-label">{t('revenue_generated')}</span>
+                <span className="summary-value">
+                  {Number(filteredData[0]?.total_revenue || 0).toFixed(3)} {t('kd_currency')}
+                </span>
+                <span className="summary-sublabel">From Hero Product</span>
+              </div>
+            </div>
+            <div className="summary-card profit" style={{ background: '#f0fdf4', borderColor: '#dcfce7' }}>
+              <div className="summary-icon" style={{ background: '#dcfce7', color: '#166534' }}><ShoppingCart size={24} /></div>
+              <div className="summary-data">
+                <span className="summary-label" style={{ color: '#166534' }}>{t('most_profitable')}</span>
+                <span className="summary-value" style={{ color: '#166534', fontSize: '1.2rem' }}>
+                  {(() => {
+                    const sorted = [...filteredData].sort((a, b) => (Number(b.total_profit) || 0) - (Number(a.total_profit) || 0));
+                    return (language === 'ar' ? (sorted[0]?.product_name_ar || sorted[0]?.product_name) : sorted[0]?.product_name) || '---';
+                  })()}
+                </span>
+                <span className="summary-sublabel">Highest Margin Item</span>
               </div>
             </div>
           </div>
@@ -500,6 +554,17 @@ const ReportsPage = () => {
                       <th>{t('status')}</th>
                     </tr>
                   )}
+                  {activeTab === 'products' && (
+                    <tr>
+                      <th>{t('item_name')}</th>
+                      <th>{t('category')}</th>
+                      <th>{t('total_sold')}</th>
+                      <th>{t('revenue')}</th>
+                      <th>{t('total_cost')}</th>
+                      <th>{t('net_profit')}</th>
+                      <th>{t('profit_contribution')}</th>
+                    </tr>
+                  )}
                 </thead>
                 <tbody>
                   {filteredData.length > 0 ? filteredData.map((item, idx) => (
@@ -555,6 +620,25 @@ const ReportsPage = () => {
                           <td><span className="discount-tag">-{Number(item.discount_amount || 0).toFixed(3)}</span></td>
                           <td><span className="profit-text">{Number(item.final_amount || 0).toFixed(3)}</span></td>
                           <td><span className={`status-pill ${item.status}`}>{t(item.status)}</span></td>
+                        </>
+                      )}
+                      {activeTab === 'products' && (
+                        <>
+                          <td><strong>{language === 'ar' ? (item.product_name_ar || item.product_name) : item.product_name}</strong></td>
+                          <td><span className="salesman-badge">{item.category || 'General'}</span></td>
+                          <td>{item.total_quantity}</td>
+                          <td>{Number(item.total_revenue).toFixed(3)}</td>
+                          <td>{Number(item.total_cost).toFixed(3)}</td>
+                          <td><span className="profit-text">{Number(item.total_profit).toFixed(3)}</span></td>
+                          <td>
+                            <div style={{ width: '100%', background: '#f1f5f9', height: '8px', borderRadius: '4px', overflow: 'hidden', marginTop: '5px' }}>
+                               <div style={{ 
+                                 width: `${Math.min(100, (item.total_revenue / data.reduce((s:any,i:any)=>s+Number(i.total_revenue),0)) * 100)}%`, 
+                                 background: 'var(--primary)', 
+                                 height: '100%' 
+                               }}></div>
+                            </div>
+                          </td>
                         </>
                       )}
                     </tr>
