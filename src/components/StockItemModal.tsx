@@ -79,13 +79,29 @@ const StockItemModal = ({ isOpen, item, onClose, onSuccess }: StockItemModalProp
   const fetchItemPackages = async (itemId: number) => {
     try {
       const res = await api.get(`/inventory/packages?inventory_item_id=${itemId}`);
-      if (res.data.success && res.data.data.length > 0) {
-        setPackages(res.data.data.map((p: any) => ({
-          id: p.package_id,
-          name_en: p.name_en,
-          multiplier: Number(p.multiplier),
-          is_base: Number(p.multiplier) === 1
-        })));
+      if (res.data.success) {
+        const dbPackages = res.data.data;
+        
+        // 🛡️ RECONSTRUCT THE TOP-DOWN LOGIC
+        // 1. Find the Main Unit (the one in item.unit_en or multiplier 1)
+        const mainUnit = {
+          name_en: item?.unit_en || 'Packet',
+          multiplier: 1,
+          is_base: true,
+          id: 'base'
+        };
+
+        // 2. The others are sub-units. Flip their multipliers back (e.g. 0.1666 -> 6)
+        const subUnits = dbPackages
+          .filter((p: any) => Number(p.multiplier) < 1)
+          .map((p: any) => ({
+            id: p.package_id,
+            name_en: p.name_en,
+            multiplier: Math.round(1 / Number(p.multiplier)),
+            is_base: false
+          }));
+
+        setPackages([mainUnit, ...subUnits]);
       }
     } catch (error) {
       console.error('Failed to fetch packages:', error);
@@ -122,14 +138,15 @@ const StockItemModal = ({ isOpen, item, onClose, onSuccess }: StockItemModalProp
     e.preventDefault();
     setSubmitting(true);
     try {
-      // Sync unit_en from the first package
       const baseUnitName = packages[0]?.name_en || 'Piece';
       const payload = { 
         ...formData, 
-        cost_price: formData.cost_price || 0, // 🛡️ Safety Default
         unit_en: baseUnitName, 
-        unit_ar: baseUnitName, 
-        packages 
+        unit_ar: baseUnitName,
+        packages: packages.filter(p => !p.is_base).map(p => ({
+          ...p,
+          multiplier: 1 / Number(p.multiplier || 1)
+        }))
       };
       
       const response = item 
@@ -221,33 +238,48 @@ const StockItemModal = ({ isOpen, item, onClose, onSuccess }: StockItemModalProp
 
             <div className="form-grid">
               <div className="form-group">
-                <label>INITIAL STOCK ({packages[0]?.name_en || '...' })</label>
-                <input 
-                  type="number" 
-                  step="0.001"
-                  value={formData.current_stock}
-                  onChange={(e) => setFormData({...formData, current_stock: e.target.value})}
-                />
-              </div>
-              <div className="form-group">
-                <label>COST PRICE (Per {packages[0]?.name_en || 'Base Unit' }) *</label>
+                <label>COST PRICE *</label>
                 <input 
                   type="number" 
                   step="0.001"
                   required
                   value={formData.cost_price}
                   onChange={(e) => setFormData({...formData, cost_price: e.target.value})}
-                  placeholder="e.g. 0.250"
+                  placeholder="0.000"
                 />
+                {packages.filter(p => !p.is_base).map(p => (
+                   <div key={p.temp_id || p.id} style={{ fontSize: '11px', color: '#01562c', fontWeight: 800, marginTop: '6px', background: '#f0fdf4', padding: '4px 8px', borderRadius: '6px', border: '1px solid #dcfce7' }}>
+                      {(() => {
+                         const multiplier = Number(p.multiplier || 1);
+                         const subPrice = (Number(formData.cost_price) / multiplier).toFixed(3);
+                         return (
+                            <span>
+                               Result: 1 {p.name_en || 'Sub-unit'} = {subPrice} KD
+                            </span>
+                         );
+                      })()}
+                   </div>
+                ))}
               </div>
             </div>
 
             <div className="form-grid">
               <div className="form-group">
-                <label>MIN ALERT LEVEL ({packages[0]?.name_en || '...' })</label>
+                <label>INITIAL STOCK (In {packages[0]?.name_en || 'Piece'}) *</label>
+                <input 
+                  type="number" 
+                  step="0.001"
+                  required
+                  value={formData.current_stock}
+                  onChange={(e) => setFormData({...formData, current_stock: e.target.value})}
+                />
+              </div>
+              <div className="form-group">
+                <label>MIN ALERT LEVEL ({packages[0]?.name_en || 'Piece'}) *</label>
                 <input 
                   type="number" 
                   step="0.1"
+                  required
                   value={formData.min_stock_level}
                   onChange={(e) => setFormData({...formData, min_stock_level: e.target.value})}
                 />
@@ -268,89 +300,65 @@ const StockItemModal = ({ isOpen, item, onClose, onSuccess }: StockItemModalProp
               <table className="pkg-table">
                 <thead>
                   <tr>
-                    <th>Package Name</th>
-                    <th>Contains</th>
-                    <th>How many?</th>
-                    <th>Base Unit</th>
-                    <th>Pack Cost</th>
-                    <th>Description</th>
+                    <th>Unit Name</th>
+                    <th>Relationship</th>
+                    <th>Resulting Unit Price</th>
                     <th className="text-center">Action</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {packages.map((pkg, idx) => (
-                    <tr key={idx} style={pkg.is_base ? { background: 'rgba(1, 86, 44, 0.05)' } : {}}>
-                      <td>
+                  {packages.map((pkg, index) => (
+                    <tr key={pkg.temp_id || pkg.id || index} style={pkg.is_base ? { background: 'rgba(1, 86, 44, 0.05)' } : {}}>
+                      <td style={{ width: '30%' }}>
                         {pkg.is_base ? (
                            <select 
-                             style={{ color: '#01562c', fontWeight: 800, border: '1px solid #01562c' }}
+                             style={{ fontWeight: 800, color: '#01562c', border: '1px solid #cbd5e1', padding: '4px', borderRadius: '6px' }}
                              value={pkg.name_en}
-                             onChange={(e) => updatePackage(idx, 'name_en', e.target.value)}
+                             onChange={(e) => updatePackage(index, 'name_en', e.target.value)}
                            >
                              {UNIT_OPTIONS.map(u => <option key={u} value={u}>{u}</option>)}
                            </select>
                         ) : (
                           <input 
                             type="text" 
-                            style={{ color: '#01562c', fontWeight: 800 }}
-                            placeholder="Package (e.g. Box)"
-                            value={pkg.name_en} 
-                            onChange={(e) => updatePackage(idx, 'name_en', e.target.value)}
+                            className="pkg-input"
+                            value={pkg.name_en}
+                            onChange={(e) => updatePackage(index, 'name_en', e.target.value)}
+                            placeholder="e.g. piece"
                           />
                         )}
                       </td>
-                      <td style={{ textAlign: 'center', color: '#64748b', fontSize: '11px', fontWeight: 800 }}>
-                         CONTAINS
-                      </td>
-                      <td style={{ width: '15%' }}>
-                        <input 
-                          type="number" 
-                          step="0.001"
-                          disabled={pkg.is_base}
-                          style={{ fontWeight: 800, color: 'var(--primary)' }}
-                          value={pkg.multiplier} 
-                          onChange={(e) => updatePackage(idx, 'multiplier', Number(e.target.value))}
-                        />
-                      </td>
-                      <td style={{ width: '15%', color: '#64748b', fontWeight: 600 }}>
-                        {packages[0].name_en}
-                      </td>
                       <td>
-                        {!pkg.is_base && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        {!pkg.is_base ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>
+                               1 {packages[0].name_en} = 
+                            </span>
                             <input 
                               type="number" 
-                              step="0.001"
-                              placeholder="Pack Cost"
-                              style={{ width: '70px', fontSize: '11px', padding: '4px' }}
-                              onChange={(e) => {
-                                const packCost = Number(e.target.value);
-                                if (packCost > 0 && pkg.multiplier > 0) {
-                                  const baseCost = (packCost / pkg.multiplier).toFixed(3);
-                                  setFormData({...formData, cost_price: baseCost});
-                                }
-                              }}
+                              className="pkg-input"
+                              style={{ width: '80px', fontWeight: 800 }}
+                              value={pkg.multiplier}
+                              onChange={(e) => updatePackage(index, 'multiplier', e.target.value)}
                             />
-                            <span style={{ fontSize: '10px' }}>KD</span>
+                            <span style={{ fontSize: '12px', color: '#64748b' }}>{pkg.name_en || '...'}s</span>
                           </div>
+                        ) : (
+                          <span style={{ color: '#01562c', fontWeight: 800, fontSize: '12px' }}>MAIN PRICING UNIT</span>
                         )}
                       </td>
-                      <td className="pkg-detail-text">
-                        {pkg.is_base ? (
-                          <span style={{ color: '#01562c', fontWeight: 800 }}>SMALLEST UNIT</span>
-                        ) : (
-                          <div style={{ fontSize: '11px' }}>
-                             <b>1 {pkg.name_en || '...'}</b> = {pkg.multiplier} {packages[0].name_en}
-                          </div>
-                        )}
+                      <td>
+                         {!pkg.is_base && formData.cost_price > 0 && (
+                            <div style={{ fontSize: '12px', color: '#01562c', fontWeight: 800 }}>
+                               {(Number(formData.cost_price) / Number(pkg.multiplier || 1)).toFixed(3)} KD / {pkg.name_en}
+                            </div>
+                         )}
                       </td>
                       <td className="text-center">
-                        {!pkg.is_base ? (
-                          <button type="button" onClick={() => removePackage(idx)} className="btn-remove-pkg">
+                        {!pkg.is_base && (
+                          <button type="button" onClick={() => removePackage(index)} className="btn-remove-pkg">
                             <Trash2 size={16} />
                           </button>
-                        ) : (
-                          <span className="base-badge">BASE</span>
                         )}
                       </td>
                     </tr>

@@ -604,14 +604,27 @@ const MenuPage = () => {
                                 {(currentItem?.unit_en?.toLowerCase() === 'liter' || currentItem?.unit_en?.toLowerCase() === 'litre') && (
                                    <option value="virtual_ml">{t('ml_unit')} (x0.001)</option>
                                 )}
-                                {!isPremixIng && allPackages.filter((p: any) => String(p.inventory_item_id) === realId && Number(p.multiplier) !== 1).map((p: any) => (
-                                  <option key={p.package_id} value={p.package_id}>{p.name_en} (x{Number(p.multiplier)})</option>
-                                ))}
+                                {!isPremixIng && allPackages.filter((p: any) => String(p.inventory_item_id) === realId && Number(p.multiplier) !== 1).map((p: any) => {
+                                   const mult = Number(p.multiplier);
+                                   const displayLabel = mult < 1 
+                                     ? `(1 ${currentItem?.unit_en || 'Unit'} = ${Math.round(1/mult)} ${p.name_en}s)` 
+                                     : `(x${mult})`;
+                                   return (
+                                     <option key={p.package_id} value={p.package_id}>
+                                       {p.name_en} {displayLabel}
+                                     </option>
+                                   );
+                                })}
                              </select>
                           </div>
                           <div className="form-group">
                              <label style={{ fontSize: '11px', fontWeight: 700, color: '#94a3b8' }}>{t('amount_used')}</label>
                              <input type="number" step="any" required style={{ padding: '0.75rem', borderRadius: '10px', border: '1px solid #e2e8f0', width: '100%' }} placeholder="0.00" value={ing.quantity} onChange={(e) => updateIngredient(idx, 'quantity', e.target.value)} />
+                             {currentItem && (
+                                <div style={{ fontSize: '10px', color: 'var(--primary)', fontWeight: 600, marginTop: '4px' }}>
+                                   {t('unit_cost')}: {((Number(allPackages.find(p => String(p.package_id) === String(ing.package_id))?.multiplier || 1) || 1) * Number((currentItem as any).dynamic_cost_price || currentItem.cost_price || 0)).toFixed(3)} KD
+                                </div>
+                             )}
                           </div>
                           <button type="button" className="btn-icon-sm" onClick={() => removeIngredient(idx)} style={{ color: '#ef4444', height: '42px', width: '42px', borderRadius: '10px', border: '1px solid #fee2e2', background: '#fff' }}><Trash2 size={16} /></button>
                         </div>
