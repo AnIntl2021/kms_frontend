@@ -230,6 +230,20 @@ const StockItemModal = ({ isOpen, item, onClose, onSuccess }: StockItemModalProp
                 />
               </div>
               <div className="form-group">
+                <label>COST PRICE (Per {packages[0]?.name_en || 'Base Unit' }) *</label>
+                <input 
+                  type="number" 
+                  step="0.001"
+                  required
+                  value={formData.cost_price}
+                  onChange={(e) => setFormData({...formData, cost_price: e.target.value})}
+                  placeholder="e.g. 0.250"
+                />
+              </div>
+            </div>
+
+            <div className="form-grid">
+              <div className="form-group">
                 <label>MIN ALERT LEVEL ({packages[0]?.name_en || '...' })</label>
                 <input 
                   type="number" 
@@ -258,6 +272,7 @@ const StockItemModal = ({ isOpen, item, onClose, onSuccess }: StockItemModalProp
                     <th>Contains</th>
                     <th>How many?</th>
                     <th>Base Unit</th>
+                    <th>Pack Cost</th>
                     <th>Description</th>
                     <th className="text-center">Action</th>
                   </tr>
@@ -299,6 +314,26 @@ const StockItemModal = ({ isOpen, item, onClose, onSuccess }: StockItemModalProp
                       </td>
                       <td style={{ width: '15%', color: '#64748b', fontWeight: 600 }}>
                         {packages[0].name_en}
+                      </td>
+                      <td>
+                        {!pkg.is_base && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <input 
+                              type="number" 
+                              step="0.001"
+                              placeholder="Pack Cost"
+                              style={{ width: '70px', fontSize: '11px', padding: '4px' }}
+                              onChange={(e) => {
+                                const packCost = Number(e.target.value);
+                                if (packCost > 0 && pkg.multiplier > 0) {
+                                  const baseCost = (packCost / pkg.multiplier).toFixed(3);
+                                  setFormData({...formData, cost_price: baseCost});
+                                }
+                              }}
+                            />
+                            <span style={{ fontSize: '10px' }}>KD</span>
+                          </div>
+                        )}
                       </td>
                       <td className="pkg-detail-text">
                         {pkg.is_base ? (

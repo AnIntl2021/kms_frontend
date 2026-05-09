@@ -604,7 +604,7 @@ const MenuPage = () => {
                                 {(currentItem?.unit_en?.toLowerCase() === 'liter' || currentItem?.unit_en?.toLowerCase() === 'litre') && (
                                    <option value="virtual_ml">{t('ml_unit')} (x0.001)</option>
                                 )}
-                                {!isPremixIng && allPackages.filter((p: any) => String(p.inventory_item_id) === realId).map((p: any) => (
+                                {!isPremixIng && allPackages.filter((p: any) => String(p.inventory_item_id) === realId && Number(p.multiplier) !== 1).map((p: any) => (
                                   <option key={p.package_id} value={p.package_id}>{p.name_en} (x{Number(p.multiplier)})</option>
                                 ))}
                              </select>
