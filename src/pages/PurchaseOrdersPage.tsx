@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import api from '../api/axios';
-import { Plus, X, Trash2, PlusCircle, Package, Truck, Calendar, CreditCard, StickyNote, Hash, MoreHorizontal, ShoppingBag, ArrowRight, PackageCheck } from 'lucide-react';
+import { Plus, X, Trash2, Edit, Eye, PlusCircle, Package, Truck, Calendar, CreditCard, StickyNote, Hash, MoreHorizontal, ShoppingBag, ArrowRight, PackageCheck } from 'lucide-react';
 import { toast } from 'react-toastify';
 import './PurchaseOrdersPage.css';
 import { useLanguage } from '../hooks/useLanguage';
@@ -13,6 +13,7 @@ const PurchaseOrdersPage = () => {
   const [loading, setLoading] = useState(true);
    const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [activeMenuId, setActiveMenuId] = useState<number | null>(null);
   const [vendors, setVendors] = useState<any[]>([]);
   const [inventoryItems, setInventoryItems] = useState<any[]>([]);
   const [allPackages, setAllPackages] = useState<any[]>([]);
@@ -43,9 +44,13 @@ const PurchaseOrdersPage = () => {
     items: [{...initialItem}] as any[] 
   });
 
-  useEffect(() => { 
-    fetchOrders(); 
-    fetchInitialData(); 
+  useEffect(() => {
+    fetchOrders();
+    fetchInitialData();
+
+    const handleClick = () => setActiveMenuId(null);
+    window.addEventListener('click', handleClick);
+    return () => window.removeEventListener('click', handleClick);
   }, []);
 
   const fetchOrders = async () => { 
@@ -154,23 +159,45 @@ const PurchaseOrdersPage = () => {
   const handleReceive = async (purchaseId: number) => {
     try {
       const confirm = await Swal.fire({
-        title: t('receive_goods_q'),
-        text: t('receive_goods_msg'),
+        title: 'Receive Stock?',
+        text: 'This will update your inventory levels and create new batches.',
         icon: 'question',
         showCancelButton: true,
         confirmButtonColor: '#01562c',
-        cancelButtonColor: '#ff4444',
-        confirmButtonText: t('yes_receive_stock')
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Yes, Receive Now'
       });
 
       if (confirm.isConfirmed) {
         await api.post(`/purchases/${purchaseId}/receive`);
-        toast.success(t('inventory_updated_success'));
+        toast.success('Stock received into inventory!');
         fetchOrders();
       }
     } catch (error: any) {
       const msg = error.response?.data?.message || error.message || 'Failed to receive stock.';
       toast.error(msg);
+    }
+  };
+
+  const handleDeleteOrder = async (id: number) => {
+    const confirm = await Swal.fire({
+      title: 'Are you sure?',
+      text: "You won't be able to revert this!",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#be123c',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Yes, delete it!'
+    });
+
+    if (confirm.isConfirmed) {
+      try {
+        await api.delete(`/purchases/${id}`);
+        toast.success('Order deleted successfully');
+        fetchOrders();
+      } catch (error: any) {
+        toast.error(error.response?.data?.message || 'Failed to delete order');
+      }
     }
   };
 
@@ -248,23 +275,38 @@ const PurchaseOrdersPage = () => {
                           {t(o.status)}
                         </span>
                       </td>
-                      <td className="px-8 py-5 text-center">
-                        <div className="flex justify-center gap-2">
-                           {o.status === 'pending' && (
-                              <button 
-                                 className="p-3 bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white rounded-xl transition-all"
-                                 title="Receive Stock"
-                                 onClick={() => handleReceive(o.purchase_id)}
-                              >
-                                 <PackageCheck size={18} />
-                              </button>
-                           )}
+                       <td className="px-8 py-5 text-center">
+                        <div className="flex justify-center gap-2" style={{ position: 'relative' }}>
                            <button 
                               className="p-3 bg-slate-100 hover:bg-[#01562c] hover:text-white rounded-xl transition-all"
-                              onClick={() => handleEdit(o)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveMenuId(activeMenuId === o.purchase_id ? null : o.purchase_id);
+                              }}
                            >
                              <MoreHorizontal size={18} />
                            </button>
+
+                           {activeMenuId === o.purchase_id && (
+                             <div className="dropdown-menu-custom shadow-2xl" style={{ right: '40px', top: '0' }}>
+                                {o.status === 'pending' && (
+                                  <button className="dropdown-item receive" onClick={() => handleReceive(o.purchase_id)}>
+                                    <PackageCheck size={16} /> {t('receive_stock')}
+                                  </button>
+                                )}
+                                <button className="dropdown-item edit" onClick={() => handleEdit(o)}>
+                                  {o.status === 'pending' ? (
+                                    <><Edit size={16} /> {t('edit_order')}</>
+                                  ) : (
+                                    <><Eye size={16} /> {t('view_order') || 'View Order'}</>
+                                  )}
+                                </button>
+                                <div className="h-[1px] bg-slate-100 my-1" />
+                                <button className="dropdown-item delete" onClick={() => handleDeleteOrder(o.purchase_id)}>
+                                  <Trash2 size={16} /> {t('delete_order')}
+                                </button>
+                             </div>
+                           )}
                         </div>
                       </td>
                     </tr>
@@ -281,9 +323,14 @@ const PurchaseOrdersPage = () => {
           <div className="po-modal-card" style={{ maxHeight: '95vh', overflowY: 'auto' }}>
             
             <header className="po-header">
-             <h2><ShoppingBag /> {editingId ? 'Edit Purchase Order' : t('add_new_po')}</h2>
-              <div className="po-close-icon" onClick={() => setIsModalOpen(false)}>
-                <X size={20} />
+              <h2>
+                <ShoppingBag /> 
+                {editingId 
+                  ? (orders.find(o => o.purchase_id === editingId)?.status === 'pending' ? t('edit_order') : t('view_order'))
+                  : t('add_new_po')}
+              </h2>
+              <div className="po-close-icon" onClick={() => { setIsModalOpen(false); setEditingId(null); }}>
+                <X size={24} />
               </div>
             </header>
 
@@ -294,14 +341,14 @@ const PurchaseOrdersPage = () => {
                 <div className="po-fields-grid">
                   <div className="po-field-group">
                     <label><Truck size={14} className="inline mr-2" /> {t('vendor_account')}</label>
-                    <select required className="po-select" value={formData.vendor_id} onChange={e => setFormData({...formData, vendor_id: e.target.value, branch_id: ''})}>
+                    <select disabled={editingId ? orders.find(o => o.purchase_id === editingId)?.status !== 'pending' : false} required className="po-select" value={formData.vendor_id} onChange={e => setFormData({...formData, vendor_id: e.target.value, branch_id: ''})}>
                       <option value="">{t('select_vendor_account')}</option>
                       {vendors.filter(v => v.type === 'supplier').map(v => <option key={v.vendor_id} value={v.vendor_id}>{language === 'ar' ? (v.name_ar || v.name_en) : v.name_en}</option>)}
                     </select>
                   </div>
                   <div className="po-field-group">
                     <label><ArrowRight size={14} className="inline mr-2" /> {t('target_branch_node')}</label>
-                    <select required className="po-select font-bold" value={formData.branch_id} onChange={e => setFormData({...formData, branch_id: e.target.value})}>
+                    <select disabled={editingId ? orders.find(o => o.purchase_id === editingId)?.status !== 'pending' : false} required className="po-select font-bold" value={formData.branch_id} onChange={e => setFormData({...formData, branch_id: e.target.value})}>
                       <option value="">{t('select_delivery_node')}</option>
                       <option value="main">{t('main_central_node')}</option>
                       {vendors.find(v => String(v.vendor_id) === String(formData.vendor_id))?.branches?.map((br: any) => (
@@ -311,22 +358,22 @@ const PurchaseOrdersPage = () => {
                   </div>
                   <div className="po-field-group">
                     <label><Hash size={14} className="inline mr-2" /> {t('po_number')}</label>
-                    <input type="text" className="po-input" value={formData.po_number} onChange={e => setFormData({...formData, po_number: e.target.value})} placeholder={t('internal_notes_hint')} />
+                    <input disabled={editingId ? orders.find(o => o.purchase_id === editingId)?.status !== 'pending' : false} type="text" className="po-input" value={formData.po_number} onChange={e => setFormData({...formData, po_number: e.target.value})} placeholder={t('internal_notes_hint')} />
                   </div>
                   <div className="po-field-group">
                     <label><Calendar size={14} className="inline mr-2" /> {t('purchase_date')}</label>
-                    <input type="date" className="po-input" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} />
+                    <input disabled={editingId ? orders.find(o => o.purchase_id === editingId)?.status !== 'pending' : false} type="date" className="po-input" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} />
                   </div>
                   <div className="po-field-group">
                     <label><CreditCard size={14} className="inline mr-2" /> {t('bill_type')}</label>
-                    <select className="po-select" value={formData.invoice_type} onChange={e => setFormData({...formData, invoice_type: e.target.value})}>
+                    <select disabled={editingId ? orders.find(o => o.purchase_id === editingId)?.status !== 'pending' : false} className="po-select" value={formData.invoice_type} onChange={e => setFormData({...formData, invoice_type: e.target.value})}>
                       <option value="tax_invoice">{t('tax_invoice')}</option>
                       <option value="simplified">{t('simplified_bill')}</option>
                     </select>
                   </div>
                   <div className="po-field-group">
                     <label><StickyNote size={14} className="inline mr-2" /> {t('order_notes')}</label>
-                    <input type="text" className="po-input" value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} placeholder={t('internal_notes_hint')} />
+                    <input disabled={editingId ? orders.find(o => o.purchase_id === editingId)?.status !== 'pending' : false} type="text" className="po-input" value={formData.notes} onChange={e => setFormData({...formData, notes: e.target.value})} placeholder={t('internal_notes_hint')} />
                   </div>
                 </div>
               </div>
@@ -357,7 +404,11 @@ const PurchaseOrdersPage = () => {
                       {formData.items.map((it, idx) => (
                         <tr key={idx}>
                           <td>
-                            <select className="po-table-input font-bold" value={it.inventory_item_id} onChange={e => {
+                            <select 
+                              className="po-table-input font-bold" 
+                              value={it.inventory_item_id} 
+                              disabled={editingId ? orders.find(o => o.purchase_id === editingId)?.status !== 'pending' : false}
+                              onChange={e => {
                                updateItem(idx, 'inventory_item_id', e.target.value);
                                // Reset package when item changes
                                updateItem(idx, 'package_id', '');
@@ -368,20 +419,22 @@ const PurchaseOrdersPage = () => {
                           </td>
                           <td><select disabled className="po-table-input opacity-40"><option>N/A</option></select></td>
                           <td>
-                            <select className="po-table-input" value={it.package_id} onChange={e => updateItem(idx, 'package_id', e.target.value)}>
+                            <select disabled={editingId ? orders.find(o => o.purchase_id === editingId)?.status !== 'pending' : false} className="po-table-input" value={it.package_id} onChange={e => updateItem(idx, 'package_id', e.target.value)}>
                               <option value="">{t('base_unit')} ({inventoryItems.find(i => String(i.inventory_item_id) === String(it.inventory_item_id))?.[language === 'ar' ? 'unit_ar' : 'unit_en'] || '...' })</option>
                               {allPackages.filter((p: any) => String(p.inventory_item_id) === String(it.inventory_item_id)).map((p: any) => (
                                 <option key={p.package_id} value={p.package_id}>{language === 'ar' ? (p.name_ar || p.name_en) : p.name_en} (x{Number(p.multiplier)})</option>
                               ))}
                             </select>
                           </td>
-                          <td><input type="number" step="0.001" className="po-table-input text-end font-bold" value={it.unit_price} onChange={e => updateItem(idx, 'unit_price', e.target.value)} /></td>
-                          <td><input type="number" className="po-table-input text-end font-bold" value={it.quantity} onChange={e => updateItem(idx, 'quantity', e.target.value)} /></td>
+                          <td><input disabled={editingId ? orders.find(o => o.purchase_id === editingId)?.status !== 'pending' : false} type="number" step="0.001" className="po-table-input text-end font-bold" value={it.unit_price} onChange={e => updateItem(idx, 'unit_price', e.target.value)} /></td>
+                          <td><input disabled={editingId ? orders.find(o => o.purchase_id === editingId)?.status !== 'pending' : false} type="number" className="po-table-input text-end font-bold" value={it.quantity} onChange={e => updateItem(idx, 'quantity', e.target.value)} /></td>
                           <td className="text-end text-slate-500 font-bold">{Number(it.amount).toFixed(3)}</td>
-                          <td><input type="number" step="0.001" className="po-table-input text-end" value={it.discount_amount} onChange={e => updateItem(idx, 'discount_amount', e.target.value)} /></td>
+                          <td><input disabled={editingId ? orders.find(o => o.purchase_id === editingId)?.status !== 'pending' : false} type="number" step="0.001" className="po-table-input text-end" value={it.discount_amount} onChange={e => updateItem(idx, 'discount_amount', e.target.value)} /></td>
                           <td className="text-end font-black text-[#01562c]">{Number(it.final_amount).toFixed(3)}</td>
                           <td className="text-center">
-                            <Trash2 size={16} className="po-delete-row" onClick={() => setFormData({...formData, items: formData.items.filter((_, i) => i !== idx)})} />
+                            {(!editingId || orders.find(o => o.purchase_id === editingId)?.status === 'pending') && (
+                              <Trash2 size={16} className="po-delete-row" onClick={() => setFormData({...formData, items: formData.items.filter((_, i) => i !== idx)})} />
+                            )}
                           </td>
                         </tr>
                       ))}
@@ -419,8 +472,14 @@ const PurchaseOrdersPage = () => {
                   </div>
 
                   <div className="po-actions">
-                    <button type="button" className="btn-cancel" onClick={() => setIsModalOpen(false)}>{t('cancel')}</button>
-                    <button type="submit" className="btn-confirm">{t('confirm_save')} <ArrowRight size={18} className="inline ml-1" /></button>
+                    <button className="btn-cancel" onClick={() => { setIsModalOpen(false); setEditingId(null); }}>
+                      {t('cancel')}
+                    </button>
+                    {(!editingId || orders.find(o => o.purchase_id === editingId)?.status === 'pending') && (
+                      <button className="btn-confirm" onClick={handleSubmit}>
+                        {t('confirm_save')}
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
