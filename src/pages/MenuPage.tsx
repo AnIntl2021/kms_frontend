@@ -591,13 +591,18 @@ const MenuPage = () => {
                           </div>
                           <div className="form-group">
                              <label style={{ fontSize: '11px', fontWeight: 700, color: '#94a3b8' }}>{t('measurement_unit')}</label>
-                             <select className="po-table-input" style={{ padding: '0.75rem', borderRadius: '10px', border: '1px solid #e2e8f0', width: '100%' }} value={ing.package_id} onChange={e => updateIngredient(idx, 'package_id', e.target.value)}>
-                                <option value="">{t('base_unit')} ({currentItem?.unit_en || '...' })</option>
+                             <select 
+                                className="po-table-input" 
+                                style={{ padding: '0.75rem', borderRadius: '10px', border: '1px solid #e2e8f0', width: '100%', fontSize: '13px' }} 
+                                value={ing.package_id} 
+                                onChange={e => updateIngredient(idx, 'package_id', e.target.value)}
+                             >
+                                <option value="">{currentItem?.unit_en || t('base_unit')} (x1)</option>
                                 {(currentItem?.unit_en?.toLowerCase() === 'kg' || currentItem?.unit_en?.toLowerCase() === 'kilogram') && (
-                                   <option value="virtual_gram">{t('grams_unit')}</option>
+                                   <option value="virtual_gram">{t('grams_unit')} (x0.001)</option>
                                 )}
                                 {(currentItem?.unit_en?.toLowerCase() === 'liter' || currentItem?.unit_en?.toLowerCase() === 'litre') && (
-                                   <option value="virtual_ml">{t('ml_unit')}</option>
+                                   <option value="virtual_ml">{t('ml_unit')} (x0.001)</option>
                                 )}
                                 {!isPremixIng && allPackages.filter((p: any) => String(p.inventory_item_id) === realId).map((p: any) => (
                                   <option key={p.package_id} value={p.package_id}>{p.name_en} (x{Number(p.multiplier)})</option>

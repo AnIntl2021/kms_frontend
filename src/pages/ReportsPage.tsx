@@ -154,12 +154,12 @@ const ReportsPage = () => {
     } else if (activeTab === 'products') {
       headers = ["Item Name", "Category", "Total Qty Sold", "Revenue (KWD)", "Total Cost", "Net Profit"];
       rows = data.map(d => [
-        d.product_name,
-        d.category || 'General',
-        d.total_quantity,
-        Number(d.total_revenue).toFixed(3),
-        Number(d.total_cost).toFixed(3),
-        Number(d.total_profit).toFixed(3)
+        d.product_name || 'N/A',
+        d.product_category || 'General',
+        d.total_quantity || 0,
+        Number(d.total_revenue || 0).toFixed(3),
+        Number(d.total_cost || 0).toFixed(3),
+        Number(d.total_profit || 0).toFixed(3)
       ]);
     }
 
@@ -177,11 +177,14 @@ const ReportsPage = () => {
 
   const filteredData = data.filter(d => {
     // 🔍 1. API REINFORCEMENT: FILTER BY VENDOR, BRANCH, SALESMAN
-    const vendorMatch = !selectedVendor || String(d.vendor_id) === String(selectedVendor);
-    const branchMatch = !selectedBranch || String(d.branch_id) === String(selectedBranch);
-    const salesmanMatch = !selectedSalesman || String(d.salesman_id) === String(selectedSalesman);
+    // Skip these for 'products' tab as data is aggregated and already filtered by backend
+    if (activeTab !== 'products') {
+      const vendorMatch = !selectedVendor || String(d.vendor_id) === String(selectedVendor);
+      const branchMatch = !selectedBranch || String(d.branch_id) === String(selectedBranch);
+      const salesmanMatch = !selectedSalesman || String(d.salesman_id) === String(selectedSalesman);
 
-    if (!vendorMatch || !branchMatch || !salesmanMatch) return false;
+      if (!vendorMatch || !branchMatch || !salesmanMatch) return false;
+    }
 
     // 🔍 2. SEARCH TERM FILTER
     const searchStr = searchTerm.toLowerCase();
@@ -196,12 +199,14 @@ const ReportsPage = () => {
       return (d.vendor_name?.toLowerCase().includes(searchStr) || 
               d.po_number?.toLowerCase().includes(searchStr));
     } else if (activeTab === 'products') {
-      return (d.product_name?.toLowerCase().includes(searchStr) || 
-              d.category?.toLowerCase().includes(searchStr));
+      const pName = (d.product_name || '').toLowerCase();
+      const pCat = (d.product_category || '').toLowerCase();
+      return pName.includes(searchStr) || pCat.includes(searchStr);
     } else {
-      return (d.product_name?.toLowerCase().includes(searchStr) || 
-              d.reason_en?.toLowerCase().includes(searchStr) ||
-              d.reason?.toLowerCase().includes(searchStr));
+      const pName = (d.product_name || '').toLowerCase();
+      const reasonEn = (d.reason_en || '').toLowerCase();
+      const reason = (d.reason || '').toLowerCase();
+      return pName.includes(searchStr) || reasonEn.includes(searchStr) || reason.includes(searchStr);
     }
   });
 
@@ -411,7 +416,7 @@ const ReportsPage = () => {
               <div className="summary-data">
                 <span className="summary-label">{t('top_selling_hero')}</span>
                 <span className="summary-value" style={{ fontSize: '1.2rem' }}>
-                  {(language === 'ar' ? (filteredData[0]?.product_name_ar || filteredData[0]?.product_name) : filteredData[0]?.product_name) || '---'}
+                  {(language === 'ar' ? (filteredData[0]?.product_name_ar || filteredData[0]?.product_name) : filteredData[0]?.product_name) || t('unknown_item')}
                 </span>
                 <span className="summary-sublabel">{filteredData[0]?.total_quantity || 0} {t('dispatch_unit')} Sold</span>
               </div>
@@ -433,7 +438,7 @@ const ReportsPage = () => {
                 <span className="summary-value" style={{ color: '#166534', fontSize: '1.2rem' }}>
                   {(() => {
                     const sorted = [...filteredData].sort((a, b) => (Number(b.total_profit) || 0) - (Number(a.total_profit) || 0));
-                    return (language === 'ar' ? (sorted[0]?.product_name_ar || sorted[0]?.product_name) : sorted[0]?.product_name) || '---';
+                    return (language === 'ar' ? (sorted[0]?.product_name_ar || sorted[0]?.product_name) : sorted[0]?.product_name) || t('unknown_item');
                   })()}
                 </span>
                 <span className="summary-sublabel">Highest Margin Item</span>
@@ -624,16 +629,16 @@ const ReportsPage = () => {
                       )}
                       {activeTab === 'products' && (
                         <>
-                          <td><strong>{language === 'ar' ? (item.product_name_ar || item.product_name) : item.product_name}</strong></td>
-                          <td><span className="salesman-badge">{item.category || 'General'}</span></td>
-                          <td>{item.total_quantity}</td>
-                          <td>{Number(item.total_revenue).toFixed(3)}</td>
-                          <td>{Number(item.total_cost).toFixed(3)}</td>
-                          <td><span className="profit-text">{Number(item.total_profit).toFixed(3)}</span></td>
+                          <td><strong>{(language === 'ar' ? (item.product_name_ar || item.product_name) : item.product_name) || t('unknown_item')}</strong></td>
+                          <td><span className="salesman-badge">{item.product_category || 'General'}</span></td>
+                          <td>{item.total_quantity || 0}</td>
+                          <td>{Number(item.total_revenue || 0).toFixed(3)}</td>
+                          <td>{Number(item.total_cost || 0).toFixed(3)}</td>
+                          <td><span className="profit-text">{Number(item.total_profit || 0).toFixed(3)}</span></td>
                           <td>
                             <div style={{ width: '100%', background: '#f1f5f9', height: '8px', borderRadius: '4px', overflow: 'hidden', marginTop: '5px' }}>
                                <div style={{ 
-                                 width: `${Math.min(100, (item.total_revenue / data.reduce((s:any,i:any)=>s+Number(i.total_revenue),0)) * 100)}%`, 
+                                 width: `${Math.min(100, (Number(item.total_revenue || 0) / (data.reduce((s:any,i:any)=>s+Number(i.total_revenue || 0),0) || 1)) * 100)}%`, 
                                  background: 'var(--primary)', 
                                  height: '100%' 
                                }}></div>
