@@ -5,12 +5,14 @@ import { Plus, X, Trash2, PlusCircle, Package, Truck, Calendar, CreditCard, Stic
 import { toast } from 'react-toastify';
 import './PurchaseOrdersPage.css';
 import { useLanguage } from '../hooks/useLanguage';
+import Swal from 'sweetalert2';
 
 const PurchaseOrdersPage = () => {
   const { t, language } = useLanguage();
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [vendors, setVendors] = useState<any[]>([]);
   const [inventoryItems, setInventoryItems] = useState<any[]>([]);
   const [allPackages, setAllPackages] = useState<any[]>([]);
@@ -95,12 +97,57 @@ const PurchaseOrdersPage = () => {
     e.preventDefault();
     try {
       const poNum = formData.po_number || `PO-${Date.now().toString().slice(-6)}`;
-      await api.post('/purchases', { ...formData, po_number: poNum, final_amount: totals.final });
+      const payload = { ...formData, po_number: poNum, final_amount: totals.final };
+      
+      if (editingId) {
+        await api.put(`/purchases/${editingId}`, payload);
+        toast.success('Purchase Order Updated!');
+      } else {
+        await api.post('/purchases', payload);
+        toast.success(t('purchase_order_success'));
+      }
+      
       setIsModalOpen(false); 
+      setEditingId(null);
       fetchOrders(); 
-      toast.success(t('purchase_order_success'));
     } catch (err) { 
       toast.error('Failed to save purchase order.'); 
+    }
+  };
+
+  const handleEdit = async (order: any) => {
+    try {
+      const res = await api.get(`/purchases/${order.purchase_id}`);
+      const fullOrder = res.data.data;
+      
+      setFormData({
+        vendor_id: fullOrder.vendor_id,
+        branch_id: fullOrder.branch_id || 'main',
+        invoice_type: fullOrder.invoice_type || 'tax_invoice',
+        po_number: fullOrder.po_number,
+        date: new Date(fullOrder.date || fullOrder.created_at).toISOString().split('T')[0],
+        discount_amount: Number(fullOrder.discount_amount || 0),
+        additional_charges: Number(fullOrder.additional_charges || 0),
+        final_amount: Number(fullOrder.final_amount || 0),
+        notes: fullOrder.notes || '',
+        items: fullOrder.items.map((it: any) => ({
+          inventory_item_id: it.inventory_item_id,
+          variant_id: it.variant_id || '',
+          package_id: it.package_id || '',
+          quantity: it.quantity,
+          unit_price: it.unit_price,
+          amount: it.amount,
+          discount_amount: it.discount_amount || 0,
+          additional_charges_amount: it.additional_charges_amount || 0,
+          final_amount: it.final_amount,
+          expiry_date: it.expiry_date ? it.expiry_date.split('T')[0] : ''
+        }))
+      });
+      
+      setEditingId(order.purchase_id);
+      setIsModalOpen(true);
+    } catch (error) {
+      toast.error('Failed to fetch order details');
     }
   };
   
@@ -122,7 +169,8 @@ const PurchaseOrdersPage = () => {
         fetchOrders();
       }
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to receive stock.');
+      const msg = error.response?.data?.message || error.message || 'Failed to receive stock.';
+      toast.error(msg);
     }
   };
 
@@ -211,7 +259,10 @@ const PurchaseOrdersPage = () => {
                                  <PackageCheck size={18} />
                               </button>
                            )}
-                           <button className="p-3 bg-slate-100 hover:bg-[#01562c] hover:text-white rounded-xl transition-all">
+                           <button 
+                              className="p-3 bg-slate-100 hover:bg-[#01562c] hover:text-white rounded-xl transition-all"
+                              onClick={() => handleEdit(o)}
+                           >
                              <MoreHorizontal size={18} />
                            </button>
                         </div>
@@ -230,7 +281,7 @@ const PurchaseOrdersPage = () => {
           <div className="po-modal-card" style={{ maxHeight: '95vh', overflowY: 'auto' }}>
             
             <header className="po-header">
-              <h2><ShoppingBag /> {t('add_new_po')}</h2>
+             <h2><ShoppingBag /> {editingId ? 'Edit Purchase Order' : t('add_new_po')}</h2>
               <div className="po-close-icon" onClick={() => setIsModalOpen(false)}>
                 <X size={20} />
               </div>
