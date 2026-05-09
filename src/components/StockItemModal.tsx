@@ -13,6 +13,9 @@ interface PackageItem {
   name_en: string;
   multiplier: number;
   is_base: boolean;
+  parent_idx?: number;
+  parent_name?: string;
+  temp_id?: string;
 }
 
 interface StockItemModalProps {
@@ -42,6 +45,19 @@ const StockItemModal = ({ isOpen, item, onClose, onSuccess }: StockItemModalProp
   const [packages, setPackages] = useState<PackageItem[]>([
     { name_en: 'Piece', multiplier: 1, is_base: true }
   ]);
+
+  const calculateChainedMultiplier = (pkg: PackageItem) => {
+    let totalDivider = 1;
+    let current: PackageItem | undefined = pkg;
+    let safety = 0;
+    while (current && !current.is_base && safety < 10) {
+      totalDivider *= Number(current.multiplier || 1);
+      const parentIdx = current.parent_idx || 0;
+      current = packages[parentIdx];
+      safety++;
+    }
+    return totalDivider;
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -91,17 +107,71 @@ const StockItemModal = ({ isOpen, item, onClose, onSuccess }: StockItemModalProp
           id: 'base'
         };
 
-        // 2. The others are sub-units. Flip their multipliers back (e.g. 0.1666 -> 6)
-        const subUnits = dbPackages
+        // 2. Map sub-units from DB
+        const rawSubUnits = dbPackages
           .filter((p: any) => Number(p.multiplier) < 1)
           .map((p: any) => ({
             id: p.package_id,
             name_en: p.name_en,
-            multiplier: Math.round(1 / Number(p.multiplier)),
-            is_base: false
+            multiplier: Number(p.multiplier), // This is the fractional multiplier from DB
+            is_base: false,
+            parent_name: p.parent_name
           }));
 
-        setPackages([mainUnit, ...subUnits]);
+        // 3. Reconstruct the list and relationships
+        const reconstructedPackages: PackageItem[] = [mainUnit];
+        
+        // We need to process them in an order that ensures parents are added before children
+        // But since we are using names, we can just add them and then resolve indices
+        rawSubUnits.forEach((su: any) => {
+           reconstructedPackages.push({
+              ...su,
+              multiplier: 1 // placeholder
+           });
+        });
+
+        // Resolve indices and multipliers
+        reconstructedPackages.forEach((pkg, idx) => {
+           if (pkg.is_base) return;
+           
+           const su = rawSubUnits.find((s: any) => s.id === pkg.id);
+           if (!su) return;
+
+           // Find parent index
+           const parentIdx = reconstructedPackages.findIndex(p => p.name_en === su.parent_name);
+           pkg.parent_idx = parentIdx !== -1 ? parentIdx : 0;
+
+           // Calculate relative multiplier
+           // DB multiplier = 1 / (ParentMultiplierChain * RelativeMultiplier)
+           // So RelativeMultiplier = 1 / (DB multiplier * ParentMultiplierChain)
+           // Wait, simpler: RelativeMultiplier = (1 / DB multiplier) / ParentChainedDivider
+           
+           // We need to do this carefully. 
+           // Let's just use the fact that we know the total divider = 1 / DB multiplier
+        });
+        
+        // Final pass for multipliers
+        reconstructedPackages.forEach((pkg, idx) => {
+           if (pkg.is_base) return;
+           const su = rawSubUnits.find((s: any) => s.id === pkg.id);
+           const totalDivider = 1 / (su?.multiplier || 1);
+           
+           // parent divider
+           let parentDivider = 1;
+           let currParentIdx = pkg.parent_idx || 0;
+           let safety = 0;
+           // This is tricky because the parent's relative multiplier might not be set yet.
+           // BUT, we can calculate the parent's total divider directly from rawSubUnits if it's a sub-unit
+           const parentPkg = reconstructedPackages[currParentIdx];
+           if (!parentPkg.is_base) {
+              const pSu = rawSubUnits.find((s: any) => s.name_en === parentPkg.name_en);
+              parentDivider = 1 / (pSu?.multiplier || 1);
+           }
+           
+           pkg.multiplier = Math.round(totalDivider / parentDivider);
+        });
+
+        setPackages(reconstructedPackages);
       }
     } catch (error) {
       console.error('Failed to fetch packages:', error);
@@ -143,10 +213,16 @@ const StockItemModal = ({ isOpen, item, onClose, onSuccess }: StockItemModalProp
         ...formData, 
         unit_en: baseUnitName, 
         unit_ar: baseUnitName,
-        packages: packages.filter(p => !p.is_base).map(p => ({
-          ...p,
-          multiplier: 1 / Number(p.multiplier || 1)
-        }))
+        packages: packages.filter(p => !p.is_base).map((p, idx) => {
+          const totalDivider = calculateChainedMultiplier(p);
+          const parentPkg = packages[p.parent_idx || 0];
+          
+          return {
+            ...p,
+            multiplier: 1 / totalDivider,
+            parent_name: parentPkg?.name_en
+          };
+        })
       };
       
       const response = item 
@@ -250,8 +326,8 @@ const StockItemModal = ({ isOpen, item, onClose, onSuccess }: StockItemModalProp
                 {packages.filter(p => !p.is_base).map(p => (
                    <div key={p.temp_id || p.id} style={{ fontSize: '11px', color: '#01562c', fontWeight: 800, marginTop: '6px', background: '#f0fdf4', padding: '4px 8px', borderRadius: '6px', border: '1px solid #dcfce7' }}>
                       {(() => {
-                         const multiplier = Number(p.multiplier || 1);
-                         const subPrice = (Number(formData.cost_price) / multiplier).toFixed(3);
+                         const totalDivider = calculateChainedMultiplier(p);
+                         const subPrice = (Number(formData.cost_price) / totalDivider).toFixed(3);
                          return (
                             <span>
                                Result: 1 {p.name_en || 'Sub-unit'} = {subPrice} KD
@@ -309,7 +385,7 @@ const StockItemModal = ({ isOpen, item, onClose, onSuccess }: StockItemModalProp
                 <tbody>
                   {packages.map((pkg, index) => (
                     <tr key={pkg.temp_id || pkg.id || index} style={pkg.is_base ? { background: 'rgba(1, 86, 44, 0.05)' } : {}}>
-                      <td style={{ width: '30%' }}>
+                      <td style={{ width: '25%' }}>
                         {pkg.is_base ? (
                            <select 
                              style={{ fontWeight: 800, color: '#01562c', border: '1px solid #cbd5e1', padding: '4px', borderRadius: '6px' }}
@@ -324,16 +400,33 @@ const StockItemModal = ({ isOpen, item, onClose, onSuccess }: StockItemModalProp
                             className="pkg-input"
                             value={pkg.name_en}
                             onChange={(e) => updatePackage(index, 'name_en', e.target.value)}
-                            placeholder="e.g. piece"
+                            placeholder="e.g. gram"
                           />
                         )}
                       </td>
                       <td>
                         {!pkg.is_base ? (
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>
-                               1 {packages[0].name_en} = 
-                            </span>
+                            <span style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>1</span>
+                            <select 
+                              style={{ 
+                                padding: '6px 10px', 
+                                borderRadius: '8px', 
+                                border: '2px solid var(--primary)', 
+                                background: '#fff',
+                                color: 'var(--primary)',
+                                fontSize: '12px', 
+                                fontWeight: 800,
+                                cursor: 'pointer'
+                              }}
+                              value={pkg.parent_idx || 0}
+                              onChange={(e) => updatePackage(index, 'parent_idx', Number(e.target.value))}
+                            >
+                               {packages.slice(0, index).map((p, i) => (
+                                  <option key={i} value={i}>{p.name_en}</option>
+                               ))}
+                            </select>
+                            <span style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>=</span>
                             <input 
                               type="number" 
                               className="pkg-input"
@@ -348,11 +441,17 @@ const StockItemModal = ({ isOpen, item, onClose, onSuccess }: StockItemModalProp
                         )}
                       </td>
                       <td>
-                         {!pkg.is_base && formData.cost_price > 0 && (
-                            <div style={{ fontSize: '12px', color: '#01562c', fontWeight: 800 }}>
-                               {(Number(formData.cost_price) / Number(pkg.multiplier || 1)).toFixed(3)} KD / {pkg.name_en}
-                            </div>
-                         )}
+                         {(() => {
+                            if (pkg.is_base) return null;
+                            if (!formData.cost_price) return null;
+                            const totalDivider = calculateChainedMultiplier(pkg);
+                             
+                             return (
+                                <div style={{ fontSize: '12px', color: '#01562c', fontWeight: 800 }}>
+                                   {(Number(formData.cost_price) / totalDivider).toFixed(3)} KD / {pkg.name_en}
+                                </div>
+                             );
+                         })()}
                       </td>
                       <td className="text-center">
                         {!pkg.is_base && (
