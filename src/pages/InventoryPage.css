@@ -23,8 +23,11 @@
   background: white;
   width: 90%;
   max-width: 700px;
+  max-height: 95vh;
   border-radius: 28px;
   box-shadow: 0 40px 100px rgba(0,0,0,0.3);
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
   animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
@@ -56,7 +59,11 @@
 
 .btn-close:hover { background: #fee2e2; color: #e11d48; }
 
-.modal-body { padding: 2.5rem; }
+.modal-body { 
+  padding: 2.5rem; 
+  overflow-y: auto;
+  flex: 1;
+}
 
 .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
 .form-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
@@ -647,3 +654,102 @@ tbody td {
     padding: 1.25rem;
   }
 }
+/* --- PRODUCT INTELLIGENCE "WOW" SYSTEM --- */
+.product-intelligence-hud {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+  perspective: 1000px;
+}
+
+.intel-card {
+  background: white;
+  padding: 1.75rem;
+  border-radius: 24px;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.intel-card::after {
+  content: '';
+  position: absolute;
+  top: 0; right: 0; width: 100px; height: 100px;
+  background: radial-gradient(circle at top right, rgba(255,255,255,0.4) 0%, transparent 70%);
+  border-radius: 50%;
+  transform: translate(30%, -30%);
+}
+
+.intel-card:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.1);
+}
+
+.intel-card.gold { background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border: 1px solid #fde68a; }
+.intel-card.blue { background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border: 1px solid #bfdbfe; }
+.intel-card.orange { background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%); border: 1px solid #fed7aa; }
+
+.intel-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  box-shadow: 0 8px 16px -4px rgba(0,0,0,0.1);
+}
+
+.intel-card.gold .intel-icon { color: #d97706; }
+.intel-card.blue .intel-icon { color: #2563eb; }
+.intel-card.orange .intel-icon { color: #ea580c; }
+
+.intel-info { display: flex; flex-direction: column; }
+.intel-label { font-size: 0.85rem; font-weight: 700; color: #64748b; margin-bottom: 0.25rem; text-transform: uppercase; letter-spacing: 0.5px; }
+.intel-value { font-size: 1.25rem; font-weight: 800; color: #1e293b; margin: 0; line-height: 1.2; }
+.intel-sub { font-size: 0.9rem; font-weight: 600; color: #475569; margin-top: 0.25rem; }
+
+/* Table Visualization Upgrades */
+.product-info-cell { display: flex; align-items: center; gap: 1rem; }
+.product-icon { width: 36px; height: 36px; border-radius: 10px; background: #f1f5f9; display: flex; align-items: center; justify-content: center; color: #64748b; }
+.product-details { display: flex; flex-direction: column; }
+.product-details strong { font-size: 0.95rem; color: #1e293b; }
+.product-details span { font-size: 0.75rem; color: #94a3b8; font-weight: 600; }
+
+.qty-indicator { display: flex; flex-direction: column; }
+.qty-val { font-size: 1.1rem; font-weight: 800; color: #1e293b; }
+.qty-unit { font-size: 0.7rem; color: #94a3b8; font-weight: 700; text-transform: uppercase; }
+
+.revenue-stack { display: flex; flex-direction: column; gap: 4px; }
+.rev-main { font-size: 1rem; font-weight: 800; color: var(--primary); }
+.contribution-bar { display: flex; align-items: center; gap: 8px; }
+.contribution-bar .fill { height: 6px; border-radius: 3px; background: #e2e8f0; position: relative; width: 60px; overflow: hidden; }
+.contribution-bar .fill::after { content: ''; position: absolute; left: 0; top: 0; height: 100%; background: var(--primary); width: 100%; transform-origin: left; }
+.contribution-bar span { font-size: 0.7rem; color: #64748b; font-weight: 700; }
+
+.profit-stack { display: flex; flex-direction: column; gap: 2px; }
+.profit-val { font-size: 1rem; font-weight: 800; }
+.profit-stack.positive .profit-val { color: #10b981; }
+.profit-stack.negative .profit-val { color: #ef4444; }
+
+.return-alert {
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: #ea580c;
+  background: #fff7ed;
+  padding: 2px 6px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid #fed7aa;
+  width: fit-content;
+}
+
+.cost-text { font-family: 'Mono', monospace; font-weight: 700; color: #64748b; font-size: 0.9rem; }

@@ -1446,7 +1446,9 @@ const FactoryDispatchPage = () => {
                     border: "1px solid #f1f5f9", 
                     padding: "20px", 
                     borderRadius: "15px",
-                    minHeight: '200px'
+                    maxHeight: '400px',
+                    overflowY: 'auto',
+                    boxShadow: 'inset 0 2px 10px rgba(0,0,0,0.02)'
                   }}
                 >
                   <h4 style={{ fontSize: "14px", marginBottom: "20px", color: '#1e293b', borderBottom: '1px solid #f1f5f9', paddingBottom: '10px' }}>

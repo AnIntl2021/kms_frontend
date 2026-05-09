@@ -13,7 +13,9 @@ import {
   User,
   Users,
   Truck,
-  X
+  X,
+  RotateCcw,
+  BadgeCent
 } from 'lucide-react';
 import api from '../api/axios';
 import { toast } from 'react-toastify';
@@ -152,14 +154,16 @@ const ReportsPage = () => {
         d.status
       ]);
     } else if (activeTab === 'products') {
-      headers = ["Item Name", "Category", "Total Qty Sold", "Revenue (KWD)", "Total Cost", "Net Profit"];
+      headers = ["Item Name", "Category", "Total Qty Sold", "Revenue (KWD)", "Total Cost", "Net Profit", "Contribution %", "Return Rate %"];
       rows = data.map(d => [
-        d.product_name || 'N/A',
-        d.product_category || 'General',
-        d.total_quantity || 0,
-        Number(d.total_revenue || 0).toFixed(3),
+        d.name_en || 'N/A',
+        d.category || 'General',
+        d.total_sold || 0,
+        Number(d.revenue || 0).toFixed(3),
         Number(d.total_cost || 0).toFixed(3),
-        Number(d.total_profit || 0).toFixed(3)
+        Number(d.net_profit || 0).toFixed(3),
+        d.contribution + "%",
+        d.return_rate + "%"
       ]);
     }
 
@@ -199,8 +203,8 @@ const ReportsPage = () => {
       return (d.vendor_name?.toLowerCase().includes(searchStr) || 
               d.po_number?.toLowerCase().includes(searchStr));
     } else if (activeTab === 'products') {
-      const pName = (d.product_name || '').toLowerCase();
-      const pCat = (d.product_category || '').toLowerCase();
+      const pName = (d.name_en || '').toLowerCase();
+      const pCat = (d.category || '').toLowerCase();
       return pName.includes(searchStr) || pCat.includes(searchStr);
     } else {
       const pName = (d.product_name || '').toLowerCase();
@@ -377,7 +381,7 @@ const ReportsPage = () => {
           </div>
         </div>
 
-        {/* Summary Dashboard */}
+        {/* Summary Dashboard (Sales Only) */}
         {!loading && activeTab === 'sales' && data.length > 0 && (
           <div className="report-summary-grid animated fadeIn">
             <div className="summary-card revenue">
@@ -400,52 +404,44 @@ const ReportsPage = () => {
                 <span className="summary-label">{t('net_profit')}</span>
                 <span className="summary-value">
                   {(filteredData.reduce((acc, curr) => acc + Number(curr.final_amount || 0), 0) - 
-                    filteredData.reduce((acc, curr) => acc + Number(curr.total_cost || 0), 0) -
                     filteredData.reduce((acc, curr) => acc + Number(curr.returns_amount || 0), 0)).toFixed(3)} {t('kd_currency')}
                 </span>
-                <span className="summary-sublabel">After Production Costs & Returns</span>
+                <span className="summary-sublabel">Net Receivable (Total - Returns)</span>
               </div>
             </div>
           </div>
         )}
 
-        {!loading && activeTab === 'products' && filteredData.length > 0 && (
-          <div className="report-summary-grid animated fadeIn">
-            <div className="summary-card revenue">
-              <div className="summary-icon"><Package size={24} /></div>
-              <div className="summary-data">
-                <span className="summary-label">{t('top_selling_hero')}</span>
-                <span className="summary-value" style={{ fontSize: '1.2rem' }}>
-                  {(language === 'ar' ? (filteredData[0]?.product_name_ar || filteredData[0]?.product_name) : filteredData[0]?.product_name) || t('unknown_item')}
-                </span>
-                <span className="summary-sublabel">{filteredData[0]?.total_quantity || 0} {t('dispatch_unit')} Sold</span>
-              </div>
-            </div>
-            <div className="summary-card profit">
-              <div className="summary-icon"><TrendingUp size={24} /></div>
-              <div className="summary-data">
-                <span className="summary-label">{t('revenue_generated')}</span>
-                <span className="summary-value">
-                  {Number(filteredData[0]?.total_revenue || 0).toFixed(3)} {t('kd_currency')}
-                </span>
-                <span className="summary-sublabel">From Hero Product</span>
-              </div>
-            </div>
-            <div className="summary-card profit" style={{ background: '#f0fdf4', borderColor: '#dcfce7' }}>
-              <div className="summary-icon" style={{ background: '#dcfce7', color: '#166534' }}><ShoppingCart size={24} /></div>
-              <div className="summary-data">
-                <span className="summary-label" style={{ color: '#166534' }}>{t('most_profitable')}</span>
-                <span className="summary-value" style={{ color: '#166534', fontSize: '1.2rem' }}>
-                  {(() => {
-                    const sorted = [...filteredData].sort((a, b) => (Number(b.total_profit) || 0) - (Number(a.total_profit) || 0));
-                    return (language === 'ar' ? (sorted[0]?.product_name_ar || sorted[0]?.product_name) : sorted[0]?.product_name) || t('unknown_item');
-                  })()}
-                </span>
-                <span className="summary-sublabel">Highest Margin Item</span>
-              </div>
-            </div>
+        {/* 🚀 PRODUCT INTELLIGENCE HUB (ONLY IN PRODUCTS TAB) */}
+        {!loading && activeTab === 'products' && data.length > 0 && (
+          <div className="product-intelligence-hud">
+             <div className="intel-card gold">
+                <div className="intel-icon"><TrendingUp size={32} /></div>
+                <div className="intel-info">
+                  <span className="intel-label">Top Selling Hero</span>
+                  <h3 className="intel-value">{data[0]?.name_en || 'None'}</h3>
+                  <p className="intel-sub">{data[0]?.total_sold} Units Sold</p>
+                </div>
+             </div>
+             <div className="intel-card blue">
+                <div className="intel-icon"><BadgeCent size={32} /></div>
+                <div className="intel-info">
+                  <span className="intel-label">Most Profitable</span>
+                  <h3 className="intel-value">{(data.reduce((prev, current) => (Number(prev.net_profit) > Number(current.net_profit)) ? prev : current, data[0]))?.name_en}</h3>
+                  <p className="intel-sub">Highest Margin Item</p>
+                </div>
+             </div>
+             <div className="intel-card orange">
+                <div className="intel-icon"><RotateCcw size={32} /></div>
+                <div className="intel-info">
+                  <span className="intel-label">Quality Attention</span>
+                  <h3 className="intel-value">{(data.reduce((prev, current) => (Number(prev.return_rate) > Number(current.return_rate)) ? prev : current, data[0]))?.name_en}</h3>
+                  <p className="intel-sub">{ (data.reduce((prev, current) => (Number(prev.return_rate) > Number(current.return_rate)) ? prev : current, data[0]))?.return_rate}% Return Rate</p>
+                </div>
+             </div>
           </div>
         )}
+
 
         {/* Visual Analytics Dashboard */}
         {!loading && analytics && analytics.dailyTrend && (
@@ -562,12 +558,10 @@ const ReportsPage = () => {
                   {activeTab === 'products' && (
                     <tr>
                       <th>{t('item_name')}</th>
-                      <th>{t('category')}</th>
                       <th>{t('total_sold')}</th>
                       <th>{t('revenue')}</th>
                       <th>{t('total_cost')}</th>
                       <th>{t('net_profit')}</th>
-                      <th>{t('profit_contribution')}</th>
                     </tr>
                   )}
                 </thead>
@@ -587,7 +581,7 @@ const ReportsPage = () => {
                           <td><span className="loss-text">{Number(item.returns_amount || 0).toFixed(3)}</span></td>
                           <td>
                             <span className="profit-badge">
-                              {(Number(item.final_amount || 0) - Number(item.total_cost || 0) - Number(item.returns_amount || 0)).toFixed(3)}
+                              {(Number(item.final_amount || 0) - Number(item.returns_amount || 0)).toFixed(3)}
                             </span>
                           </td>
                           <td><span className={`status-pill ${item.dispatch_status}`}>{t(item.dispatch_status)}</span></td>
@@ -629,19 +623,41 @@ const ReportsPage = () => {
                       )}
                       {activeTab === 'products' && (
                         <>
-                          <td><strong>{(language === 'ar' ? (item.product_name_ar || item.product_name) : item.product_name) || t('unknown_item')}</strong></td>
-                          <td><span className="salesman-badge">{item.product_category || 'General'}</span></td>
-                          <td>{item.total_quantity || 0}</td>
-                          <td>{Number(item.total_revenue || 0).toFixed(3)}</td>
-                          <td>{Number(item.total_cost || 0).toFixed(3)}</td>
-                          <td><span className="profit-text">{Number(item.total_profit || 0).toFixed(3)}</span></td>
                           <td>
-                            <div style={{ width: '100%', background: '#f1f5f9', height: '8px', borderRadius: '4px', overflow: 'hidden', marginTop: '5px' }}>
-                               <div style={{ 
-                                 width: `${Math.min(100, (Number(item.total_revenue || 0) / (data.reduce((s:any,i:any)=>s+Number(i.total_revenue || 0),0) || 1)) * 100)}%`, 
-                                 background: 'var(--primary)', 
-                                 height: '100%' 
-                               }}></div>
+                            <div className="product-info-cell">
+                              <div className="product-icon">
+                                <Package size={16} />
+                              </div>
+                              <div className="product-details">
+                                <strong>{language === 'ar' ? (item.name_ar || item.name_en) : item.name_en}</strong>
+                                <span>{item.category || 'General'}</span>
+                              </div>
+                            </div>
+                          </td>
+                          <td>
+                            <div className="qty-indicator">
+                               <span className="qty-val">{Number(item.total_sold || 0).toLocaleString()}</span>
+                               <span className="qty-unit">Units Sold</span>
+                            </div>
+                          </td>
+                          <td>
+                            <div className="revenue-stack">
+                               <span className="rev-main">{Number(item.revenue || 0).toFixed(3)} د.ك</span>
+                               <div className="contribution-bar">
+                                  <div className="fill" style={{ width: `${item.contribution}%` }}></div>
+                                  <span>{item.contribution}% of total</span>
+                               </div>
+                            </div>
+                          </td>
+                          <td><span className="cost-text">{Number(item.total_cost || 0).toFixed(3)}</span></td>
+                          <td>
+                            <div className={`profit-stack ${Number(item.net_profit) < 0 ? 'negative' : 'positive'}`}>
+                               <span className="profit-val">{Number(item.net_profit || 0).toFixed(3)} د.ك</span>
+                               {Number(item.return_rate) > 5 && (
+                                 <span className="return-alert">
+                                    <RotateCcw size={10} /> {item.return_rate}% Returns
+                                 </span>
+                               )}
                             </div>
                           </td>
                         </>
@@ -675,7 +691,7 @@ const ReportsPage = () => {
              <tbody>
                 {filteredData.map((item, idx) => (
                    <tr key={idx}>
-                      {activeTab === 'sales' && <><td>{item.sale_id}</td><td>{item.vendor_name}</td><td>{item.report_date}</td><td>{item.final_amount}</td><td>{item.returns_amount || 0}</td><td>{(Number(item.final_amount || 0) - Number(item.total_cost || 0) - Number(item.returns_amount || 0)).toFixed(3)}</td></>}
+                      {activeTab === 'sales' && <><td>{item.sale_id}</td><td>{item.vendor_name}</td><td>{item.report_date}</td><td>{item.final_amount}</td><td>{item.returns_amount || 0}</td><td>{(Number(item.final_amount || 0) - Number(item.returns_amount || 0)).toFixed(3)}</td></>}
                       {activeTab === 'production' && <><td>{item.batch_number}</td><td>{item.report_date}</td><td>{item.product_name}</td><td>{item.quantity_produced}</td><td>{(item.quantity_produced * item.cost_price).toFixed(3)}</td></>}
                       {activeTab === 'wastage' && <><td>{item.report_date}</td><td>{item.product_name}</td><td>{item.quantity}</td><td>{(item.quantity * item.price).toFixed(3)}</td><td>{item.reason_en}</td></>}
                       {activeTab === 'purchase' && <><td>{item.po_number}</td><td>{item.vendor_name}</td><td>{item.report_date}</td><td>{item.final_amount}</td><td>{item.status}</td></>}

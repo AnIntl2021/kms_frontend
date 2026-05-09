@@ -364,8 +364,8 @@ const SalesPage = () => {
 
   const stats = {
     totalRevenue: (Array.isArray(sales) ? sales : [])
-      .filter(s => s.dispatch_status === 'delivered')
-      .reduce((acc, curr) => acc + (Number(curr.final_amount || curr.total_amount) - Number(curr.returns_amount || 0)), 0),
+      .filter(s => ['delivered', 'dispatched', 'in_transit', 'paid'].includes((s.dispatch_status || '').toLowerCase()))
+      .reduce((acc, curr) => acc + (Number(curr.final_amount || 0) - Number(curr.returns_amount || 0)), 0),
     pendingDispatch: (Array.isArray(sales) ? sales : []).filter(s => (s.dispatch_status || '').toLowerCase() === 'pending').length,
     todayOrders: (Array.isArray(sales) ? sales : []).length,
     completed: (Array.isArray(sales) ? sales : []).filter(s => (s.dispatch_status || '').toLowerCase() === 'delivered').length
