@@ -10,9 +10,13 @@ export default defineConfig({
     minify: 'esbuild',
     rollupOptions: {
       output: {
-        manualChunks: {
-          'lucide': ['lucide-react'],
-          'vendor': ['react', 'react-dom', 'react-router-dom', 'axios', 'zustand'],
+        manualChunks(id) {
+          if (id.includes('lucide-react')) {
+            return 'lucide';
+          }
+          if (id.includes('node_modules')) {
+            return 'vendor';
+          }
         },
       },
     },
