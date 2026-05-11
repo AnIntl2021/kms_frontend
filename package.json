@@ -40,6 +40,8 @@
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.56.1",
     "vite": "^8.0.0",
-    "cross-env": "^7.0.3"
+    "cross-env": "^7.0.3",
+    "esbuild": "^0.25.0",
+    "oxc": "^0.1.0"
   }
 }

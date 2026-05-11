@@ -7,7 +7,7 @@ export default defineConfig({
   build: {
     sourcemap: false,
     chunkSizeWarningLimit: 1000,
-    minify: 'esbuild',
+    minify: 'oxc',
     rollupOptions: {
       output: {
         manualChunks(id) {
