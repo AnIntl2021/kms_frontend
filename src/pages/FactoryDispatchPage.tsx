@@ -763,7 +763,7 @@ const FactoryDispatchPage = () => {
                           <td>{new Date(r.created_at).toLocaleDateString()}</td>
                           <td className="text-end">
                             <strong style={{ color: '#be123c' }}>
-                              {Number(r.total_credit_amount).toFixed(3)} {t('kd_currency')}
+                              {Number(r.wastage_loss || 0).toFixed(3)} {t('kd_currency')}
                             </strong>
                           </td>
                           <td className="text-center">

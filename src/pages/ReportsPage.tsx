@@ -604,7 +604,7 @@ const ReportsPage = () => {
                           <td>{language === 'ar' ? (item.vendor_name_ar || item.vendor_name || 'المصنع') : (item.vendor_name || 'Factory')}</td>
                            <td>{language === 'ar' ? (item.branch_name_ar || item.branch_name || 'الرئيسي') : (item.branch_name || 'Main')}</td>
                           <td>{item.quantity || 0}</td>
-                          <td><span className="loss-text">{Number((item.quantity || 0) * (item.price || 0)).toFixed(3)}</span></td>
+                          <td><span className="loss-text">{Number((item.quantity || 0) * (item.cost_price || 0)).toFixed(3)}</span></td>
                           <td>{language === 'ar' ? (item.reason_ar || item.reason_en) : item.reason_en}</td>
                         </>
                       )}
