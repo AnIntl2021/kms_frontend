@@ -13,9 +13,10 @@ interface SearchableSelectProps {
   isClearable?: boolean;
   isMulti?: boolean;
   closeMenuOnSelect?: boolean;
+  isDisabled?: boolean;
 }
 
-const SearchableSelect = ({ options, value, onChange, placeholder = "Select...", isClearable = false, isMulti = false, closeMenuOnSelect = true }: SearchableSelectProps) => {
+const SearchableSelect = ({ options, value, onChange, placeholder = "Select...", isClearable = false, isMulti = false, closeMenuOnSelect = true, isDisabled = false }: SearchableSelectProps) => {
   const customStyles = {
     control: (base: any, state: any) => ({
       ...base,
@@ -126,9 +127,9 @@ const SearchableSelect = ({ options, value, onChange, placeholder = "Select...",
     if (isMulti) {
       if (!Array.isArray(value)) return [];
       const stringValues = value.map(v => String(v));
-      return allOptions.filter(opt => stringValues.includes(String(opt.value)));
+      return allOptions.filter((opt: any) => stringValues.includes(String(opt.value)));
     }
-    return allOptions.find(opt => String(opt.value) === String(value)) || null;
+    return allOptions.find((opt: any) => String(opt.value) === String(value)) || null;
   };
 
   return (
@@ -146,6 +147,7 @@ const SearchableSelect = ({ options, value, onChange, placeholder = "Select...",
       }}
       placeholder={placeholder}
       isClearable={isClearable}
+      isDisabled={isDisabled}
       styles={customStyles}
       classNamePrefix="react-select"
     />

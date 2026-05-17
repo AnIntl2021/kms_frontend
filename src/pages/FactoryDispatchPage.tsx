@@ -30,6 +30,7 @@ interface Vendor {
   vendor_id: number;
   name_en: string;
   type: string;
+  default_discount?: number;
 }
 
 interface MenuItem {
@@ -951,7 +952,7 @@ const FactoryDispatchPage = () => {
                 <div
                   style={{
                     display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
                     gap: "20px",
                     marginBottom: "20px",
                   }}
@@ -1125,7 +1126,7 @@ const FactoryDispatchPage = () => {
                 <div
                   style={{
                     display: "grid",
-                    gridTemplateColumns: "repeat(3, 1fr)",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
                     gap: "1rem",
                     marginBottom: "15px",
                   }}
@@ -1460,7 +1461,7 @@ const FactoryDispatchPage = () => {
                        {returnForm.vendor_id ? "Please select Dispatch Order(s) to see items." : "Select a Client first."}
                     </div>
                   ) : (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
                       {returnForm.items.map((item, idx) => (
                         <div key={item.unique_key || idx} style={{ 
                           display: "flex", 
@@ -1526,7 +1527,7 @@ const FactoryDispatchPage = () => {
               <button className="btn-close" onClick={() => setShowReturnViewModal(false)}><X /></button>
             </div>
             <div className="modal-body" style={{ padding: "1.5rem" }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px', background: '#f8fafc', padding: '15px', borderRadius: '15px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '20px', background: '#f8fafc', padding: '15px', borderRadius: '15px' }}>
                 <div>
                   <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>CLIENT / PARTNER</div>
                   <div style={{ fontWeight: 700 }}>{selectedReturn.client_name}</div>

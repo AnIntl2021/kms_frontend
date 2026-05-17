@@ -353,3 +353,50 @@
 
 .dropdown-item.delete { color: #be123c; }
 .dropdown-item.delete:hover { background: #fff1f2; }
+
+/* Premium Fluid Mobile Responsiveness Overrides */
+@media (max-width: 900px) {
+  .po-fields-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  
+  .po-footer-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  
+  .po-modal-card {
+    width: 98% !important;
+    height: 96vh !important;
+    border-radius: 16px;
+  }
+  
+  .po-header {
+    padding: 1rem 1.5rem;
+  }
+  
+  .po-body {
+    padding: 1rem;
+    gap: 1rem;
+  }
+}
+
+@media (max-width: 600px) {
+  .po-fields-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
+  .po-actions {
+    flex-direction: column;
+  }
+  
+  .po-totals-card {
+    padding: 1rem;
+  }
+  
+  .po-table th, .po-table td {
+    padding: 0.5rem 0.25rem !important;
+  }
+}

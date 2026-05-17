@@ -52,7 +52,7 @@ const StockItemModal = ({ isOpen, item, onClose, onSuccess }: StockItemModalProp
     let safety = 0;
     while (current && !current.is_base && safety < 10) {
       totalDivider *= Number(current.multiplier || 1);
-      const parentIdx = current.parent_idx || 0;
+      const parentIdx: number = current.parent_idx || 0;
       current = packages[parentIdx];
       safety++;
     }
@@ -104,7 +104,7 @@ const StockItemModal = ({ isOpen, item, onClose, onSuccess }: StockItemModalProp
           name_en: item?.unit_en || 'Packet',
           multiplier: 1,
           is_base: true,
-          id: 'base'
+          temp_id: 'base'
         };
 
         // 2. Map sub-units from DB
@@ -168,7 +168,7 @@ const StockItemModal = ({ isOpen, item, onClose, onSuccess }: StockItemModalProp
               parentDivider = 1 / (pSu?.multiplier || 1);
            }
            
-           pkg.multiplier = Math.round(totalDivider / parentDivider);
+           pkg.multiplier = Math.round((totalDivider / parentDivider) * 10000) / 10000;
         });
 
         setPackages(reconstructedPackages);
@@ -429,6 +429,7 @@ const StockItemModal = ({ isOpen, item, onClose, onSuccess }: StockItemModalProp
                             <span style={{ fontSize: '12px', fontWeight: 700, color: '#64748b' }}>=</span>
                             <input 
                               type="number" 
+                              step="any"
                               className="pkg-input"
                               style={{ width: '80px', fontWeight: 800 }}
                               value={pkg.multiplier}

@@ -275,8 +275,7 @@ const VendorsPage = () => {
 
                   <div style={{ maxHeight: '180px', overflowY: 'auto', padding: '5px' }}>
                     {(formData.branches || []).map((br: any, idx: number) => (
-                      <div key={idx} style={{ 
-                        display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 30px', gap: '8px', 
+                      <div key={idx} className="vendor-branch-row" style={{ 
                         marginBottom: '8px', padding: '10px', background: '#f8fafc', borderRadius: '6px', border: '1px solid #e2e8f0' 
                       }}>
                         <input 

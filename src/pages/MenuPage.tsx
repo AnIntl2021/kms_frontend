@@ -67,6 +67,7 @@ const MenuPage = () => {
     unit_ar: 'حبة',
     description_en: '',
     description_ar: '',
+    yield_quantity: 1.000,
     ingredients: [] as { inventory_item_id: string, package_id: string, quantity: string }[]
   });
 
@@ -108,8 +109,10 @@ const MenuPage = () => {
         totalCost += (itemCost * Number(ing.quantity) * calcMultiplier);
       }
     });
-    setFormData(prev => ({ ...prev, cost_price: Number(totalCost.toFixed(3)) }));
-  }, [formData.ingredients, inventoryItems, allPackages, items]);
+    const isPremixItem = activeTab === 'premix';
+    const finalCost = isPremixItem ? (totalCost / (Number(formData.yield_quantity) || 1.0)) : totalCost;
+    setFormData(prev => ({ ...prev, cost_price: Number(finalCost.toFixed(3)) }));
+  }, [formData.ingredients, inventoryItems, allPackages, items, formData.yield_quantity, activeTab]);
 
   const fetchItems = async () => {
     setLoading(true);
@@ -177,6 +180,7 @@ const MenuPage = () => {
           unit_ar: details.unit_ar || 'حبة',
           description_en: details.description_en || '',
           description_ar: details.description_ar || '',
+          yield_quantity: Number(details.yield_quantity || 1.000),
           ingredients: (details.ingredients || []).map((ing: any) => ({
             inventory_item_id: ing.sub_menu_item_id ? `pre-${ing.sub_menu_item_id}` : `inv-${ing.inventory_item_id}`,
             package_id: String(ing.package_id || ''),
@@ -224,12 +228,13 @@ const MenuPage = () => {
       form.append('name_ar', formData.name_ar);
       form.append('barcode', formData.barcode || '');
       form.append('category_id', formData.category_id);
-      form.append('price', formData.price.toString());
+      form.append('price', activeTab === 'premix' ? formData.cost_price.toString() : formData.price.toString());
       form.append('cost_price', formData.cost_price.toString());
       form.append('unit_en', formData.unit_en);
       form.append('unit_ar', formData.unit_ar);
       form.append('description_en', formData.description_en || '');
       form.append('description_ar', formData.description_ar || '');
+      form.append('yield_quantity', formData.yield_quantity.toString());
       form.append('type', activeTab === 'menu' ? 'selling' : 'premix');
       form.append('ingredients', JSON.stringify(formData.ingredients));
       
@@ -277,6 +282,7 @@ const MenuPage = () => {
       unit_ar: 'حبة',
       description_en: '',
       description_ar: '',
+      yield_quantity: 1.000,
       ingredients: []
     });
     setImageFile(null);
@@ -334,7 +340,7 @@ const MenuPage = () => {
                 <tr>
                   <th>{t('product_details')}</th>
                   <th>{t('category')}</th>
-                  <th>{t('sale_price')}</th>
+                  <th>{isPremix ? (t('production_cost') || 'Production Cost') : t('sale_price')}</th>
                   <th>{t('status')}</th>
                   <th className="text-end">{t('actions')}</th>
                 </tr>
@@ -368,7 +374,16 @@ const MenuPage = () => {
                       </div>
                     </td>
                     <td><span className="sku-badge" style={{background: '#f1f5f9', color: '#64748b'}}>{item.category_name || t('general')}</span></td>
-                    <td><strong>{Number(item.price).toFixed(3)} {t('kd_currency')}</strong></td>
+                    <td>
+                      <strong>
+                        {Number(activeTab === 'premix' ? item.cost_price : item.price).toFixed(3)} {t('kd_currency')}
+                      </strong>
+                      {activeTab === 'premix' && (
+                        <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 'normal', marginLeft: '4px' }}>
+                          / {item.unit_en}
+                        </span>
+                      )}
+                    </td>
                     <td><span className={item.status === 'available' ? 'status-badge healthy' : 'status-badge critical'}>{t(item.status)}</span></td>
                      <td className="text-end">
                        <div className="row-actions">
@@ -388,12 +403,13 @@ const MenuPage = () => {
 
       {isModalOpen && (
         <div className="modal-overlay">
-          <div className="modal-content" style={{maxWidth: '1000px', maxHeight: '90vh', overflowY: 'auto'}}>
+          <div className="modal-content" style={{maxWidth: '1000px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden'}}>
             <div className="modal-header">
               <h3>{isPremix ? t('define_kitchen_premix') : t('configure_menu_item')}</h3>
               <button className="btn-close" onClick={() => setIsModalOpen(false)}><X size={20} /></button>
             </div>
-            <form onSubmit={handleSubmit} className="modal-body" style={{ padding: '2rem', background: '#fcfcfc' }}>
+            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+              <div className="modal-body" style={{ padding: '2rem', background: '#fcfcfc', overflowY: 'auto', flex: 1 }}>
               
               <div className="form-section-premium" style={{ marginBottom: '2rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem', color: 'var(--primary)' }}>
@@ -401,7 +417,7 @@ const MenuPage = () => {
                   <h4 style={{ margin: 0 }}>{t('basic_information')}</h4>
                 </div>
                 
-                <div className="form-grid" style={{ gridTemplateColumns: '150px 1fr 1fr', gap: '1.5rem', alignItems: 'start' }}>
+                <div className="menu-modal-grid">
                   <div 
                     className="image-upload-box" 
                     onClick={() => document.getElementById('image-upload')?.click()}
@@ -450,7 +466,7 @@ const MenuPage = () => {
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-                     <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                     <div className="form-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '10px' }}>
                         <div className="form-group">
                           <label style={{ fontWeight: 600, fontSize: '13px', color: '#64748b' }}>{t('category_star')}</label>
                           <select
@@ -502,24 +518,46 @@ const MenuPage = () => {
                         </div>
                      )}
                      
-                     <div style={{ display: 'grid', gridTemplateColumns: !isPremix ? '1fr 1fr' : '1fr', gap: '0.8rem' }}>
-                        {!isPremix && (
-                          <div className="form-group">
-                            <label style={{ fontWeight: 800, fontSize: '11px', color: 'var(--primary)' }}>{t('selling_price_kd')}</label>
-                            <div style={{ position: 'relative' }}>
-                              <input type="number" step="0.001" style={{ padding: '0.8rem 0.8rem 0.8rem 2rem', width: '100%', borderRadius: '12px', border: '2px solid #e2e8f0', fontWeight: 'bold' }} required value={formData.price} onChange={(e) => setFormData({...formData, price: Number(e.target.value)})} />
-                              <BadgeCent size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--primary)' }} />
-                            </div>
-                          </div>
-                        )}
-                        <div className="form-group">
-                           <label style={{ fontWeight: 800, fontSize: '11px', color: '#f59e0b' }}>{isPremix ? t('total_production_cost') : t('cost_price_recipe')}</label>
-                           <div style={{ position: 'relative' }}>
-                             <input type="number" step="0.001" style={{ padding: '0.8rem 0.8rem 0.8rem 2rem', width: '100%', borderRadius: '12px', border: '2px solid #fef3c7', background: '#fffbeb', fontWeight: 'bold', color: '#b45309' }} value={formData.cost_price} onChange={(e) => setFormData({...formData, cost_price: Number(e.target.value)})} />
-                             <TrendingUp size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#f59e0b' }} />
+                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.8rem' }}>
+                         {isPremix && (
+                           <div className="form-group">
+                              <label style={{ fontWeight: 800, fontSize: '11px', color: 'var(--primary)' }}>
+                                 {language === 'ar' 
+                                   ? `إجمالي كمية الإنتاج (${formData.unit_ar})` 
+                                   : `Total Recipe Yield (${formData.unit_en})`}
+                              </label>
+                              <div style={{ position: 'relative' }}>
+                                <input 
+                                  type="number" 
+                                  step="any" 
+                                  style={{ padding: '0.8rem 0.8rem 0.8rem 2rem', width: '100%', borderRadius: '12px', border: '2px solid #e2e8f0', fontWeight: 'bold' }} 
+                                  required 
+                                  value={formData.yield_quantity} 
+                                  onChange={(e) => setFormData({...formData, yield_quantity: Number(e.target.value) || 1.000})} 
+                                />
+                                <ClipboardList size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--primary)' }} />
+                              </div>
                            </div>
-                        </div>
-                     </div>
+                         )}
+                         {!isPremix && (
+                           <div className="form-group">
+                             <label style={{ fontWeight: 800, fontSize: '11px', color: 'var(--primary)' }}>{t('selling_price_kd')}</label>
+                             <div style={{ position: 'relative' }}>
+                               <input type="number" step="0.001" style={{ padding: '0.8rem 0.8rem 0.8rem 2rem', width: '100%', borderRadius: '12px', border: '2px solid #e2e8f0', fontWeight: 'bold' }} required value={formData.price} onChange={(e) => setFormData({...formData, price: Number(e.target.value)})} />
+                               <BadgeCent size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--primary)' }} />
+                             </div>
+                           </div>
+                         )}
+                         <div className="form-group">
+                            <label style={{ fontWeight: 800, fontSize: '11px', color: '#f59e0b' }}>
+                               {isPremix ? `${t('total_production_cost') || 'Unit Cost'} (${t('per') || 'Per 1'} ${formData.unit_en})` : t('cost_price_recipe')}
+                            </label>
+                            <div style={{ position: 'relative' }}>
+                              <input type="number" step="0.001" style={{ padding: '0.8rem 0.8rem 0.8rem 2rem', width: '100%', borderRadius: '12px', border: '2px solid #fef3c7', background: '#fffbeb', fontWeight: 'bold', color: '#b45309' }} value={formData.cost_price} onChange={(e) => setFormData({...formData, cost_price: Number(e.target.value)})} />
+                              <TrendingUp size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#f59e0b' }} />
+                            </div>
+                         </div>
+                      </div>
                   </div>
                 </div>
               </div>
@@ -564,7 +602,7 @@ const MenuPage = () => {
                          : inventoryItems.find(ii => String(ii.inventory_item_id) === realId);
 
                        return (
-                        <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1.2fr 1.2fr 1fr 45px', gap: '1rem', background: '#f8fafc', padding: '1rem', borderRadius: '14px', alignItems: 'end', border: '1px solid #f1f5f9' }}>
+                        <div key={idx} className="menu-ingredient-row">
                           <div className="form-group">
                              <label style={{ fontSize: '11px', fontWeight: 700, color: '#94a3b8' }}>{t('raw_material_premix')}</label>
                              <SearchableSelect
@@ -638,8 +676,9 @@ const MenuPage = () => {
                      )}
                  </div>
               </div>
+              </div>
 
-              <div className="modal-footer" style={{ marginTop: '2.5rem', display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
+              <div className="modal-footer" style={{ padding: '1.5rem 2rem', background: '#fff', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', gap: '1rem', zIndex: 10 }}>
                 <button type="button" className="btn-secondary" onClick={() => setIsModalOpen(false)}>{t('cancel')}</button>
                 <button type="submit" className="btn-primary" style={{ background: 'var(--primary)' }}>
                   {editingItem ? (isPremix ? t('update_kitchen_premix') : t('update_menu_item')) : (isPremix ? t('create_kitchen_premix') : t('create_menu_item'))}

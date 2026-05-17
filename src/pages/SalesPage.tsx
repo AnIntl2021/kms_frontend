@@ -45,6 +45,7 @@ interface SaleOrder {
   discount_amount?: number;
   discount_percentage?: number;
   final_amount?: number;
+  returns_amount?: number;
 }
 
 const SalesPage = () => {
@@ -807,26 +808,26 @@ const SalesPage = () => {
                        <input 
                          type="number" 
                          style={{ padding: '0.8rem', borderRadius: '12px', border: '1px solid #e2e8f0', width: '100%', marginTop: '5px', fontWeight: 700 }}
-                         value={editingOrder.discount_percentage}
+                       value={editingOrder.discount_percentage}
                          onChange={(e) => setEditingOrder({...editingOrder, discount_percentage: Number(e.target.value)})}
                        />
                     </div>
 
                     <h5 style={{ margin: '1rem 0 0.5rem 0' }}>{t("current_cart")}: {editingOrder.items.length} {t("products")}</h5>
                     <div style={{ maxHeight: '150px', overflowY: 'auto', background: 'white', borderRadius: '10px', padding: '10px', border: '1px solid #eef2f6' }}>
-                       {editingOrder.items.map(item => (
+                       {editingOrder.items.map((item: any) => (
                          <div key={item.menu_item_id} style={{ fontSize: '12px', display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #f1f5f9' }}>
                            <span><b>{language === 'ar' ? (item.name_ar || item.name_en) : item.name_en}</b> x {item.quantity}</span>
                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                              <button onClick={() => {
-                               const updated = editingOrder.items.map(i => i.menu_item_id === item.menu_item_id ? {...i, quantity: Math.max(1, i.quantity - 1)} : i);
+                               const updated = editingOrder.items.map((i: any) => i.menu_item_id === item.menu_item_id ? {...i, quantity: Math.max(1, i.quantity - 1)} : i);
                                setEditingOrder({...editingOrder, items: updated});
                              }} style={{ width: '24px', height: '24px', borderRadius: '6px', border: '1px solid #ddd', background: 'white', cursor: 'pointer' }}>-</button>
                              <button onClick={() => {
-                               const updated = editingOrder.items.map(i => i.menu_item_id === item.menu_item_id ? {...i, quantity: i.quantity + 1} : i);
+                               const updated = editingOrder.items.map((i: any) => i.menu_item_id === item.menu_item_id ? {...i, quantity: i.quantity + 1} : i);
                                setEditingOrder({...editingOrder, items: updated});
                              }} style={{ width: '24px', height: '24px', borderRadius: '6px', border: '1px solid #ddd', background: 'white', cursor: 'pointer' }}>+</button>
-                             <button onClick={() => setEditingOrder({...editingOrder, items: editingOrder.items.filter(i => i.menu_item_id !== item.menu_item_id)})} style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '10px', cursor: 'pointer', fontWeight: 800, marginLeft: '5px' }}>{t("remove")}</button>
+                             <button onClick={() => setEditingOrder({...editingOrder, items: editingOrder.items.filter((i: any) => i.menu_item_id !== item.menu_item_id)})} style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '10px', cursor: 'pointer', fontWeight: 800, marginLeft: '5px' }}>{t("remove")}</button>
                            </div>
                          </div>
                        ))}

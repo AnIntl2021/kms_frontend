@@ -306,7 +306,7 @@ const WastagePage = () => {
                  )}
                </div>
 
-               <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
+               <div className="form-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem', marginBottom: '1.5rem' }}>
                  <div className="form-group">
                     <label style={{ fontWeight: 700, fontSize: '12px', color: '#64748b', textTransform: 'uppercase' }}>{t('quantity_wasted')}</label>
                     <input 

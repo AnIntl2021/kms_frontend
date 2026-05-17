@@ -59,7 +59,7 @@ const SalesmenPage = () => {
         api.get('/salesmen/performance')
       ]);
       
-      const statsMap = new Map(statsRes.data.data.map((s: any) => [s.salesman_id, s]));
+      const statsMap = new Map<number, any>(statsRes.data.data.map((s: any) => [s.salesman_id, s]));
       const combined = listRes.data.data.map((s: any) => ({
         ...s,
         total_revenue: statsMap.get(s.salesman_id)?.total_revenue || 0,

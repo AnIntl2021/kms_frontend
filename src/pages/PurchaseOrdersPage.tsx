@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
+import SearchableSelect from '../components/SearchableSelect';
 import api from '../api/axios';
 import { Plus, X, Trash2, Edit, Eye, PlusCircle, Package, Truck, Calendar, CreditCard, StickyNote, Hash, MoreHorizontal, ShoppingBag, ArrowRight, PackageCheck } from 'lucide-react';
 import { toast } from 'react-toastify';
@@ -403,21 +404,23 @@ const PurchaseOrdersPage = () => {
                     <tbody>
                       {formData.items.map((it, idx) => (
                         <tr key={idx}>
-                          <td>
-                            <select 
-                              className="po-table-input font-bold" 
-                              value={it.inventory_item_id} 
-                              disabled={editingId ? orders.find(o => o.purchase_id === editingId)?.status !== 'pending' : false}
-                              onChange={e => {
-                               updateItem(idx, 'inventory_item_id', e.target.value);
-                               // Reset package when item changes
-                               updateItem(idx, 'package_id', '');
-                            }}>
-                              <option value="">{t('choose_item')}</option>
-                              {inventoryItems.map(i => <option key={i.inventory_item_id} value={i.inventory_item_id}>{language === 'ar' ? (i.name_ar || i.name_en) : i.name_en} ({language === 'ar' ? (i.unit_ar || i.unit_en) : i.unit_en})</option>)}
-                            </select>
-                          </td>
-                          <td><select disabled className="po-table-input opacity-40"><option>N/A</option></select></td>
+                           <td>
+                             <SearchableSelect
+                               options={inventoryItems.map(i => ({
+                                 value: String(i.inventory_item_id),
+                                 label: `${language === 'ar' ? (i.name_ar || i.name_en) : i.name_en} (${language === 'ar' ? (i.unit_ar || i.unit_en) : i.unit_en})`
+                               }))}
+                               value={it.inventory_item_id}
+                               isDisabled={editingId ? orders.find(o => o.purchase_id === editingId)?.status !== 'pending' : false}
+                               onChange={(val: any) => {
+                                 updateItem(idx, 'inventory_item_id', String(val));
+                                 // Reset package when item changes
+                                 updateItem(idx, 'package_id', '');
+                               }}
+                               placeholder={t('choose_item')}
+                             />
+                           </td>
+                           <td><select disabled className="po-table-input opacity-40"><option>N/A</option></select></td>
                           <td>
                             <select disabled={editingId ? orders.find(o => o.purchase_id === editingId)?.status !== 'pending' : false} className="po-table-input" value={it.package_id} onChange={e => updateItem(idx, 'package_id', e.target.value)}>
                               <option value="">{t('base_unit')} ({inventoryItems.find(i => String(i.inventory_item_id) === String(it.inventory_item_id))?.[language === 'ar' ? 'unit_ar' : 'unit_en'] || '...' })</option>

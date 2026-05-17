@@ -386,6 +386,12 @@
   padding: 2rem;
 }
 
+@media (max-width: 900px) {
+  .page-body {
+    padding: 1rem;
+  }
+}
+
 .mobile-close, .mobile-toggle {
   display: none;
 }
