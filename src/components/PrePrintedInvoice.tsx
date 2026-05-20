@@ -131,6 +131,7 @@ const PrePrintedInvoice = React.forwardRef<HTMLDivElement, InvoiceProps>(({ orde
           width: '100%',
           borderCollapse: 'collapse',
           tableLayout: 'fixed',
+          transform: `translateX(${0.2 * CM}px)`,
         }}>
           <colgroup>
             <col style={{ width: cols.code }} />
@@ -206,7 +207,7 @@ const PrePrintedInvoice = React.forwardRef<HTMLDivElement, InvoiceProps>(({ orde
               fontWeight: 800,
               fontSize: '13px',
               fontFamily: "'Courier New', Courier, monospace",
-              transform: `translateY(${0.15 * CM}px)`,
+              transform: `translateY(${0.3 * CM}px)`,
             }}>
               {Number(order.discount_percentage) % 1 === 0 
                 ? Number(order.discount_percentage).toFixed(0) 
