@@ -44,12 +44,12 @@ const PrePrintedInvoice = React.forwardRef<HTMLDivElement, InvoiceProps>(({ orde
         backgroundColor: '#fff',
         boxSizing: 'border-box',
         position: 'relative',
+        transform: `translateX(-${0.5 * CM}px)`,
       }}
     >
       {/* ── HEADER SPACER (space above pre-printed header area) ── */}
-      {/* Increased by 1cm (4.5 -> 5.5) to move WHOLE page down as requested */}
-      {/* 6.2 - 0.3 = 5.9cm down from top */}
-      <div style={{ height: `${5.9 * CM}px` }} />
+      {/* Shifted to 5.7cm down to move header and middle table exactly 0.3cm down */}
+      <div style={{ height: `${5.7 * CM}px` }} />
 
       {/* ── HEADER ROW: Customer Name (left) + Metadata block (right) ── */}
       {/*
@@ -183,7 +183,7 @@ const PrePrintedInvoice = React.forwardRef<HTMLDivElement, InvoiceProps>(({ orde
       */}
       {[
         { label: 'Total Amount', value: subTotal.toFixed(3) },
-        { label: 'Discount', value: `${Number(order?.discount_percentage) > 0 ? `(${Number(order.discount_percentage).toFixed(2)}%) ` : ''}${discount.toFixed(3)}` },
+        { label: 'Discount', value: discount.toFixed(3) },
         { label: 'Net Amount', value: netAmount.toFixed(3) },
       ].map(({ label, value }, i) => (
         <div
@@ -195,9 +195,26 @@ const PrePrintedInvoice = React.forwardRef<HTMLDivElement, InvoiceProps>(({ orde
             alignItems: 'center',
             justifyContent: 'flex-end',
             boxSizing: 'border-box',
+            position: 'relative',
           }}
         >
-          {/* value sits inside the rightmost 2.6 cm column, shifted 0.5cm left */}
+          {/* Absolutely position the discount percentage at exactly 2 cm from left */}
+          {i === 1 && Number(order?.discount_percentage) > 0 && (
+            <div style={{
+              position: 'absolute',
+              left: `${2 * CM}px`,
+              fontWeight: 800,
+              fontSize: '13px',
+              fontFamily: "'Courier New', Courier, monospace",
+              transform: `translateY(-${0.1 * CM}px)`,
+            }}>
+              {Number(order.discount_percentage) % 1 === 0 
+                ? Number(order.discount_percentage).toFixed(0) 
+                : Number(order.discount_percentage).toFixed(2)}%
+            </div>
+          )}
+
+          {/* value sits inside the rightmost 4.0 cm column, shifted 0.35cm right */}
           <div style={{
             width: `${4.0 * CM}px`,
             textAlign: 'right',
@@ -208,16 +225,8 @@ const PrePrintedInvoice = React.forwardRef<HTMLDivElement, InvoiceProps>(({ orde
             flexDirection: 'column',
             justifyContent: 'center',
             alignItems: 'flex-end',
-            lineHeight: i === 1 ? '1.1' : '1.5'
           }}>
-            {i === 1 && Number(order?.discount_percentage) > 0 ? (
-              <>
-                <span style={{ fontSize: '10px', fontWeight: 700 }}>({Number(order.discount_percentage).toFixed(2)}%)</span>
-                <span>{discount.toFixed(3)}</span>
-              </>
-            ) : (
-              value
-            )}
+            {value}
           </div>
         </div>
       ))}
