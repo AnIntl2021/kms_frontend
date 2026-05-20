@@ -44,8 +44,8 @@ const AnalyticsPage = () => {
     const headers = [t('partner_name'), t('loss_value'), t('revenue'), t('potential'), t('adjustment_recommendation')];
     const rows = forecasting.map(f => [
       language === 'ar' ? (f.vendor_name_ar || f.vendor_name) : f.vendor_name,
-      parseFloat(f.loss_kwd).toFixed(3),
-      parseFloat(f.recent_sales).toFixed(3),
+      parseFloat(f.loss_kwd || '0').toFixed(3),
+      parseFloat(f.recent_sales || '0').toFixed(3),
       f.priority,
       f.recommendation
     ]);
@@ -72,16 +72,16 @@ const AnalyticsPage = () => {
   // Helper to render bars for SVG Chart
   const renderProfitBars = () => {
       // Get top 6 stores by sales
-      const sorted = [...forecasting].sort((a, b) => b.recent_sales - a.recent_sales).slice(0, 6);
+      const sorted = [...forecasting].sort((a, b) => parseFloat(b.recent_sales || '0') - parseFloat(a.recent_sales || '0')).slice(0, 6);
       if (sorted.length === 0) return null;
 
-      const maxSales = Math.max(...sorted.map(s => parseFloat(s.recent_sales || '1')));
+      const maxSales = Math.max(...sorted.map(s => parseFloat(s.recent_sales || '0')), 1);
       
       return sorted.map((s, idx) => {
-          const height = (parseFloat(s.recent_sales) / maxSales) * 100;
+          const height = (parseFloat(s.recent_sales || '0') / maxSales) * 100;
           return (
               <div key={idx} className="chart-bar-v">
-                  <div className="bar-label">{parseFloat(s.recent_sales).toFixed(1)}</div>
+                  <div className="bar-label">{parseFloat(s.recent_sales || '0').toFixed(1)}</div>
                   <div className="bar-fill" style={{ height: `${height}%` }}></div>
                   <div className="bar-title">{language === 'ar' ? (s.vendor_name_ar || s.vendor_name).substring(0, 8) : s.vendor_name.substring(0, 8)}..</div>
               </div>
@@ -169,7 +169,7 @@ const AnalyticsPage = () => {
                            <div key={i} className="opp-item">
                                <div>
                                    <div style={{ fontWeight: 700 }}>{language === 'ar' ? (f.vendor_name_ar || f.vendor_name) : f.vendor_name}</div>
-                                   <div style={{ fontSize: '11px', opacity: 0.8 }}>{t('sales_vs_stock_ratio')}: {(parseFloat(f.recent_sales) / (parseFloat(f.loss_kwd) || 1)).toFixed(1)}x</div>
+                                   <div style={{ fontSize: '11px', opacity: 0.8 }}>{t('sales_vs_stock_ratio')}: {(parseFloat(f.recent_sales || '0') / (parseFloat(f.loss_kwd || '0') || 1)).toFixed(1)}x</div>
                                </div>
                                <span className="stag neon">+{f.adjustmentScore}%</span>
                            </div>
@@ -241,11 +241,24 @@ const AnalyticsPage = () => {
             <div className="strategy-grid animated slideInUp delay-300">
                 <div className="strategy-card green">
                    <h4>💡 {t('earn_everything_back')}</h4>
-                   <p>Increase production for <b>{forecasting.find(f => f.adjustmentScore > 0)?.vendor_name || 'Top Stores'}</b> by 25% today. Their sales velocity is higher than current delivery volumes.</p>
+                   <p>Increase production for <b>{(() => {
+                       const topStore = forecasting.find(f => f.adjustmentScore > 0);
+                       if (!topStore) return 'Top Stores';
+                       return language === 'ar' ? (topStore.vendor_name_ar || topStore.vendor_name) : topStore.vendor_name;
+                   })()}</b> by 25% today. Their sales velocity is higher than current delivery volumes.</p>
                 </div>
                 <div className="strategy-card red">
                    <h4>✋ {t('stop_the_leak')}</h4>
-                   <p>Reduce delivery for stores with <b>Critical Priority</b> immediately. You are losing approx. {parseFloat(health?.total_loss_kwd || '0').toFixed(1)} {t('kd_currency')} every week just in these locations.</p>
+                   <p>
+                     {forecasting.some(f => f.priority.toLowerCase() === 'critical') ? (
+                       <>
+                         Reduce delivery for <b>{forecasting.filter(f => f.priority.toLowerCase() === 'critical').map(f => language === 'ar' ? (f.vendor_name_ar || f.vendor_name) : f.vendor_name).join(', ')}</b> (Critical Priority) immediately.
+                       </>
+                     ) : (
+                       <>Reduce delivery for stores with <b>Critical Priority</b> immediately.</>
+                     )}{' '}
+                     You are losing approx. {parseFloat(health?.total_loss_kwd || '0').toFixed(1)} {t('kd_currency')} every week just in these locations.
+                   </p>
                 </div>
             </div>
           </>
@@ -272,6 +285,7 @@ const AnalyticsPage = () => {
         .chart-deck-grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 1.5rem; margin-bottom: 2rem; }
         .chart-card { background: white; border-radius: 16px; padding: 1.5rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); border: 1px solid #f1f5f9; }
         .chart-card.dark { background: #1e293b; color: white; }
+        .chart-card.dark h4 { color: white !important; }
         .chart-header { display: flex; align-items: center; gap: 0.8rem; margin-bottom: 2rem; }
         .chart-header h4 { margin: 0; }
         
