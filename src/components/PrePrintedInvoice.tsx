@@ -44,7 +44,7 @@ const PrePrintedInvoice = React.forwardRef<HTMLDivElement, InvoiceProps>(({ orde
         backgroundColor: '#fff',
         boxSizing: 'border-box',
         position: 'relative',
-        transform: `translateX(-${0.5 * CM}px)`,
+        transform: `translateX(0px)`,
       }}
     >
       {/* ── HEADER SPACER (space above pre-printed header area) ── */}
@@ -198,11 +198,11 @@ const PrePrintedInvoice = React.forwardRef<HTMLDivElement, InvoiceProps>(({ orde
             position: 'relative',
           }}
         >
-          {/* Absolutely position the discount percentage at exactly 2 cm from left */}
+          {/* Absolutely position the discount percentage at exactly 3 cm from left */}
           {i === 1 && Number(order?.discount_percentage) > 0 && (
             <div style={{
               position: 'absolute',
-              left: `${2 * CM}px`,
+              left: `${3 * CM}px`,
               fontWeight: 800,
               fontSize: '13px',
               fontFamily: "'Courier New', Courier, monospace",
