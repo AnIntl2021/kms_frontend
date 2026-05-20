@@ -131,7 +131,7 @@ const PrePrintedInvoice = React.forwardRef<HTMLDivElement, InvoiceProps>(({ orde
           width: '100%',
           borderCollapse: 'collapse',
           tableLayout: 'fixed',
-          transform: `translateX(${0.2 * CM}px)`,
+          transform: `translate(${0.2 * CM}px, ${0.2 * CM}px)`,
         }}>
           <colgroup>
             <col style={{ width: cols.code }} />
