@@ -17,7 +17,7 @@ const FullInvoicePrint = React.forwardRef<HTMLDivElement, InvoiceProps>(({ order
 
   return (
     <div ref={ref} className="invoice-print-container" style={{
-      padding: '30px 40px',
+      padding: '30px 40px 30px calc(40px + 0.5cm)',
       fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
       color: '#000',
       backgroundColor: '#fff',
@@ -187,7 +187,7 @@ const FullInvoicePrint = React.forwardRef<HTMLDivElement, InvoiceProps>(({ order
               </tr>
               <tr>
                 <td style={{ border: '1px solid #000', padding: '10px 15px', fontWeight: 700, fontSize: '13px', textAlign: 'left' }}>
-                  Discount {Number(order?.discount_percentage) > 0 && `(${Number(order.discount_percentage)}%)`} 
+                  Discount {Number(order?.discount_percentage) > 0 && <span style={{ marginLeft: '1cm' }}>({Number(order.discount_percentage)}%)</span>} 
                   <span style={{ float: 'right' }}>الخصم</span>
                 </td>
                 <td style={{ border: '1px solid #000', padding: '10px 8px', textAlign: 'right', fontWeight: 900, fontSize: '16px' }}>{discount.toFixed(3)}</td>
