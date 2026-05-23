@@ -196,8 +196,15 @@
 .po-delete-row:hover { color: #ef4444; }
 
 /* Add Row Button */
-.po-add-row {
+.po-add-row-group {
   margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.po-add-row {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -212,6 +219,38 @@
 }
 
 .po-add-row:hover { background: rgba(2, 138, 74, 0.1); }
+
+/* Quick-link: Add Stock Item button */
+.btn-add-stock-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  background: transparent;
+  color: #7c3aed;
+  border: 1.5px dashed #a78bfa;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  letter-spacing: 0.2px;
+}
+
+.btn-add-stock-item:hover {
+  background: #f5f3ff;
+  border-color: #7c3aed;
+  color: #5b21b6;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.15);
+}
+
+.btn-add-stock-item:active {
+  transform: translateY(0);
+}
+
+
 
 /* Totals Panel */
 .po-footer-grid {
@@ -245,6 +284,34 @@
   color: var(--fnf-green);
   font-weight: 900;
 }
+
+/* Inline discount input — no border/box, blends into the row */
+.po-discount-input {
+  width: 72px;
+  text-align: right;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-dark);
+  background: transparent;
+  border: none;
+  border-bottom: 1.5px dashed #cbd5e1;
+  outline: none;
+  padding: 2px 4px;
+  transition: border-color 0.2s ease;
+  -moz-appearance: textfield;
+}
+
+.po-discount-input::-webkit-outer-spin-button,
+.po-discount-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.po-discount-input:focus {
+  border-bottom-color: var(--fnf-green);
+  color: var(--fnf-green);
+}
+
 
 /* Action Buttons */
 .po-actions {

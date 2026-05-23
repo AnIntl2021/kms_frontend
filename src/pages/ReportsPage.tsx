@@ -43,6 +43,12 @@ const ReportsPage = () => {
   }, []);
 
   useEffect(() => {
+    // Only trigger if both dates are valid or both are empty
+    const startValid = !startDate || /^\d{4}-\d{2}-\d{2}$/.test(startDate);
+    const endValid = !endDate || /^\d{4}-\d{2}-\d{2}$/.test(endDate);
+    if (!startValid || !endValid) return;
+    // Ensure startDate <= endDate
+    if (startDate && endDate && startDate > endDate) return;
     fetchReportData();
     fetchAnalytics();
   }, [activeTab, startDate, endDate, selectedVendor, selectedBranch, selectedSalesman]);
@@ -180,18 +186,33 @@ const ReportsPage = () => {
   };
 
   const filteredData = data.filter(d => {
+    // 🔍 0. CLIENT-SIDE DATE FILTER FALLBACK (catches any edge cases)
+    if (startDate && endDate) {
+      const recordDate = d.report_date || d.created_at || '';
+      if (recordDate) {
+        const rd = recordDate.substring(0, 10);
+        if (rd < startDate || rd > endDate) return false;
+      }
+    }
+
     // 🔍 1. API REINFORCEMENT: FILTER BY VENDOR, BRANCH, SALESMAN
-    // Skip these for 'products' tab as data is aggregated and already filtered by backend
-    if (activeTab !== 'products') {
+    if (activeTab === 'sales' || activeTab === 'wastage') {
       const vendorMatch = !selectedVendor || String(d.vendor_id) === String(selectedVendor);
       const branchMatch = !selectedBranch || String(d.branch_id) === String(selectedBranch);
       const salesmanMatch = !selectedSalesman || String(d.salesman_id) === String(selectedSalesman);
-
       if (!vendorMatch || !branchMatch || !salesmanMatch) return false;
+    } else if (activeTab === 'purchase') {
+      const vendorMatch = !selectedVendor || String(d.vendor_id) === String(selectedVendor);
+      const branchMatch = !selectedBranch || String(d.branch_id) === String(selectedBranch);
+      if (!vendorMatch || !branchMatch) return false;
+    } else if (activeTab === 'production') {
+      const branchMatch = !selectedBranch || String(d.branch_id) === String(selectedBranch);
+      if (!branchMatch) return false;
     }
 
     // 🔍 2. SEARCH TERM FILTER
     const searchStr = searchTerm.toLowerCase();
+    if (!searchStr) return true;
     if (activeTab === 'sales') {
       return (d.vendor_name?.toLowerCase().includes(searchStr) || 
               String(d.sale_id).includes(searchStr) ||
@@ -256,9 +277,20 @@ const ReportsPage = () => {
             <div className="filter-group">
               <label><Calendar size={14} /> {t('date_range')}</label>
               <div className="date-inputs">
-                <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+                <input 
+                  type="date" 
+                  value={startDate} 
+                  max={endDate}
+                  onChange={(e) => setStartDate(e.target.value)} 
+                />
                 <span>{t('to')}</span>
-                <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+                <input 
+                  type="date" 
+                  value={endDate} 
+                  min={startDate}
+                  max={new Date().toISOString().split('T')[0]}
+                  onChange={(e) => setEndDate(e.target.value)} 
+                />
               </div>
             </div>
 
@@ -775,8 +807,8 @@ const ReportsPage = () => {
 
         .filter-grid { 
           display: grid; 
-          grid-template-columns: 1.2fr 1fr 1fr; 
-          gap: 1.5rem; 
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
+          gap: 1rem 1.5rem; 
           align-items: flex-end;
           margin-bottom: 2rem;
         }

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import SearchableSelect from '../components/SearchableSelect';
 import api from '../api/axios';
-import { Plus, X, Trash2, Edit, Eye, PlusCircle, Package, Truck, Calendar, CreditCard, StickyNote, Hash, MoreHorizontal, ShoppingBag, ArrowRight, PackageCheck } from 'lucide-react';
+import { Plus, X, Trash2, Edit, Eye, PlusCircle, Package, Truck, Calendar, CreditCard, StickyNote, Hash, MoreHorizontal, ShoppingBag, ArrowRight, PackageCheck, ExternalLink } from 'lucide-react';
 import { toast } from 'react-toastify';
 import './PurchaseOrdersPage.css';
 import { useLanguage } from '../hooks/useLanguage';
@@ -445,8 +445,19 @@ const PurchaseOrdersPage = () => {
                   </table>
                 </div>
 
-                <div className="po-add-row" onClick={() => setFormData({...formData, items: [...formData.items, {...initialItem}]})}>
-                  <PlusCircle size={18} /> {t('add_new_line_item')}
+                <div className="po-add-row-group">
+                  <div className="po-add-row" onClick={() => setFormData({...formData, items: [...formData.items, {...initialItem}]})}>
+                    <PlusCircle size={18} /> {t('add_new_line_item')}
+                  </div>
+                  <button
+                    type="button"
+                    className="btn-add-stock-item"
+                    onClick={() => window.open('/inventory?addNew=true', '_blank')}
+                    title="Open Inventory page and add a new stock item"
+                  >
+                    <ExternalLink size={14} />
+                    Add Stock Item
+                  </button>
                 </div>
               </div>
 
@@ -465,7 +476,7 @@ const PurchaseOrdersPage = () => {
                   <div className="po-total-row">
                     <span>{t('overall_discount')}</span>
                     <div className="flex items-center gap-2">
-                      <input type="number" className="w-24 text-end p-1 rounded-lg border border-slate-200" value={formData.discount_amount} onChange={e => setFormData({...formData, discount_amount: Number(e.target.value)})} />
+                      <input type="number" className="po-discount-input" min="0" step="0.001" value={formData.discount_amount} onChange={e => setFormData({...formData, discount_amount: Number(e.target.value)})} />
                       <span className="text-xs font-bold text-[#01562c]">{t('kd_currency')}</span>
                     </div>
                   </div>

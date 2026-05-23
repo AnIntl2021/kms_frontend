@@ -13,6 +13,7 @@ import {
   AlertOctagon, 
   RotateCcw, 
   ArrowRight,
+  ArrowLeft,
   TrendingUp,
   FileText,
   TrendingDown,
@@ -48,6 +49,7 @@ interface DispatchItem {
 interface Dispatch {
   sale_id: number;
   order_number: string;
+  vendor_id?: number;
   batch_number?: string;
   client_name: string;
   client_name_ar?: string;
@@ -65,6 +67,7 @@ interface Dispatch {
 interface ReturnLog {
   return_id: number;
   sale_id: number;
+  total_credit_amount?: number;
   client_name: string;
   branch_name?: string;
   reason: string;
@@ -83,6 +86,12 @@ const DispatchDashboardPage = () => {
   const [selectedDispatch, setSelectedDispatch] = useState<Dispatch | null>(null);
   const [dispatchItems, setDispatchItems] = useState<DispatchItem[]>([]);
   const [itemsLoading, setItemsLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [selectedPartner, setSelectedPartner] = useState<string | null>(null);
+  const [partnerLoading, setPartnerLoading] = useState(false);
+  const [partnerSoldItems, setPartnerSoldItems] = useState<any[]>([]);
+  const [partnerReturnedItems, setPartnerReturnedItems] = useState<any[]>([]);
+  const [activeOrdersModalBranch, setActiveOrdersModalBranch] = useState<string | null>(null);
 
   // Dynamic Calculated KPI States
   const [totalReturnsValue, setTotalReturnsValue] = useState(0);
@@ -94,6 +103,11 @@ const DispatchDashboardPage = () => {
   useEffect(() => {
     fetchDashboardData();
   }, []);
+
+  // Reset pagination to first page when search or status filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter]);
 
   const fetchDashboardData = async () => {
     try {
@@ -176,6 +190,73 @@ const DispatchDashboardPage = () => {
     }
   };
 
+  const handleSelectPartner = async (partnerName: string) => {
+    setSelectedPartner(partnerName);
+    setPartnerLoading(true);
+    try {
+      const pDispatches = dispatches.filter(d => d.client_name === partnerName);
+      const firstMatch = pDispatches.find(d => d.vendor_id !== undefined && d.vendor_id !== null);
+      const vendorId = firstMatch ? firstMatch.vendor_id : null;
+
+      if (!vendorId) {
+        console.warn(`No vendor_id found for partner: ${partnerName}`);
+        setPartnerSoldItems([]);
+        setPartnerReturnedItems([]);
+        return;
+      }
+
+      const [perfRes, wastageRes] = await Promise.all([
+        api.get(`/reports/products?vendor_id=${vendorId}`).catch(() => ({ data: { data: [] } })),
+        api.get(`/reports/wastage?vendor_id=${vendorId}`).catch(() => ({ data: { data: [] } }))
+      ]);
+
+      const perfData = perfRes.data?.data || perfRes.data || [];
+      const wastageData = wastageRes.data?.data || wastageRes.data || [];
+
+      const soldMap: { [key: string]: { name: string, qty: number, totalVal: number, returnsQty: number, returnsLoss: number, netVal: number } } = {};
+      perfData.forEach((item: any) => {
+        const key = language === 'ar' ? (item.name_ar || item.name_en) : item.name_en;
+        const qty = Number(item.total_sold || 0);
+        const val = Number(item.revenue || 0);
+        const rQty = Number(item.returns_qty || 0);
+        const rLoss = Number(item.returns_loss || 0);
+        if (!soldMap[key]) {
+          soldMap[key] = { name: key, qty: 0, totalVal: 0, returnsQty: 0, returnsLoss: 0, netVal: 0 };
+        }
+        soldMap[key].qty += qty;
+        soldMap[key].totalVal += val;
+        soldMap[key].returnsQty += rQty;
+        soldMap[key].returnsLoss += rLoss;
+        soldMap[key].netVal += (val - rLoss);
+      });
+
+      const returnedMap: { [key: string]: { name: string, qty: number, totalLoss: number, branches: { [branch: string]: number } } } = {};
+      wastageData.forEach((item: any) => {
+        const key = language === 'ar' ? (item.product_name_ar || item.product_name) : item.product_name;
+        const qty = Number(item.quantity || 0);
+        const cost = Number(item.cost_price || 0);
+        const loss = qty * cost;
+        const branch = item.branch_name || 'Main Office';
+
+        if (!returnedMap[key]) {
+          returnedMap[key] = { name: key, qty: 0, totalLoss: 0, branches: {} };
+        }
+        returnedMap[key].qty += qty;
+        returnedMap[key].totalLoss += loss;
+        returnedMap[key].branches[branch] = (returnedMap[key].branches[branch] || 0) + qty;
+      });
+
+      setPartnerSoldItems(Object.values(soldMap).sort((a, b) => b.qty - a.qty));
+      setPartnerReturnedItems(Object.values(returnedMap).sort((a, b) => b.qty - a.qty));
+    } catch (e) {
+      console.error("Failed to load partner analytics:", e);
+      setPartnerSoldItems([]);
+      setPartnerReturnedItems([]);
+    } finally {
+      setPartnerLoading(false);
+    }
+  };
+
   const updateDispatchStatus = async (saleId: number, status: string) => {
     try {
       const result = await Swal.fire({
@@ -248,11 +329,12 @@ const DispatchDashboardPage = () => {
   const filteredDispatches = dispatches.filter(d => {
     const term = searchTerm.toLowerCase();
     const orderNo = d.order_number.toLowerCase();
+    const formattedOrderNo = `FNFI-${100000 + d.sale_id}`.toLowerCase();
     const client = (d.client_name || '').toLowerCase();
     const salesman = (d.salesman_name || '').toLowerCase();
     const batch = (d.batch_number || '').toLowerCase();
 
-    const matchesSearch = orderNo.includes(term) || client.includes(term) || salesman.includes(term) || batch.includes(term);
+    const matchesSearch = formattedOrderNo.includes(term) || orderNo.includes(term) || client.includes(term) || salesman.includes(term) || batch.includes(term);
 
     if (statusFilter === 'all') return matchesSearch;
     if (statusFilter === 'in_transit') return matchesSearch && (d.dispatch_status === 'in_transit' || d.dispatch_status === 'dispatched');
@@ -261,6 +343,420 @@ const DispatchDashboardPage = () => {
     
     return matchesSearch;
   });
+
+  // Pagination Calculations
+  const indexOfLastEntry = currentPage * 5;
+  const indexOfFirstEntry = indexOfLastEntry - 5;
+  const currentEntries = filteredDispatches.slice(indexOfFirstEntry, indexOfLastEntry);
+  const totalPages = Math.ceil(filteredDispatches.length / 5);
+
+  if (selectedPartner) {
+    const partnerDispatches = dispatches.filter(d => d.client_name === selectedPartner);
+    const partnerReturns = returns.filter(r => r.client_name === selectedPartner);
+
+    const pActiveCount = partnerDispatches.filter(d => d.dispatch_status === 'in_transit' || d.dispatch_status === 'dispatched' || d.dispatch_status === 'pending').length;
+    const pDeliveredCount = partnerDispatches.filter(d => d.dispatch_status === 'delivered').length;
+
+    const pGrossValue = partnerDispatches.reduce((sum, d) => sum + Number(d.total_amount || 0), 0);
+    const pSoldValue = partnerDispatches.filter(d => d.dispatch_status === 'delivered').reduce((sum, d) => sum + Number(d.total_amount || 0), 0);
+    const pReturnedValue = partnerReturns.reduce((sum, r) => sum + Number(r.total_credit_amount || 0), 0);
+    const pNetProfit = pSoldValue - pReturnedValue;
+
+    const pReturnRate = pSoldValue > 0 ? Math.round((pReturnedValue / pSoldValue) * 100) : 0;
+
+    const pBranchesSet = new Set<string>();
+    partnerDispatches.forEach(d => pBranchesSet.add(d.branch_name || 'Main Office'));
+    partnerReturns.forEach(r => pBranchesSet.add(r.branch_name || 'Main Office'));
+    const pBranches = Array.from(pBranchesSet);
+
+    const branchData = pBranches.map(branchName => {
+      const bDispatches = partnerDispatches.filter(d => (d.branch_name || 'Main Office') === branchName);
+      const bReturns = partnerReturns.filter(r => (r.branch_name || 'Main Office') === branchName);
+
+      const bActiveCount = bDispatches.filter(d => d.dispatch_status === 'in_transit' || d.dispatch_status === 'dispatched' || d.dispatch_status === 'pending').length;
+      const bSoldValue = bDispatches.filter(d => d.dispatch_status === 'delivered').reduce((sum, d) => sum + Number(d.total_amount || 0), 0);
+      const bReturnedValue = bReturns.reduce((sum, r) => sum + Number(r.total_credit_amount || 0), 0);
+      const bNetProfit = bSoldValue - bReturnedValue;
+
+      return {
+        name: branchName,
+        activeCount: bActiveCount,
+        soldValue: bSoldValue,
+        returnedValue: bReturnedValue,
+        netProfit: bNetProfit
+      };
+    }).sort((a, b) => b.netProfit - a.netProfit);
+
+    return (
+      <Layout title={`Partner Analytics • ${selectedPartner}`}>
+        <div className="partner-analytics-portal animated fadeIn">
+          {/* Header */}
+          <div className="portal-header">
+            <button className="btn-back" onClick={() => setSelectedPartner(null)}>
+              <ArrowLeft size={16} /> Back to Overview
+            </button>
+            <div className="partner-title-area">
+              <div className="partner-avatar">
+                <Building2 size={24} />
+              </div>
+              <div>
+                <h2>{selectedPartner}</h2>
+                <span className="partner-badge">Corporate Partner Ledger</span>
+              </div>
+            </div>
+          </div>
+
+          {partnerLoading ? (
+            <div className="portal-loading">
+              <Clock className="spin-icon text-green" size={32} />
+              <p>Analyzing partner telemetry and aggregating ledger items...</p>
+            </div>
+          ) : (
+            <div className="portal-content">
+              {/* KPIs Bento Grid */}
+              <div className="bento-grid partner-bento">
+                
+                {/* Active Dispatches */}
+                <div className="hud-card glass-glow-blue">
+                  <div className="hud-header">
+                    <div className="icon-wrapper bg-blue">
+                      <Truck size={24} />
+                    </div>
+                    <span className="hud-title">ACTIVE SHIPMENTS</span>
+                  </div>
+                  <div className="hud-body">
+                    <div className="big-value">{pActiveCount}</div>
+                    <div className="hud-sub">Currently en-route/prepared</div>
+                  </div>
+                </div>
+
+                {/* Total Gross Dispatched */}
+                <div className="hud-card glass-glow-blue">
+                  <div className="hud-header">
+                    <div className="icon-wrapper bg-blue">
+                      <TrendingUp size={24} />
+                    </div>
+                    <span className="hud-title">GROSS DISPATCHED</span>
+                  </div>
+                  <div className="hud-body">
+                    <div className="big-value">{pGrossValue.toFixed(3)} <span className="currency">KD</span></div>
+                    <div className="hud-sub">All shipped load value</div>
+                  </div>
+                </div>
+
+                {/* Delivered / Sold */}
+                <div className="hud-card glass-glow-green">
+                  <div className="hud-header">
+                    <div className="icon-wrapper bg-green">
+                      <CheckCircle2 size={24} />
+                    </div>
+                    <span className="hud-title">DELIVERED REVENUE</span>
+                  </div>
+                  <div className="hud-body">
+                    <div className="big-value text-green">{pSoldValue.toFixed(3)} <span className="currency">KD</span></div>
+                    <div className="hud-sub">{pDeliveredCount} completed sales</div>
+                  </div>
+                </div>
+
+                {/* Returns Received */}
+                <div className="hud-card glass-glow-rose">
+                  <div className="hud-header">
+                    <div className="icon-wrapper bg-rose">
+                      <RotateCcw size={24} />
+                    </div>
+                    <span className="hud-title">TOTAL RETURNS</span>
+                  </div>
+                  <div className="hud-body">
+                    <div className="big-value text-rose">{pReturnedValue.toFixed(3)} <span className="currency">KD</span></div>
+                    <div className="hud-sub">{partnerReturns.length} return claims received</div>
+                  </div>
+                </div>
+
+                {/* Return Rate */}
+                <div className="hud-card glass-glow-rose">
+                  <div className="hud-header">
+                    <div className="icon-wrapper bg-rose">
+                      <AlertOctagon size={24} />
+                    </div>
+                    <span className="hud-title">RETURN VALUE RATE</span>
+                  </div>
+                  <div className="hud-body">
+                    <div className="big-value text-rose">{pReturnRate}%</div>
+                    <div className="hud-sub">Percentage of revenue returned</div>
+                  </div>
+                </div>
+
+                {/* Net Earnings */}
+                <div className="hud-card glass-glow-green" style={{ gridColumn: 'span 2' }}>
+                  <div className="hud-header">
+                    <div className="icon-wrapper bg-green">
+                      <CheckCircle2 size={24} />
+                    </div>
+                    <span className="hud-title">NET EARNINGS / PARTNER PROFIT</span>
+                  </div>
+                  <div className="hud-body">
+                    <div className="big-value text-green" style={{ fontSize: '1.4rem' }}>{pNetProfit.toFixed(3)} <span className="currency">KD</span></div>
+                    <div className="hud-sub">Net profitability from this client</div>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Grid Layout for branches & products */}
+              <div className="main-content-layout">
+                
+                {/* LEFT COLUMN: BRANCHES & SALES */}
+                <div className="left-column-layout">
+                  
+                  {/* Branch Performance Card */}
+                  <div className="dispatch-stream-card">
+                    <div className="stream-header">
+                      <div className="header-left">
+                        <Building2 size={18} className="text-green" />
+                        <h3>Branch Performance Ledger</h3>
+                      </div>
+                    </div>
+                    <div className="stream-table-wrapper" style={{ maxHeight: '250px' }}>
+                      <table className="dispatch-table">
+                        <thead>
+                          <tr>
+                            <th>BRANCH NAME</th>
+                            <th className="text-center">ACTIVE DISPATCHES</th>
+                            <th>REVENUE SOLD</th>
+                            <th>RETURNS VALUE</th>
+                            <th>NET PROFIT</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {branchData.map((branch, idx) => (
+                            <tr key={idx} className="dispatch-row">
+                              <td><strong>{branch.name}</strong></td>
+                              <td className="text-center">
+                                <span 
+                                  className={`status-badge-premium ${branch.activeCount > 0 ? 'in_transit' : 'delivered'}`}
+                                  onClick={() => branch.activeCount > 0 && setActiveOrdersModalBranch(branch.name)}
+                                  style={branch.activeCount > 0 ? { cursor: 'pointer' } : undefined}
+                                  title={branch.activeCount > 0 ? "Click to view active dispatches" : undefined}
+                                >
+                                  {branch.activeCount} Active
+                                </span>
+                              </td>
+                              <td>{branch.soldValue.toFixed(3)} KD</td>
+                              <td className="text-rose">{branch.returnedValue.toFixed(3)} KD</td>
+                              <td className={branch.netProfit >= 0 ? 'text-green font-bold' : 'text-rose font-bold'}>
+                                {branch.netProfit.toFixed(3)} KD
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Top Selling Products Card */}
+                  <div className="dispatch-stream-card">
+                    <div className="stream-header">
+                      <div className="header-left">
+                        <TrendingUp size={18} className="text-green" />
+                        <h3>Top Selling Products (Wins & Returns)</h3>
+                      </div>
+                    </div>
+                    <div className="stream-table-wrapper" style={{ maxHeight: '220px' }}>
+                      {partnerSoldItems.length === 0 ? (
+                        <div className="no-records-area">
+                          <p>No completed sales item data found.</p>
+                        </div>
+                      ) : (
+                        <table className="dispatch-table">
+                          <thead>
+                            <tr>
+                              <th>PRODUCT NAME</th>
+                              <th className="text-center">QTY SOLD</th>
+                              <th>REVENUE</th>
+                              <th className="text-center text-rose">RETURNS</th>
+                              <th>NET REVENUE</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {partnerSoldItems.map((item, idx) => (
+                              <tr key={idx}>
+                                <td><strong>{item.name}</strong></td>
+                                <td className="text-center"><span className="loaded-qty">{item.qty}</span></td>
+                                <td>{item.totalVal.toFixed(3)} KD</td>
+                                <td className="text-center">
+                                  {item.returnsQty > 0 ? (
+                                    <span className="returns-tag-highlight">
+                                      {item.returnsQty} u ({item.returnsLoss.toFixed(3)} KD)
+                                    </span>
+                                  ) : (
+                                    <span className="text-slate-400 font-normal">0</span>
+                                  )}
+                                </td>
+                                <td className="text-green font-bold">
+                                  {item.netVal.toFixed(3)} KD
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      )}
+                    </div>
+                  </div>
+
+                </div>
+
+                {/* RIGHT COLUMN: RETURNS & LOGS */}
+                <div className="right-column-layout">
+                  
+                  {/* Returned Products Card */}
+                  <div className="dispatch-stream-card">
+                    <div className="stream-header">
+                      <div className="header-left">
+                        <RotateCcw size={18} className="text-rose" />
+                        <h3>Returned Menu Products (Loss Control)</h3>
+                      </div>
+                    </div>
+                    <div className="stream-table-wrapper" style={{ maxHeight: '220px' }}>
+                      {partnerReturnedItems.length === 0 ? (
+                        <div className="no-records-area">
+                          <p>No returns recorded for this client. Clean record!</p>
+                        </div>
+                      ) : (
+                        <table className="dispatch-table">
+                          <thead>
+                            <tr>
+                              <th>PRODUCT NAME</th>
+                              <th className="text-center">QTY RETURNED</th>
+                              <th>LOSS VALUE</th>
+                              <th>BRANCH IMPACT</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {partnerReturnedItems.map((item, idx) => (
+                              <tr key={idx}>
+                                <td><strong className="text-rose">{item.name}</strong></td>
+                                <td className="text-center">
+                                  <span className="loaded-qty" style={{ backgroundColor: 'rgba(244, 63, 94, 0.08)', color: '#e11d48' }}>
+                                    {item.qty}
+                                  </span>
+                                </td>
+                                <td className="text-rose font-bold">{item.totalLoss.toFixed(3)} KD</td>
+                                <td>
+                                  <div className="branch-badges-list">
+                                    {Object.entries(item.branches || {}).map(([branch, qty]) => (
+                                      <span key={branch} className="branch-qty-badge">
+                                        <span className="b-name">{branch}</span>
+                                        <span className="b-val">{qty as number}</span>
+                                      </span>
+                                    ))}
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Dispatches Card */}
+                  <div className="dispatch-pulse-card">
+                    <div className="section-title">
+                      <Truck size={16} className="text-blue" />
+                      <h3>Active & Recent Shipments</h3>
+                    </div>
+                    <div className="small-items-list" style={{ maxHeight: '250px' }}>
+                      {partnerDispatches.slice(0, 10).map((d, idx) => (
+                        <div key={idx} className="dispatch-item-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '0.25rem' }}>
+                          <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span className="item-name" style={{ fontWeight: 800 }}>FNFI-{100000 + d.sale_id}</span>
+                            <span className={`status-badge-premium ${d.dispatch_status}`}>{d.dispatch_status.toUpperCase()}</span>
+                          </div>
+                          <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', fontSize: '0.68rem', color: '#64748b' }}>
+                            <span>Branch: <b>{d.branch_name || 'Main Office'}</b></span>
+                            <span>Salesman: <b>{d.salesman_name || 'Unassigned'}</b></span>
+                          </div>
+                          <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', fontSize: '0.68rem', color: '#64748b' }}>
+                            <span>Dispatched: <b>{d.dispatch_date}</b></span>
+                            <span>Value: <b>{Number(d.total_amount).toFixed(3)} KD</b></span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                </div>
+
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Active Orders Modal */}
+        {activeOrdersModalBranch && (
+          <div className="modal-overlay animated fadeIn" onClick={() => setActiveOrdersModalBranch(null)}>
+            <div className="modal-card animated scaleIn" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-header">
+                <div className="header-left" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <Truck size={18} className="text-blue" />
+                  <h3 style={{ margin: 0 }}>Active Shipments • {activeOrdersModalBranch}</h3>
+                </div>
+                <button className="btn-close" onClick={() => setActiveOrdersModalBranch(null)}>&times;</button>
+              </div>
+              <div className="modal-body">
+                {(() => {
+                  const activeDispatches = partnerDispatches.filter(
+                    d => (d.branch_name || 'Main Office') === activeOrdersModalBranch &&
+                    (d.dispatch_status === 'in_transit' || d.dispatch_status === 'dispatched' || d.dispatch_status === 'pending')
+                  );
+                  
+                  if (activeDispatches.length === 0) {
+                    return (
+                      <div className="no-active-orders">
+                        <AlertOctagon size={28} />
+                        <p>No active shipments found for this branch.</p>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="active-orders-list">
+                      {activeDispatches.map((d, index) => (
+                        <div key={index} className="modal-order-row">
+                          <div className="order-main-info">
+                            <span className="order-id" style={{ fontWeight: 900 }}>FNFI-{100000 + d.sale_id}</span>
+                            <span className={`status-badge-premium ${d.dispatch_status}`}>
+                              {d.dispatch_status.toUpperCase()}
+                            </span>
+                          </div>
+                          <div className="order-sub-details">
+                            <div className="detail-item">
+                              <span className="label">Salesman</span>
+                              <span className="val">{d.salesman_name || 'Unassigned'}</span>
+                            </div>
+                            <div className="detail-item">
+                              <span className="label">Dispatched</span>
+                              <span className="val">{d.dispatch_date}</span>
+                            </div>
+                            <div className="detail-item" style={{ gridColumn: 'span 2', marginTop: '0.2rem', borderTop: '1px solid #f1f5f9', paddingTop: '0.2rem' }}>
+                              <span className="label">Value</span>
+                              <span className="val bold text-green" style={{ fontSize: '0.8rem' }}>{Number(d.total_amount).toFixed(3)} KD</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+          </div>
+        )}
+
+        <DashboardStyles />
+      </Layout>
+    );
+  }
 
   return (
     <Layout title={t('dispatch_dashboard') || 'Dispatch Dashboard & Pulse'}>
@@ -415,457 +911,828 @@ const DispatchDashboardPage = () => {
 
         </div>
 
-        {/* 📊 NEXT-GEN CHARTS & LOGISTICS RADAR */}
-        <div className="analytics-charts-grid">
+        {/* 📊 MAIN CONTENT SPLIT LAYOUT (FITTING 1 PAGE) */}
+        <div className="main-content-layout">
           
-          {/* Chart 1: Sales / Dispatch Value Timeline */}
-          <div className="analytics-chart-card glass-glow-blue">
-            <div className="chart-header">
-              <div className="header-icon-title">
-                <div className="icon-wrapper bg-blue small">
-                  <TrendingUp size={18} />
-                </div>
-                <div>
-                  <h4>{language === 'ar' ? 'مخطط قيمة التوزيع' : 'Dispatch Value Timeline'}</h4>
-                  <p className="chart-sub">Chronological billing volumes in KWD</p>
-                </div>
-              </div>
-            </div>
-            <div className="chart-body">
-              {timelineData.length === 0 ? (
-                <div className="empty-chart-placeholder">
-                  <Activity size={24} className="spin-icon text-blue" />
-                  <p>Awaiting dispatch stream telemetry...</p>
-                </div>
-              ) : (
-                <div style={{ width: '100%', height: 180 }}>
-                  <ResponsiveContainer>
-                    <AreaChart data={timelineData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                      <defs>
-                        <linearGradient id="colorAmount" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4}/>
-                          <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                      <XAxis dataKey="date" stroke="#94a3b8" fontSize={11} fontWeight={600} tickLine={false} />
-                      <YAxis stroke="#94a3b8" fontSize={11} fontWeight={600} tickLine={false} />
-                      <Tooltip 
-                        contentStyle={{ 
-                          background: 'rgba(255, 255, 255, 0.95)', 
-                          border: '1px solid #e2e8f0', 
-                          borderRadius: 12, 
-                          boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)' 
-                        }} 
-                      />
-                      <Area type="monotone" dataKey="amount" stroke="#2563eb" strokeWidth={3} fillOpacity={1} fill="url(#colorAmount)" name="Value (KD)" />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Chart 2: Logistics Matrix Breakdown */}
-          <div className="analytics-chart-card glass-glow-green">
-            <div className="chart-header">
-              <div className="header-icon-title">
-                <div className="icon-wrapper bg-green small">
-                  <Activity size={18} />
-                </div>
-                <div>
-                  <h4>{language === 'ar' ? 'تحليل حالة الخدمات اللوجستية' : 'Logistics Matrix Breakdown'}</h4>
-                  <p className="chart-sub">Active status distribution shares</p>
-                </div>
-              </div>
-            </div>
-            <div className="chart-body pie-chart-body">
-              {pieData.length === 0 ? (
-                <div className="empty-chart-placeholder">
-                  <Clock size={24} className="spin-icon text-green" />
-                  <p>Awaiting status telemetry...</p>
-                </div>
-              ) : (
-                <div className="pie-container-layout">
-                  <div style={{ width: '100%', height: 180 }}>
-                    <ResponsiveContainer>
-                      <PieChart>
-                        <Pie
-                          data={pieData}
-                          cx="50%"
-                          cy="55%"
-                          innerRadius={40}
-                          outerRadius={60}
-                          paddingAngle={4}
-                          dataKey="value"
-                        >
-                          {pieData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                          ))}
-                        </Pie>
-                        <Tooltip
-                          contentStyle={{ 
-                            background: 'rgba(255, 255, 255, 0.95)', 
-                            border: '1px solid #e2e8f0', 
-                            borderRadius: 12 
-                          }}
-                        />
-                        <Legend verticalAlign="bottom" height={36} iconType="circle" />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-        </div>
-
-        {/* 🚚 LIVE INTERACTIVE CONTROL DECK */}
-        <div className="control-deck-layout">
-          
-          {/* LEFT: Live Dispatch Streams */}
-          <div className="dispatch-stream-card">
+          {/* LEFT COLUMN: CHARTS + STREAMS */}
+          <div className="left-column-layout">
             
-            <div className="stream-header">
-              <div className="header-left">
-                <Activity size={20} className="pulse-text" />
-                <h3>Live Logistics Streams</h3>
-              </div>
-              <div className="search-and-filter">
-                <div className="search-box-wrapper">
-                  <Search size={16} />
-                  <input 
-                    type="text" 
-                    placeholder="Search by Order #, Client, Salesman..." 
-                    value={searchTerm} 
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                </div>
-                <div className="status-toggles">
-                  <button className={`toggle-btn ${statusFilter === 'all' ? 'active' : ''}`} onClick={() => setStatusFilter('all')}>All</button>
-                  <button className={`toggle-btn ${statusFilter === 'in_transit' ? 'active' : ''}`} onClick={() => setStatusFilter('in_transit')}>In Transit</button>
-                  <button className={`toggle-btn ${statusFilter === 'delivered' ? 'active' : ''}`} onClick={() => setStatusFilter('delivered')}>Delivered</button>
-                  <button className={`toggle-btn ${statusFilter === 'pending' ? 'active' : ''}`} onClick={() => setStatusFilter('pending')}>Prepared</button>
-                </div>
-              </div>
-            </div>
-
-            <div className="stream-table-wrapper">
-              {loading ? (
-                <div className="loading-spinner-area">
-                  <Clock className="spin-icon" size={32} />
-                  <p>Streaming logistics feed...</p>
-                </div>
-              ) : filteredDispatches.length === 0 ? (
-                <div className="no-records-area">
-                  <AlertOctagon size={48} />
-                  <p>No dispatches matches the current filter settings.</p>
-                </div>
-              ) : (
-                <table className="dispatch-table">
-                  <thead>
-                    <tr>
-                      <th>ORDER DETAILS</th>
-                      <th>PARTNER / DESTINATION</th>
-                      <th>SALESMAN</th>
-                      <th>STATUS</th>
-                      <th>DISPATCHED</th>
-                      <th>LOAD VALUE</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredDispatches.map((d) => {
-                      const isSelected = selectedDispatch?.sale_id === d.sale_id;
-                      return (
-                        <tr 
-                          key={d.sale_id} 
-                          className={`dispatch-row ${isSelected ? 'row-selected' : ''}`}
-                          onClick={() => handleSelectDispatch(d)}
-                        >
-                          <td>
-                            <div className="order-no">{d.order_number}</div>
-                            <span className="batch-tag">{t('batch')}: {d.batch_number || 'N/A'}</span>
-                          </td>
-                          <td>
-                            <div className="client-name">{language === 'ar' ? (d.client_name_ar || d.client_name) : d.client_name}</div>
-                            {d.branch_name && (
-                              <div className="branch-tag">{language === 'ar' ? (d.branch_name_ar || d.branch_name) : d.branch_name} {t('branch')}</div>
-                            )}
-                          </td>
-                          <td>
-                            <div className="salesman-tag">{language === 'ar' ? (d.salesman_name_ar || d.salesman_name) : (d.salesman_name || 'Unassigned')}</div>
-                          </td>
-                          <td>
-                            <span className={`status-badge-premium ${d.dispatch_status}`}>
-                              {d.dispatch_status.toUpperCase()}
-                            </span>
-                          </td>
-                          <td>
-                            <div className="dispatch-date-cell">
-                              <Calendar size={13} />
-                              {d.dispatch_date}
-                            </div>
-                          </td>
-                          <td>
-                            <strong className="load-value">{Number(d.total_amount).toFixed(3)} <span className="unit">KD</span></strong>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              )}
-            </div>
-
-          </div>
-
-          {/* RIGHT: Selected Order Pulse (Logistics Chain Details) */}
-          <div className="dispatch-pulse-card">
-            
-            {selectedDispatch ? (
-              <div className="pulse-detail-container">
-                
-                {/* Visual horizontal flow trace */}
-                <div className="logistics-chain-header">
-                  <h4>LOGISTICS CHAIN TRACE</h4>
-                  <div className="chain-visual">
-                    
-                    <div className="chain-node active">
-                      <div className="node-icon bg-green"><CheckCircle2 size={16} /></div>
-                      <span className="node-label">Central Prep</span>
+            {/* 📊 NEXT-GEN CHARTS & LOGISTICS RADAR */}
+            <div className="analytics-charts-grid">
+              
+              {/* Chart 1: Sales / Dispatch Value Timeline */}
+              <div className="analytics-chart-card glass-glow-blue">
+                <div className="chart-header">
+                  <div className="header-icon-title">
+                    <div className="icon-wrapper bg-blue small">
+                      <TrendingUp size={16} />
                     </div>
-                    
-                    <div className="chain-line bg-green"></div>
-                    
-                    <div className={`chain-node ${(selectedDispatch.dispatch_status !== 'pending') ? 'active' : ''}`}>
-                      <div className={`node-icon ${(selectedDispatch.dispatch_status !== 'pending') ? 'bg-blue' : 'bg-slate'}`}>
-                        <Truck size={16} />
-                      </div>
-                      <span className="node-label">In Transit</span>
-                    </div>
-
-                    <div className={`chain-line ${(selectedDispatch.dispatch_status === 'delivered' || selectedDispatch.dispatch_status === 'returned') ? 'bg-green' : 'bg-slate'}`}></div>
-
-                    <div className={`chain-node ${(selectedDispatch.dispatch_status === 'delivered' || selectedDispatch.dispatch_status === 'returned') ? 'active' : ''}`}>
-                      <div className={`node-icon ${(selectedDispatch.dispatch_status === 'delivered' || selectedDispatch.dispatch_status === 'returned') ? 'bg-green' : 'bg-slate'}`}>
-                        <MapPin size={16} />
-                      </div>
-                      <span className="node-label">Delivered</span>
-                    </div>
-
-                    <div className="chain-line bg-slate"></div>
-
-                    <div className="chain-node">
-                      <div className="node-icon bg-slate"><RotateCcw size={16} /></div>
-                      <span className="node-label">Returns Recvd</span>
-                    </div>
-
-                  </div>
-                </div>
-
-                {/* Core Specs Panel */}
-                <div className="specs-grid">
-                  
-                  <div className="spec-item">
-                    <span className="spec-label">Order Number</span>
-                    <strong className="spec-val text-green">{selectedDispatch.order_number}</strong>
-                  </div>
-
-                  <div className="spec-item">
-                    <span className="spec-label">Assigned Salesman</span>
-                    <strong className="spec-val">{selectedDispatch.salesman_name || 'N/A'}</strong>
-                  </div>
-
-                  <div className="spec-item">
-                    <span className="spec-label">Client Partner</span>
-                    <strong className="spec-val">{selectedDispatch.client_name}</strong>
-                  </div>
-
-                  <div className="spec-item">
-                    <span className="spec-label">Destination Branch</span>
-                    <strong className="spec-val">{selectedDispatch.branch_name || 'Main Office'}</strong>
-                  </div>
-
-                  <div className="spec-item">
-                    <span className="spec-label">Dispatch Status</span>
-                    <span className={`status-pill ${selectedDispatch.dispatch_status}`}>
-                      {selectedDispatch.dispatch_status.toUpperCase()}
-                    </span>
-                  </div>
-
-                  <div className="spec-item">
-                    <span className="spec-label">Actions</span>
-                    <div className="action-buttons-wrapper">
-                      {(selectedDispatch.dispatch_status === 'pending') && (
-                        <button 
-                          className="btn-action dispatch-btn"
-                          onClick={() => updateDispatchStatus(selectedDispatch.sale_id, 'in_transit')}
-                        >
-                          <Truck size={14} /> Mark In Transit
-                        </button>
-                      )}
-                      {(selectedDispatch.dispatch_status === 'in_transit' || selectedDispatch.dispatch_status === 'dispatched') && (
-                        <button 
-                          className="btn-action deliver-btn"
-                          onClick={() => updateDispatchStatus(selectedDispatch.sale_id, 'delivered')}
-                        >
-                          <CheckCircle2 size={14} /> Confirm Delivered
-                        </button>
-                      )}
-                      {selectedDispatch.dispatch_status === 'delivered' && (
-                        <span className="completed-log-tag">✅ Delivery Confirmed</span>
-                      )}
+                    <div>
+                      <h4>{language === 'ar' ? 'مخطط قيمة التوزيع' : 'Dispatch Value Timeline'}</h4>
+                      <p className="chart-sub">Chronological billing volumes in KWD</p>
                     </div>
                   </div>
-
                 </div>
-
-                {/* Items in Dispatch list */}
-                <div className="dispatch-items-list-container">
-                  <h5>LOADED PRODUCTS CATALOG</h5>
-                  
-                  {itemsLoading ? (
-                    <div className="loading-spinner-area-small">
-                      <Clock className="spin-icon" size={20} />
-                      <span>Loading items...</span>
+                <div className="chart-body">
+                  {timelineData.length === 0 ? (
+                    <div className="empty-chart-placeholder">
+                      <Activity size={20} className="spin-icon text-blue" />
+                      <p>Awaiting dispatch stream telemetry...</p>
                     </div>
-                  ) : dispatchItems.length === 0 ? (
-                    <p className="no-items-placeholder">No products loaded in this dispatch order.</p>
                   ) : (
-                    <div className="small-items-list">
-                      {dispatchItems.map((item, idx) => {
-                        const uPrice = Number(item.unit_price || item.price || 0);
-                        const qty = Number(item.quantity || 0);
-                        return (
-                          <div key={idx} className="dispatch-item-row">
-                            <div className="item-left">
-                              <span className="item-name">{language === 'ar' ? (item.name_ar || item.name_en) : item.name_en}</span>
-                              <span className="unit-price-tag">Unit Price: {uPrice.toFixed(3)} KD</span>
-                            </div>
-                            <div className="item-right">
-                              <span className="loaded-qty">Qty: {qty}</span>
-                              <span className="item-total-price">{(qty * uPrice).toFixed(3)} KD</span>
-                            </div>
-                          </div>
-                        );
-                      })}
+                    <div style={{ width: '100%', height: 110 }}>
+                      <ResponsiveContainer>
+                        <AreaChart data={timelineData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                          <defs>
+                            <linearGradient id="colorAmount" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4}/>
+                              <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                          <XAxis dataKey="date" stroke="#94a3b8" fontSize={10} fontWeight={600} tickLine={false} />
+                          <YAxis stroke="#94a3b8" fontSize={10} fontWeight={600} tickLine={false} />
+                          <Tooltip 
+                            contentStyle={{ 
+                              background: 'rgba(255, 255, 255, 0.95)', 
+                              border: '1px solid #e2e8f0', 
+                              borderRadius: 12, 
+                              boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)' 
+                            }} 
+                          />
+                          <Area type="monotone" dataKey="amount" stroke="#2563eb" strokeWidth={2.5} fillOpacity={1} fill="url(#colorAmount)" name="Value (KD)" />
+                        </AreaChart>
+                      </ResponsiveContainer>
                     </div>
                   )}
                 </div>
+              </div>
 
+              {/* Chart 2: Logistics Matrix Breakdown */}
+              <div className="analytics-chart-card glass-glow-green">
+                <div className="chart-header">
+                  <div className="header-icon-title">
+                    <div className="icon-wrapper bg-green small">
+                      <Activity size={16} />
+                    </div>
+                    <div>
+                      <h4>{language === 'ar' ? 'تحليل حالة الخدمات اللوجستية' : 'Logistics Matrix Breakdown'}</h4>
+                      <p className="chart-sub">Active status distribution shares</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="chart-body pie-chart-body">
+                  {pieData.length === 0 ? (
+                    <div className="empty-chart-placeholder">
+                      <Clock size={20} className="spin-icon text-green" />
+                      <p>Awaiting status telemetry...</p>
+                    </div>
+                  ) : (
+                    <div className="pie-container-layout">
+                      <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                        <div style={{ width: '100%', height: 110 }}>
+                          <ResponsiveContainer>
+                            <PieChart>
+                              <Pie
+                                data={pieData}
+                                cx="50%"
+                                cy="50%"
+                                innerRadius={28}
+                                outerRadius={45}
+                                paddingAngle={4}
+                                dataKey="value"
+                              >
+                                {pieData.map((entry, index) => (
+                                  <Cell key={`cell-${index}`} fill={entry.color} />
+                                ))}
+                              </Pie>
+                              <Tooltip
+                                contentStyle={{ 
+                                  background: 'rgba(255, 255, 255, 0.95)', 
+                                  border: '1px solid #e2e8f0', 
+                                  borderRadius: 12 
+                                }}
+                              />
+                            </PieChart>
+                          </ResponsiveContainer>
+                        </div>
+                        <div className="custom-pie-legend">
+                          {pieData.map((item, index) => (
+                            <div key={index} className="legend-item">
+                              <span className="legend-dot" style={{ backgroundColor: item.color }} />
+                              <span className="legend-label">{item.name}</span>
+                              <span className="legend-val">({item.value})</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
-            ) : (
-              <div className="no-selected-placeholder">
-                <Navigation size={48} className="placeholder-icon" />
-                <h4>Select a Dispatch Order</h4>
-                <p>Select any dispatch order from the stream on the left to inspect its real-time logistics trace, assigned loaded inventory, and salesman timeline.</p>
+
+            </div>
+
+            {/* 🚚 LIVE INTERACTIVE CONTROL DECK (TABLE) */}
+            <div className="dispatch-stream-card">
+              
+              <div className="stream-header">
+                <div className="header-left">
+                  <Activity size={18} className="pulse-text" />
+                  <h3>Live Logistics Streams</h3>
+                </div>
+                <div className="search-and-filter">
+                  <div className="search-box-wrapper">
+                    <Search size={14} />
+                    <input 
+                      type="text" 
+                      placeholder="Search Order #, Client, Salesman..." 
+                      value={searchTerm} 
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                  </div>
+                  <div className="status-toggles">
+                    <button className={`toggle-btn ${statusFilter === 'all' ? 'active' : ''}`} onClick={() => setStatusFilter('all')}>All</button>
+                    <button className={`toggle-btn ${statusFilter === 'in_transit' ? 'active' : ''}`} onClick={() => setStatusFilter('in_transit')}>In Transit</button>
+                    <button className={`toggle-btn ${statusFilter === 'delivered' ? 'active' : ''}`} onClick={() => setStatusFilter('delivered')}>Delivered</button>
+                    <button className={`toggle-btn ${statusFilter === 'pending' ? 'active' : ''}`} onClick={() => setStatusFilter('pending')}>Prepared</button>
+                  </div>
+                </div>
               </div>
-            )}
+
+              <div className="stream-table-wrapper">
+                {loading ? (
+                  <div className="loading-spinner-area">
+                    <Clock className="spin-icon" size={24} />
+                    <p>Streaming logistics feed...</p>
+                  </div>
+                ) : filteredDispatches.length === 0 ? (
+                  <div className="no-records-area">
+                    <AlertOctagon size={36} />
+                    <p>No dispatches matches the current filter settings.</p>
+                  </div>
+                ) : (
+                  <table className="dispatch-table">
+                    <thead>
+                      <tr>
+                        <th>ORDER DETAILS</th>
+                        <th>PARTNER / DESTINATION</th>
+                        <th>SALESMAN</th>
+                        <th>STATUS</th>
+                        <th>DISPATCHED</th>
+                        <th>LOAD VALUE</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {currentEntries.map((d) => {
+                        const isSelected = selectedDispatch?.sale_id === d.sale_id;
+                        return (
+                          <tr 
+                            key={d.sale_id} 
+                            className={`dispatch-row ${isSelected ? 'row-selected' : ''}`}
+                            onClick={() => handleSelectDispatch(d)}
+                          >
+                            <td>
+                              <div className="order-no">FNFI-{100000 + d.sale_id}</div>
+                              <span className="batch-tag">{t('batch')}: {d.batch_number || 'N/A'}</span>
+                            </td>
+                            <td>
+                              <div 
+                                className="client-name link-style" 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleSelectPartner(d.client_name);
+                                }}
+                                title="Click to view Partner Analytics Portal"
+                              >
+                                {language === 'ar' ? (d.client_name_ar || d.client_name) : d.client_name}
+                              </div>
+                              {d.branch_name && (
+                                <div className="branch-tag">{language === 'ar' ? (d.branch_name_ar || d.branch_name) : d.branch_name} {t('branch')}</div>
+                              )}
+                            </td>
+                            <td>
+                              <div className="salesman-tag">{language === 'ar' ? (d.salesman_name_ar || d.salesman_name) : (d.salesman_name || 'Unassigned')}</div>
+                            </td>
+                            <td>
+                              <span className={`status-badge-premium ${d.dispatch_status}`}>
+                                {d.dispatch_status.toUpperCase()}
+                              </span>
+                            </td>
+                            <td>
+                              <div className="dispatch-date-cell">
+                                <Calendar size={12} />
+                                {d.dispatch_date}
+                              </div>
+                            </td>
+                            <td>
+                              <strong className="load-value">{Number(d.total_amount).toFixed(3)} <span className="unit">KD</span></strong>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+
+              {/* 📊 Premium Pagination Controls */}
+              {filteredDispatches.length > 5 && (
+                <div className="pagination-wrapper">
+                  <span className="pagination-info">
+                    Showing <b>{indexOfFirstEntry + 1}</b> to <b>{Math.min(indexOfLastEntry, filteredDispatches.length)}</b> of <b>{filteredDispatches.length}</b> dispatches
+                  </span>
+                  <div className="pagination-controls">
+                    <button 
+                      className="pagination-arrow"
+                      disabled={currentPage === 1}
+                      onClick={() => setCurrentPage(1)}
+                      title="First Page"
+                    >
+                      &laquo;
+                    </button>
+                    <button 
+                      className="pagination-arrow"
+                      disabled={currentPage === 1}
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      title="Previous Page"
+                    >
+                      &lsaquo;
+                    </button>
+                    <span className="page-indicator">
+                      Page <b>{currentPage}</b> of <b>{totalPages || 1}</b>
+                    </span>
+                    <button 
+                      className="pagination-arrow"
+                      disabled={currentPage === totalPages || totalPages === 0}
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                      title="Next Page"
+                    >
+                      &rsaquo;
+                    </button>
+                    <button 
+                      className="pagination-arrow"
+                      disabled={currentPage === totalPages || totalPages === 0}
+                      onClick={() => setCurrentPage(totalPages)}
+                      title="Last Page"
+                    >
+                      &raquo;
+                    </button>
+                  </div>
+                </div>
+              )}
+
+            </div>
 
           </div>
 
-        </div>
-
-        {/* 🔮 PREDICITIVE RETURNS PULSE TRACKER */}
-        <div className="returns-pulse-section">
-          <div className="section-title">
-            <Clock size={20} className="pulse-text" />
-            <h3>Predictive Returns & Route Checkpoints</h3>
-          </div>
-          
-          <div className="returns-tracker-grid">
+          {/* RIGHT COLUMN: PULSE DETAILS + ROUTE CHECKPOINTS */}
+          <div className="right-column-layout">
             
-            <div className="tracker-card en-route">
-              <div className="tracker-top">
-                <div className="salesman-meta">
-                  <div className="salesman-avatar">A</div>
-                  <div>
-                    <strong className="name">Atiq (Route A)</strong>
-                    <span className="destination">Select Mart (H Tower)</span>
+            {/* RIGHT: Selected Order Pulse (Logistics Chain Details) */}
+            <div className="dispatch-pulse-card">
+              
+              {selectedDispatch ? (
+                <div className="pulse-detail-container">
+                  
+                  {/* Visual horizontal flow trace */}
+                  <div className="logistics-chain-header">
+                    <h4>LOGISTICS CHAIN TRACE</h4>
+                    <div className="chain-visual">
+                      
+                      <div className="chain-node active">
+                        <div className="node-icon bg-green"><CheckCircle2 size={12} /></div>
+                        <span className="node-label">Central Prep</span>
+                      </div>
+                      
+                      <div className="chain-line bg-green"></div>
+                      
+                      <div className={`chain-node ${(selectedDispatch.dispatch_status !== 'pending') ? 'active' : ''}`}>
+                        <div className={`node-icon ${(selectedDispatch.dispatch_status !== 'pending') ? 'bg-blue' : 'bg-slate'}`}>
+                          <Truck size={12} />
+                        </div>
+                        <span className="node-label">In Transit</span>
+                      </div>
+
+                      <div className={`chain-line ${(selectedDispatch.dispatch_status === 'delivered' || selectedDispatch.dispatch_status === 'returned') ? 'bg-green' : 'bg-slate'}`}></div>
+
+                      <div className={`chain-node ${(selectedDispatch.dispatch_status === 'delivered' || selectedDispatch.dispatch_status === 'returned') ? 'active' : ''}`}>
+                        <div className={`node-icon ${(selectedDispatch.dispatch_status === 'delivered' || selectedDispatch.dispatch_status === 'returned') ? 'bg-green' : 'bg-slate'}`}>
+                          <MapPin size={12} />
+                        </div>
+                        <span className="node-label">Delivered</span>
+                      </div>
+
+                      <div className="chain-line bg-slate"></div>
+
+                      <div className="chain-node">
+                        <div className="node-icon bg-slate"><RotateCcw size={12} /></div>
+                        <span className="node-label">Returns Recvd</span>
+                      </div>
+
+                    </div>
                   </div>
+
+                  {/* Core Specs Panel */}
+                  <div className="specs-grid">
+                    
+                    <div className="spec-item">
+                      <span className="spec-label">Order Number</span>
+                      <strong className="spec-val text-green">FNFI-{100000 + selectedDispatch.sale_id}</strong>
+                    </div>
+
+                    <div className="spec-item">
+                      <span className="spec-label">Assigned Salesman</span>
+                      <strong className="spec-val">{selectedDispatch.salesman_name || 'N/A'}</strong>
+                    </div>
+
+                    <div className="spec-item">
+                      <span className="spec-label">Client Partner</span>
+                      <strong className="spec-val">{selectedDispatch.client_name}</strong>
+                    </div>
+
+                    <div className="spec-item">
+                      <span className="spec-label">Destination Branch</span>
+                      <strong className="spec-val">{selectedDispatch.branch_name || 'Main Office'}</strong>
+                    </div>
+
+                    <div className="spec-item">
+                      <span className="spec-label">Dispatch Status</span>
+                      <span className={`status-pill ${selectedDispatch.dispatch_status}`}>
+                        {selectedDispatch.dispatch_status.toUpperCase()}
+                      </span>
+                    </div>
+
+                    <div className="spec-item">
+                      <span className="spec-label">Actions</span>
+                      <div className="action-buttons-wrapper">
+                        {(selectedDispatch.dispatch_status === 'pending') && (
+                          <button 
+                            className="btn-action dispatch-btn"
+                            onClick={() => updateDispatchStatus(selectedDispatch.sale_id, 'in_transit')}
+                          >
+                            <Truck size={12} /> Mark In Transit
+                          </button>
+                        )}
+                        {(selectedDispatch.dispatch_status === 'in_transit' || selectedDispatch.dispatch_status === 'dispatched') && (
+                          <button 
+                            className="btn-action deliver-btn"
+                            onClick={() => updateDispatchStatus(selectedDispatch.sale_id, 'delivered')}
+                          >
+                            <CheckCircle2 size={12} /> Confirm Delivered
+                          </button>
+                        )}
+                        {selectedDispatch.dispatch_status === 'delivered' && (
+                          <span className="completed-log-tag">✅ Delivery Confirmed</span>
+                        )}
+                      </div>
+                    </div>
+
+                  </div>
+
+                  {/* Items in Dispatch list */}
+                  <div className="dispatch-items-list-container">
+                    <h5>LOADED PRODUCTS CATALOG</h5>
+                    
+                    {itemsLoading ? (
+                      <div className="loading-spinner-area-small">
+                        <Clock className="spin-icon" size={16} />
+                        <span>Loading items...</span>
+                      </div>
+                    ) : dispatchItems.length === 0 ? (
+                      <p className="no-items-placeholder">No products loaded in this dispatch order.</p>
+                    ) : (
+                      <div className="small-items-list">
+                        {dispatchItems.map((item, idx) => {
+                          const uPrice = Number(item.unit_price || item.price || 0);
+                          const qty = Number(item.quantity || 0);
+                          return (
+                            <div key={idx} className="dispatch-item-row">
+                              <div className="item-left">
+                                <span className="item-name">{language === 'ar' ? (item.name_ar || item.name_en) : item.name_en}</span>
+                                <span className="unit-price-tag">Unit Price: {uPrice.toFixed(3)} KD</span>
+                              </div>
+                              <div className="item-right">
+                                <span className="loaded-qty">Qty: {qty}</span>
+                                <span className="item-total-price">{(qty * uPrice).toFixed(3)} KD</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
                 </div>
-                <span className="timer-badge active">EN ROUTE</span>
-              </div>
-              <div className="tracker-body">
-                <div className="route-bar">
-                  <div className="route-fill" style={{ width: '70%' }}></div>
-                  <span className="dot" style={{ left: '70%' }}><Truck size={12} /></span>
+              ) : (
+                <div className="no-selected-placeholder">
+                  <Navigation size={36} className="placeholder-icon" />
+                  <h4>Select a Dispatch Order</h4>
+                  <p>Select any dispatch order from the stream on the left to inspect its real-time logistics trace, assigned loaded inventory, and salesman timeline.</p>
                 </div>
-                <div className="time-meta">
-                  <span>Dispatched: 08:30 AM</span>
-                  <span className="bold">Expected Return: 02:00 PM (1h 45m left)</span>
-                </div>
-              </div>
+              )}
+
             </div>
 
-            <div className="tracker-card en-route">
-              <div className="tracker-top">
-                <div className="salesman-meta">
-                  <div className="salesman-avatar">I</div>
-                  <div>
-                    <strong className="name">Irfan (Route B)</strong>
-                    <span className="destination">Mart B (Kuwait City)</span>
+            {/* 🔮 PREDICITIVE RETURNS PULSE TRACKER */}
+            <div className="returns-pulse-card">
+              <div className="section-title">
+                <Clock size={16} className="pulse-text" />
+                <h3>Predictive Returns & Route Checkpoints</h3>
+              </div>
+              
+              <div className="returns-tracker-list">
+                
+                <div className="tracker-card en-route">
+                  <div className="tracker-top">
+                    <div className="salesman-meta">
+                      <div className="salesman-avatar">A</div>
+                      <div>
+                        <strong className="name">Atiq (Route A)</strong>
+                        <span className="destination">Select Mart (H Tower)</span>
+                      </div>
+                    </div>
+                    <span className="timer-badge active">EN ROUTE</span>
+                  </div>
+                  <div className="tracker-body">
+                    <div className="route-bar">
+                      <div className="route-fill" style={{ width: '70%' }}></div>
+                      <span className="dot" style={{ left: '70%' }}><Truck size={10} /></span>
+                    </div>
+                    <div className="time-meta">
+                      <span>Dispatched: 08:30 AM</span>
+                      <span className="bold">Expected Return: 02:00 PM (1h 45m left)</span>
+                    </div>
                   </div>
                 </div>
-                <span className="timer-badge active">EN ROUTE</span>
-              </div>
-              <div className="tracker-body">
-                <div className="route-bar">
-                  <div className="route-fill" style={{ width: '45%' }}></div>
-                  <span className="dot" style={{ left: '45%' }}><Truck size={12} /></span>
-                </div>
-                <div className="time-meta">
-                  <span>Dispatched: 09:45 AM</span>
-                  <span className="bold">Expected Return: 04:30 PM (4h 15m left)</span>
-                </div>
-              </div>
-            </div>
 
-            <div className="tracker-card scheduled">
-              <div className="tracker-top">
-                <div className="salesman-meta">
-                  <div className="salesman-avatar">A</div>
-                  <div>
-                    <strong className="name">Atiq (Route C)</strong>
-                    <span className="destination">Lulu Hypermarket</span>
+                <div className="tracker-card en-route">
+                  <div className="tracker-top">
+                    <div className="salesman-meta">
+                      <div className="salesman-avatar">I</div>
+                      <div>
+                        <strong className="name">Irfan (Route B)</strong>
+                        <span className="destination">Mart B (Kuwait City)</span>
+                      </div>
+                    </div>
+                    <span className="timer-badge active">EN ROUTE</span>
+                  </div>
+                  <div className="tracker-body">
+                    <div className="route-bar">
+                      <div className="route-fill" style={{ width: '45%' }}></div>
+                      <span className="dot" style={{ left: '45%' }}><Truck size={10} /></span>
+                    </div>
+                    <div className="time-meta">
+                      <span>Dispatched: 09:45 AM</span>
+                      <span className="bold">Expected Return: 04:30 PM (4h 15m left)</span>
+                    </div>
                   </div>
                 </div>
-                <span className="timer-badge scheduled">SCHEDULED</span>
-              </div>
-              <div className="tracker-body">
-                <div className="route-bar">
-                  <div className="route-fill" style={{ width: '0%' }}></div>
-                  <span className="dot" style={{ left: '0%' }}></span>
+
+                <div className="tracker-card scheduled">
+                  <div className="tracker-top">
+                    <div className="salesman-meta">
+                      <div className="salesman-avatar">A</div>
+                      <div>
+                        <strong className="name">Atiq (Route C)</strong>
+                        <span className="destination">Lulu Hypermarket</span>
+                      </div>
+                    </div>
+                    <span className="timer-badge scheduled">SCHEDULED</span>
+                  </div>
+                  <div className="tracker-body">
+                    <div className="route-bar">
+                      <div className="route-fill" style={{ width: '0%' }}></div>
+                      <span className="dot" style={{ left: '0%' }}></span>
+                    </div>
+                    <div className="time-meta">
+                      <span>Pending Factory Release</span>
+                      <span className="bold">Expected Run: 03:00 PM</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="time-meta">
-                  <span>Pending Factory Release</span>
-                  <span className="bold">Expected Run: 03:00 PM</span>
-                </div>
+
               </div>
             </div>
 
           </div>
+
         </div>
 
       </div>
 
-      <style>{`
+      <DashboardStyles />
+    </Layout>
+  );
+};
+
+const DashboardStyles = () => (
+  <style>{`
+        .page-body {
+          padding: 0.5rem !important;
+        }
+
+        /* 💎 NEXT-GEN LOSS ORACLE & PRODUCTS RETURNS WIDGETS */
+        .returns-tag-highlight {
+          background: rgba(244, 63, 94, 0.08);
+          color: #e11d48;
+          font-weight: 800;
+          padding: 0.15rem 0.4rem;
+          border-radius: 6px;
+          font-size: 0.68rem;
+          display: inline-block;
+          border: 1px solid rgba(244, 63, 94, 0.15);
+        }
+
+        /* 🔮 MODERN MODAL BOX OVERLAY & CARDS */
+        .modal-overlay {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100vw;
+          height: 100vh;
+          background: rgba(15, 23, 42, 0.4);
+          backdrop-filter: blur(8px);
+          -webkit-backdrop-filter: blur(8px);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 9999;
+        }
+
+        .modal-card {
+          background: white;
+          border-radius: 16px;
+          border: 1px solid rgba(255, 255, 255, 0.8);
+          box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+          width: 90%;
+          max-width: 480px;
+          max-height: 80vh;
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+          animation: scaleIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes scaleIn {
+          from { transform: scale(0.95); opacity: 0; }
+          to { transform: scale(1); opacity: 1; }
+        }
+
+        .modal-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 0.8rem 1.2rem;
+          border-bottom: 1px solid #f1f5f9;
+          background: #f8fafc;
+        }
+        .modal-header h3 {
+          font-size: 0.95rem;
+          font-weight: 900;
+          color: #0f172a;
+          margin: 0;
+        }
+        .btn-close {
+          border: none;
+          background: transparent;
+          font-size: 1.5rem;
+          color: #94a3b8;
+          cursor: pointer;
+          line-height: 1;
+          padding: 0;
+          transition: color 0.2s ease;
+        }
+        .btn-close:hover {
+          color: #0f172a;
+        }
+
+        .modal-body {
+          padding: 1rem;
+          overflow-y: auto;
+          flex: 1;
+          background: #fcfcfd;
+        }
+
+        .no-active-orders {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          height: 150px;
+          color: #94a3b8;
+          text-align: center;
+          gap: 0.5rem;
+        }
+        .no-active-orders p {
+          font-size: 0.8rem;
+          font-weight: 600;
+        }
+
+        .active-orders-list {
+          display: flex;
+          flex-direction: column;
+          gap: 0.6rem;
+        }
+
+        .modal-order-row {
+          background: white;
+          border: 1px solid #eef2f6;
+          border-radius: 10px;
+          padding: 0.6rem 0.8rem;
+          display: flex;
+          flex-direction: column;
+          gap: 0.4rem;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+          transition: all 0.2s ease;
+        }
+        .modal-order-row:hover {
+          border-color: #cbd5e1;
+          transform: translateY(-1px);
+        }
+
+        .order-main-info {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+        .order-id {
+          font-size: 0.85rem;
+          font-weight: 900;
+          color: #0f172a;
+        }
+
+        .order-sub-details {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 0.3rem 0.6rem;
+          font-size: 0.72rem;
+          border-top: 1px dashed #f1f5f9;
+          padding-top: 0.4rem;
+        }
+
+        .detail-item {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+        .detail-item .label {
+          color: #94a3b8;
+          font-weight: 700;
+        }
+        .detail-item .val {
+          color: #334155;
+          font-weight: 800;
+        }
+        .detail-item .val.bold {
+          font-weight: 900;
+        }
+
+        .loss-tracker-card {
+          background: linear-gradient(145deg, rgba(255, 255, 255, 0.95) 0%, rgba(253, 244, 245, 0.95) 100%);
+          border-radius: 12px;
+          border: 1px solid rgba(244, 63, 94, 0.12);
+          padding: 0.6rem 0.8rem;
+          display: flex;
+          flex-direction: column;
+          gap: 0.5rem;
+          box-shadow: 0 4px 12px -5px rgba(244, 63, 94, 0.08);
+          transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .loss-tracker-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 20px -8px rgba(244, 63, 94, 0.15);
+          border-color: rgba(244, 63, 94, 0.25);
+        }
+
+        .loss-card-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          gap: 0.5rem;
+        }
+
+        .product-info {
+          display: flex;
+          flex-direction: column;
+          gap: 0.2rem;
+        }
+
+        .product-name-highlight {
+          font-size: 0.85rem;
+          font-weight: 900;
+          color: #0f172a;
+          margin: 0;
+        }
+
+        .units-returned-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.25rem;
+          font-size: 0.7rem;
+          font-weight: 700;
+          color: #e11d48;
+          background: rgba(244, 63, 94, 0.06);
+          padding: 0.1rem 0.35rem;
+          border-radius: 4px;
+          width: fit-content;
+        }
+
+        .loss-value-pill {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-end;
+          background: rgba(244, 63, 94, 0.08);
+          padding: 0.25rem 0.5rem;
+          border-radius: 8px;
+          border: 1px solid rgba(244, 63, 94, 0.1);
+          min-width: 80px;
+        }
+
+        .loss-label {
+          font-size: 0.55rem;
+          font-weight: 800;
+          color: #f43f5e;
+          text-transform: uppercase;
+          letter-spacing: 0.25px;
+        }
+
+        .loss-amount {
+          font-size: 0.82rem;
+          font-weight: 900;
+          color: #e11d48;
+        }
+
+        .branch-breakdown-container {
+          display: flex;
+          flex-direction: column;
+          gap: 0.25rem;
+          border-top: 1px dashed rgba(244, 63, 94, 0.15);
+          padding-top: 0.4rem;
+        }
+
+        .breakdown-title {
+          font-size: 0.6rem;
+          font-weight: 800;
+          color: #94a3b8;
+          text-transform: uppercase;
+          letter-spacing: 0.25px;
+        }
+
+        .branch-badges-list {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.3rem;
+        }
+
+        .branch-qty-badge {
+          background: rgba(15, 23, 42, 0.03);
+          border: 1px solid rgba(226, 232, 240, 0.8);
+          padding: 0.15rem 0.4rem;
+          border-radius: 6px;
+          font-size: 0.65rem;
+          font-weight: 700;
+          display: inline-flex;
+          align-items: center;
+          gap: 0.25rem;
+          color: #475569;
+          transition: all 0.2s ease;
+        }
+        .branch-qty-badge:hover {
+          background: rgba(15, 23, 42, 0.05);
+          border-color: #cbd5e1;
+        }
+        .branch-qty-badge .b-name {
+          max-width: 100px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        .branch-qty-badge .b-val {
+          background: #f43f5e;
+          color: white;
+          padding: 0.02rem 0.25rem;
+          border-radius: 4px;
+          font-size: 0.6rem;
+          font-weight: 800;
+        }
         .dispatch-dashboard-hud {
-          padding: 1.25rem;
+          padding: 0.4rem 0.6rem;
           background: linear-gradient(135deg, #f6f8fb 0%, #edf2f7 100%);
           display: flex;
           flex-direction: column;
-          gap: 1.5rem;
-          min-height: 95vh;
+          gap: 0.5rem;
+          min-height: calc(100vh - 90px);
           font-family: 'Inter', -apple-system, sans-serif;
+          box-sizing: border-box;
         }
 
         /* 🌟 DYNAMIC FUTURISTIC BENTO GRID */
         .bento-grid {
           display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-          gap: 0.85rem;
+          grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+          gap: 0.4rem;
+          flex-shrink: 0;
         }
 
         @media (min-width: 1200px) {
@@ -879,11 +1746,10 @@ const DispatchDashboardPage = () => {
           background: rgba(255, 255, 255, 0.85);
           backdrop-filter: blur(20px);
           -webkit-backdrop-filter: blur(20px);
-          border-radius: 18px;
-          padding: 0.95rem 1.1rem;
+          border-radius: 14px;
+          padding: 0.5rem 0.75rem;
           border: 1px solid rgba(255, 255, 255, 0.7);
-          box-shadow: 0 4px 20px -5px rgba(51, 65, 85, 0.05), 
-                      0 1px 2px rgba(51, 65, 85, 0.02);
+          box-shadow: 0 4px 15px -5px rgba(51, 65, 85, 0.05);
           display: flex;
           flex-direction: column;
           justify-content: space-between;
@@ -898,7 +1764,7 @@ const DispatchDashboardPage = () => {
           top: 0;
           left: 0;
           width: 100%;
-          height: 4px;
+          height: 3px;
           opacity: 0.85;
         }
 
@@ -909,29 +1775,22 @@ const DispatchDashboardPage = () => {
         .glass-glow-gold::after { background: linear-gradient(90deg, #eab308, #facc15); }
 
         .hud-card:hover {
-          transform: translateY(-3px);
+          transform: translateY(-2px);
           background: rgba(255, 255, 255, 0.95);
-          box-shadow: 0 15px 30px -8px rgba(51, 65, 85, 0.1),
-                      0 0 0 1px rgba(255, 255, 255, 1);
+          box-shadow: 0 10px 20px -5px rgba(51, 65, 85, 0.08);
         }
-
-        /* Micro hover glow effect */
-        .glass-glow-blue:hover { box-shadow: 0 15px 30px -8px rgba(59, 130, 246, 0.1); }
-        .glass-glow-green:hover { box-shadow: 0 15px 30px -8px rgba(16, 185, 129, 0.1); }
-        .glass-glow-rose:hover { box-shadow: 0 15px 30px -8px rgba(244, 63, 94, 0.1); }
-        .glass-glow-gold:hover { box-shadow: 0 15px 30px -8px rgba(234, 179, 8, 0.1); }
 
         .hud-header {
           display: flex;
           align-items: center;
-          gap: 0.5rem;
-          margin-bottom: 0.6rem;
+          gap: 0.4rem;
+          margin-bottom: 0.25rem;
         }
 
         .icon-wrapper {
-          width: 34px;
-          height: 34px;
-          border-radius: 10px;
+          width: 28px;
+          height: 28px;
+          border-radius: 8px;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -945,24 +1804,24 @@ const DispatchDashboardPage = () => {
         .icon-wrapper.bg-gold { background: rgba(234, 179, 8, 0.08); color: #ca8a04; }
 
         .hud-card:hover .icon-wrapper {
-          transform: scale(1.08) rotate(3deg);
+          transform: scale(1.05) rotate(3deg);
         }
 
         .hud-title {
-          font-size: 0.65rem;
+          font-size: 0.58rem;
           font-weight: 800;
           color: #64748b;
           text-transform: uppercase;
-          letter-spacing: 0.75px;
+          letter-spacing: 0.5px;
         }
 
         .big-value {
-          font-size: 1.5rem;
+          font-size: 1.15rem;
           font-weight: 900;
           color: #0f172a;
           line-height: 1.1;
-          letter-spacing: -0.75px;
-          margin-bottom: 0.3rem;
+          letter-spacing: -0.5px;
+          margin-bottom: 0.15rem;
         }
         .big-value.text-green { color: #059669; }
         .big-value.text-blue { color: #2563eb; }
@@ -970,43 +1829,43 @@ const DispatchDashboardPage = () => {
         .big-value.text-rose { color: #e11d48; }
 
         .currency {
-          font-size: 0.8rem;
+          font-size: 0.7rem;
           font-weight: 800;
           color: #94a3b8;
-          margin-left: 0.15rem;
+          margin-left: 0.1rem;
         }
 
         .hud-sub {
-          font-size: 0.7rem;
+          font-size: 0.65rem;
           color: #64748b;
           font-weight: 600;
           display: flex;
           align-items: center;
-          gap: 0.3rem;
+          gap: 0.25rem;
         }
 
         .indicator {
-          width: 6px;
-          height: 6px;
+          width: 5px;
+          height: 5px;
           border-radius: 50%;
         }
         .indicator.active-pulse {
           background: #3b82f6;
-          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+          box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
           animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
 
         @keyframes pulse-ring {
           0%, 100% { transform: scale(1); opacity: 1; }
-          50% { transform: scale(1.2); opacity: 0.6; }
+          50% { transform: scale(1.15); opacity: 0.6; }
         }
 
         .progress-bar-container {
           background: #f1f5f9;
-          height: 5px;
+          height: 4px;
           border-radius: 99px;
           overflow: hidden;
-          margin-top: 0.75rem;
+          margin-top: 0.4rem;
         }
 
         .progress-bar-fill {
@@ -1031,20 +1890,20 @@ const DispatchDashboardPage = () => {
           flex-direction: column;
         }
         .radial-number {
-          font-size: 1.5rem;
+          font-size: 1.15rem;
           font-weight: 900;
           color: #0f172a;
-          letter-spacing: -0.75px;
+          letter-spacing: -0.5px;
         }
         .radial-desc {
-          font-size: 0.65rem;
+          font-size: 0.58rem;
           color: #64748b;
           font-weight: 600;
         }
 
         .radial-bar {
-          width: 42px;
-          height: 42px;
+          width: 32px;
+          height: 32px;
           border-radius: 50%;
           position: relative;
           display: flex;
@@ -1054,59 +1913,78 @@ const DispatchDashboardPage = () => {
           transition: transform 0.4s ease;
         }
         .hud-card:hover .radial-bar {
-          transform: scale(1.06) rotate(15deg);
+          transform: scale(1.04) rotate(15deg);
         }
         .radial-bar::after {
           content: '';
           position: absolute;
-          width: 32px;
-          height: 32px;
+          width: 24px;
+          height: 24px;
           background: white;
           border-radius: 50%;
         }
 
-        /* 🚚 LIVE INTERACTIVE CONTROL DECK Layout */
-        .control-deck-layout {
+        /* 📊 SPLIT SCREEN LAYOUT */
+        .main-content-layout {
           display: grid;
-          grid-template-columns: 1.6fr 1fr;
-          gap: 2rem;
+          grid-template-columns: 1.5fr 1fr;
+          gap: 0.5rem;
+          flex: 1;
+          min-height: 0;
         }
 
-        @media (max-width: 1200px) {
-          .control-deck-layout {
+        @media (max-width: 768px) {
+          .main-content-layout {
             grid-template-columns: 1fr;
+            overflow-y: auto;
           }
         }
 
+        .left-column-layout {
+          display: flex;
+          flex-direction: column;
+          gap: 0.5rem;
+          min-height: 0;
+        }
+
+        .right-column-layout {
+          display: flex;
+          flex-direction: column;
+          gap: 0.5rem;
+          min-height: 0;
+        }
+
+        /* 🚚 LIVE INTERACTIVE CONTROL DECK Layout */
         .dispatch-stream-card {
           background: rgba(255, 255, 255, 0.85);
           backdrop-filter: blur(20px);
-          border-radius: 30px;
+          border-radius: 16px;
           border: 1px solid rgba(255, 255, 255, 0.7);
-          box-shadow: 0 20px 40px -15px rgba(51, 65, 85, 0.05);
-          padding: 2rem;
+          box-shadow: 0 10px 25px -10px rgba(51, 65, 85, 0.05);
+          padding: 0.5rem 0.75rem;
           display: flex;
           flex-direction: column;
-          gap: 1.5rem;
+          gap: 0.4rem;
+          flex: 1;
         }
 
         .stream-header {
           display: flex;
           flex-direction: column;
-          gap: 1.25rem;
+          gap: 0.5rem;
         }
 
         .header-left {
           display: flex;
           align-items: center;
-          gap: 0.75rem;
+          gap: 0.5rem;
         }
         .header-left h3 {
-          font-size: 1.35rem;
+          font-size: 1.05rem;
           font-weight: 900;
           color: #0f172a;
           margin: 0;
-          letter-spacing: -0.5px;
+          letter-spacing: -0.3px;
         }
 
         .pulse-text {
@@ -1115,72 +1993,72 @@ const DispatchDashboardPage = () => {
         }
         @keyframes text-pulse {
           0%, 100% { opacity: 0.6; transform: scale(1); }
-          50% { opacity: 1; transform: scale(1.05); }
+          50% { opacity: 1; transform: scale(1.03); }
         }
 
         .search-and-filter {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          gap: 1.25rem;
+          gap: 0.75rem;
           flex-wrap: wrap;
         }
 
         .search-box-wrapper {
           background: rgba(248, 250, 252, 0.8);
-          border: 2px solid #e2e8f0;
-          border-radius: 16px;
-          padding: 0.6rem 1.25rem;
+          border: 1px solid #e2e8f0;
+          border-radius: 10px;
+          padding: 0.4rem 0.8rem;
           display: flex;
           align-items: center;
-          gap: 0.75rem;
+          gap: 0.5rem;
           flex: 1;
-          min-width: 280px;
+          min-width: 200px;
           transition: all 0.3s ease;
         }
         .search-box-wrapper:focus-within {
           border-color: #3b82f6;
           background: white;
-          box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.08);
         }
         .search-box-wrapper input {
           background: transparent;
           border: none;
           outline: none;
           width: 100%;
-          font-size: 0.9rem;
+          font-size: 0.82rem;
           color: #0f172a;
           font-weight: 600;
         }
 
         .status-toggles {
           display: flex;
-          gap: 0.35rem;
+          gap: 0.25rem;
           background: #f1f5f9;
-          padding: 0.35rem;
-          border-radius: 16px;
+          padding: 0.25rem;
+          border-radius: 10px;
         }
         .toggle-btn {
           border: none;
           background: transparent;
-          font-size: 0.8rem;
+          font-size: 0.75rem;
           font-weight: 800;
           color: #64748b;
-          padding: 0.5rem 1rem;
-          border-radius: 12px;
+          padding: 0.3rem 0.6rem;
+          border-radius: 7px;
           cursor: pointer;
-          transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+          transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
         }
         .toggle-btn.active {
           background: white;
           color: #01562c;
-          box-shadow: 0 4px 10px rgba(0,0,0,0.06);
+          box-shadow: 0 2px 6px rgba(0,0,0,0.05);
         }
 
         .stream-table-wrapper {
-          max-height: 520px;
+          flex: 1;
           overflow-y: auto;
-          border-radius: 16px;
+          border-radius: 12px;
           border: 1px solid #f1f5f9;
         }
 
@@ -1190,24 +2068,28 @@ const DispatchDashboardPage = () => {
           text-align: left;
         }
         .dispatch-table th {
-          font-size: 0.75rem;
+          font-size: 0.65rem;
           font-weight: 900;
           color: #475569;
           text-transform: uppercase;
-          letter-spacing: 0.75px;
-          padding: 1.1rem 1.25rem;
+          letter-spacing: 0.5px;
+          padding: 0.4rem 0.5rem;
           background: #f8fafc;
           border-bottom: 2px solid #e2e8f0;
+          position: sticky;
+          top: 0;
+          z-index: 10;
         }
         .dispatch-table td {
-          padding: 1.25rem;
+          padding: 0.4rem 0.5rem;
           border-bottom: 1px solid #f1f5f9;
           vertical-align: middle;
+          font-size: 0.78rem;
         }
 
         .dispatch-row {
           cursor: pointer;
-          transition: all 0.25s ease;
+          transition: all 0.2s ease;
         }
         .dispatch-row:hover {
           background: rgba(248, 250, 252, 0.8);
@@ -1219,16 +2101,16 @@ const DispatchDashboardPage = () => {
         .order-no {
           font-weight: 900;
           color: #0f172a;
-          font-size: 0.95rem;
-          margin-bottom: 0.25rem;
+          font-size: 0.85rem;
+          margin-bottom: 0.1rem;
         }
         .batch-tag {
-          font-size: 0.68rem;
+          font-size: 0.62rem;
           font-weight: 800;
           color: #475569;
           background: #f1f5f9;
-          padding: 0.2rem 0.5rem;
-          border-radius: 6px;
+          padding: 0.1rem 0.35rem;
+          border-radius: 4px;
         }
 
         .client-name {
@@ -1236,28 +2118,28 @@ const DispatchDashboardPage = () => {
           color: #1e293b;
         }
         .branch-tag {
-          font-size: 0.7rem;
+          font-size: 0.65rem;
           font-weight: 800;
           color: #01562c;
         }
 
         .salesman-tag {
-          font-size: 0.75rem;
+          font-size: 0.68rem;
           font-weight: 800;
           color: #2563eb;
           background: rgba(37, 99, 235, 0.08);
-          padding: 0.3rem 0.65rem;
-          border-radius: 10px;
+          padding: 0.2rem 0.5rem;
+          border-radius: 8px;
           width: fit-content;
         }
 
         .status-badge-premium {
-          font-size: 0.7rem;
+          font-size: 0.65rem;
           font-weight: 900;
-          padding: 0.3rem 0.8rem;
+          padding: 0.2rem 0.6rem;
           border-radius: 99px;
           display: inline-block;
-          letter-spacing: 0.5px;
+          letter-spacing: 0.25px;
         }
         .status-badge-premium.pending { background: rgba(234, 88, 12, 0.08); color: #ea580c; }
         .status-badge-premium.in_transit, .status-badge-premium.dispatched { background: rgba(37, 99, 235, 0.08); color: #2563eb; }
@@ -1265,21 +2147,21 @@ const DispatchDashboardPage = () => {
         .status-badge-premium.returned { background: rgba(244, 63, 94, 0.08); color: #e11d48; }
 
         .dispatch-date-cell {
-          font-size: 0.8rem;
+          font-size: 0.75rem;
           font-weight: 700;
           color: #64748b;
           display: flex;
           align-items: center;
-          gap: 0.35rem;
+          gap: 0.25rem;
         }
 
         .load-value {
-          font-size: 1.05rem;
+          font-size: 0.9rem;
           font-weight: 900;
           color: #0f172a;
         }
         .load-value .unit {
-          font-size: 0.75rem;
+          font-size: 0.68rem;
           color: #94a3b8;
         }
 
@@ -1287,13 +2169,14 @@ const DispatchDashboardPage = () => {
         .dispatch-pulse-card {
           background: rgba(255, 255, 255, 0.85);
           backdrop-filter: blur(20px);
-          border-radius: 30px;
+          border-radius: 16px;
           border: 1px solid rgba(255, 255, 255, 0.7);
-          box-shadow: 0 20px 40px -15px rgba(51, 65, 85, 0.05);
-          padding: 2rem;
+          box-shadow: 0 10px 25px -10px rgba(51, 65, 85, 0.05);
+          padding: 0.5rem 0.75rem;
           display: flex;
           flex-direction: column;
-          min-height: 400px;
+          flex: 1.2;
+          gap: 0.4rem;
         }
 
         .no-selected-placeholder {
@@ -1304,49 +2187,50 @@ const DispatchDashboardPage = () => {
           flex: 1;
           text-align: center;
           color: #64748b;
-          padding: 3rem;
+          padding: 1.5rem;
         }
         .placeholder-icon {
           color: #cbd5e1;
-          margin-bottom: 1.5rem;
+          margin-bottom: 0.75rem;
           animation: float 3s ease-in-out infinite;
         }
         @keyframes float {
           0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-10px); }
+          50% { transform: translateY(-6px); }
         }
         .no-selected-placeholder h4 {
-          font-size: 1.25rem;
+          font-size: 1rem;
           font-weight: 900;
           color: #1e293b;
-          margin: 0 0 0.6rem 0;
-          letter-spacing: -0.5px;
+          margin: 0 0 0.4rem 0;
+          letter-spacing: -0.3px;
         }
         .no-selected-placeholder p {
-          font-size: 0.85rem;
-          line-height: 1.6;
-          max-width: 320px;
+          font-size: 0.78rem;
+          line-height: 1.5;
+          max-width: 260px;
         }
 
         .pulse-detail-container {
           display: flex;
           flex-direction: column;
-          gap: 1.75rem;
+          gap: 0.5rem;
           height: 100%;
+          min-height: 0;
         }
 
         .logistics-chain-header {
           display: flex;
           flex-direction: column;
-          gap: 1rem;
-          padding-bottom: 1.5rem;
+          gap: 0.5rem;
+          padding-bottom: 0.5rem;
           border-bottom: 1px solid #f1f5f9;
         }
         .logistics-chain-header h4 {
-          font-size: 0.8rem;
+          font-size: 0.72rem;
           font-weight: 900;
           color: #475569;
-          letter-spacing: 0.75px;
+          letter-spacing: 0.5px;
           margin: 0;
         }
 
@@ -1355,42 +2239,42 @@ const DispatchDashboardPage = () => {
           align-items: center;
           justify-content: space-between;
           position: relative;
-          padding: 0 0.75rem;
+          padding: 0 0.25rem;
         }
 
         .chain-node {
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 0.5rem;
+          gap: 0.25rem;
           z-index: 2;
         }
 
         .node-icon {
-          width: 38px;
-          height: 38px;
+          width: 26px;
+          height: 26px;
           border-radius: 50%;
           display: flex;
           align-items: center;
           justify-content: center;
           color: white;
-          box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+          box-shadow: 0 2px 6px rgba(0,0,0,0.08);
         }
         .node-icon.bg-green { background: #10b981; }
         .node-icon.bg-blue { background: #3b82f6; }
         .node-icon.bg-slate { background: #94a3b8; }
 
         .node-label {
-          font-size: 0.7rem;
+          font-size: 0.62rem;
           font-weight: 800;
           color: #475569;
         }
 
         .chain-line {
-          height: 4px;
+          height: 3px;
           flex: 1;
-          margin: 0 -8px;
-          margin-bottom: 1.25rem;
+          margin: 0 -4px;
+          margin-bottom: 0.85rem;
           z-index: 1;
         }
         .chain-line.bg-green { background: #10b981; }
@@ -1399,27 +2283,27 @@ const DispatchDashboardPage = () => {
         .specs-grid {
           display: grid;
           grid-template-columns: 1fr 1fr;
-          gap: 1.25rem;
+          gap: 0.3rem;
           background: #f8fafc;
-          padding: 1.5rem;
-          border-radius: 20px;
+          padding: 0.4rem 0.6rem;
+          border-radius: 10px;
           border: 1px solid #f1f5f9;
         }
 
         .spec-item {
           display: flex;
           flex-direction: column;
-          gap: 0.3rem;
+          gap: 0.1rem;
         }
         .spec-label {
-          font-size: 0.7rem;
+          font-size: 0.62rem;
           font-weight: 800;
           color: #94a3b8;
           text-transform: uppercase;
-          letter-spacing: 0.5px;
+          letter-spacing: 0.25px;
         }
         .spec-val {
-          font-size: 0.95rem;
+          font-size: 0.82rem;
           font-weight: 900;
           color: #1e293b;
         }
@@ -1428,12 +2312,12 @@ const DispatchDashboardPage = () => {
         }
 
         .status-pill {
-          font-size: 0.75rem;
+          font-size: 0.68rem;
           font-weight: 900;
-          padding: 0.25rem 0.75rem;
-          border-radius: 8px;
+          padding: 0.15rem 0.5rem;
+          border-radius: 6px;
           width: fit-content;
-          letter-spacing: 0.25px;
+          letter-spacing: 0.15px;
         }
         .status-pill.pending { background: rgba(234, 88, 12, 0.08); color: #ea580c; }
         .status-pill.in_transit, .status-pill.dispatched { background: rgba(37, 99, 235, 0.08); color: #2563eb; }
@@ -1441,55 +2325,57 @@ const DispatchDashboardPage = () => {
         .status-pill.returned { background: rgba(244, 63, 94, 0.08); color: #e11d48; }
 
         .action-buttons-wrapper {
-          margin-top: 0.5rem;
+          margin-top: 0.2rem;
         }
 
         .btn-action {
           border: none;
-          padding: 0.6rem 1.25rem;
-          font-size: 0.85rem;
+          padding: 0.35rem 0.75rem;
+          font-size: 0.75rem;
           font-weight: 800;
-          border-radius: 12px;
+          border-radius: 8px;
           cursor: pointer;
           display: flex;
           align-items: center;
-          gap: 0.4rem;
+          gap: 0.25rem;
           color: white;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-          transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+          box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+          transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
         }
         .btn-action.dispatch-btn { background: #3b82f6; }
-        .btn-action.dispatch-btn:hover { background: #2563eb; transform: translateY(-2px); box-shadow: 0 8px 20px rgba(59, 130, 246, 0.2); }
+        .btn-action.dispatch-btn:hover { background: #2563eb; transform: translateY(-1px); }
         .btn-action.deliver-btn { background: #10b981; }
-        .btn-action.deliver-btn:hover { background: #059669; transform: translateY(-2px); box-shadow: 0 8px 20px rgba(16, 185, 129, 0.2); }
+        .btn-action.deliver-btn:hover { background: #059669; transform: translateY(-1px); }
 
         .completed-log-tag {
-          font-size: 0.85rem;
+          font-size: 0.75rem;
           font-weight: 800;
           color: #10b981;
           display: flex;
           align-items: center;
-          gap: 0.35rem;
+          gap: 0.25rem;
         }
 
         .dispatch-items-list-container {
           display: flex;
           flex-direction: column;
-          gap: 0.85rem;
+          gap: 0.3rem;
+          flex: 1;
+          min-height: 0;
         }
         .dispatch-items-list-container h5 {
-          font-size: 0.75rem;
+          font-size: 0.68rem;
           font-weight: 900;
           color: #475569;
-          letter-spacing: 0.75px;
+          letter-spacing: 0.5px;
           margin: 0;
         }
 
         .small-items-list {
           display: flex;
           flex-direction: column;
-          gap: 0.6rem;
-          max-height: 220px;
+          gap: 0.35rem;
+          max-height: 180px;
           overflow-y: auto;
           padding-right: 4px;
         }
@@ -1498,9 +2384,9 @@ const DispatchDashboardPage = () => {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          padding: 0.75rem 1rem;
+          padding: 0.3rem 0.5rem;
           background: rgba(248, 250, 252, 0.8);
-          border-radius: 14px;
+          border-radius: 8px;
           border: 1px solid #eef2f6;
           transition: all 0.2s ease;
         }
@@ -1513,76 +2399,86 @@ const DispatchDashboardPage = () => {
           flex-direction: column;
         }
         .item-name {
-          font-size: 0.85rem;
+          font-size: 0.78rem;
           font-weight: 800;
           color: #1e293b;
         }
         .unit-price-tag {
-          font-size: 0.7rem;
+          font-size: 0.65rem;
           font-weight: 600;
           color: #94a3b8;
         }
         .item-right {
           display: flex;
           align-items: center;
-          gap: 1.25rem;
+          gap: 0.75rem;
         }
         .loaded-qty {
-          font-size: 0.75rem;
+          font-size: 0.68rem;
           font-weight: 800;
           color: #475569;
           background: #e2e8f0;
-          padding: 0.15rem 0.5rem;
-          border-radius: 6px;
+          padding: 0.1rem 0.35rem;
+          border-radius: 4px;
         }
         .item-total-price {
-          font-size: 0.85rem;
+          font-size: 0.78rem;
           font-weight: 900;
           color: #1e293b;
         }
 
-        /* 🔮 PREDICTIVE RETURNS TRACKER */
-        .returns-pulse-section {
+        /* 🔮 PREDICTIVE RETURNS TRACKER CARD */
+        .returns-pulse-card {
+          background: rgba(255, 255, 255, 0.85);
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
+          border-radius: 16px;
+          border: 1px solid rgba(255, 255, 255, 0.7);
+          box-shadow: 0 10px 25px -10px rgba(51, 65, 85, 0.05);
+          padding: 0.5rem 0.75rem;
           display: flex;
           flex-direction: column;
-          gap: 1.5rem;
+          flex: 0.8;
+          gap: 0.3rem;
         }
 
-        .returns-pulse-section h3 {
-          font-size: 1.35rem;
+        .returns-pulse-card h3 {
+          font-size: 0.85rem;
           font-weight: 900;
           color: #0f172a;
           margin: 0;
-          letter-spacing: -0.5px;
+          letter-spacing: -0.3px;
         }
 
         .section-title {
           display: flex;
           align-items: center;
-          gap: 0.6rem;
+          gap: 0.4rem;
         }
 
-        .returns-tracker-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
-          gap: 1.5rem;
+        .returns-tracker-list {
+          display: flex;
+          flex-direction: column;
+          gap: 0.3rem;
+          max-height: 220px;
+          overflow-y: auto;
+          padding-right: 4px;
         }
 
         .tracker-card {
           background: rgba(255, 255, 255, 0.85);
           backdrop-filter: blur(20px);
-          border-radius: 26px;
+          border-radius: 10px;
           border: 1px solid rgba(255, 255, 255, 0.7);
-          box-shadow: 0 15px 35px -10px rgba(51, 65, 85, 0.05);
-          padding: 1.5rem;
+          padding: 0.35rem 0.5rem;
           display: flex;
           flex-direction: column;
-          gap: 1.25rem;
+          gap: 0.25rem;
           transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
         .tracker-card:hover {
-          transform: translateY(-4px);
-          box-shadow: 0 25px 45px -12px rgba(51, 65, 85, 0.1);
+          transform: translateY(-1px);
+          box-shadow: 0 6px 15px -5px rgba(51, 65, 85, 0.08);
         }
 
         .tracker-top {
@@ -1594,17 +2490,17 @@ const DispatchDashboardPage = () => {
         .salesman-meta {
           display: flex;
           align-items: center;
-          gap: 0.85rem;
+          gap: 0.5rem;
         }
 
         .salesman-avatar {
-          width: 42px;
-          height: 42px;
-          border-radius: 14px;
+          width: 24px;
+          height: 24px;
+          border-radius: 6px;
           background: rgba(1, 86, 44, 0.08);
           color: #01562c;
           font-weight: 900;
-          font-size: 1.05rem;
+          font-size: 0.75rem;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -1612,34 +2508,34 @@ const DispatchDashboardPage = () => {
         }
 
         .salesman-meta .name {
-          font-size: 0.95rem;
+          font-size: 0.85rem;
           font-weight: 900;
           color: #1e293b;
           display: block;
         }
         .salesman-meta .destination {
-          font-size: 0.72rem;
+          font-size: 0.65rem;
           color: #64748b;
           font-weight: 700;
           display: block;
         }
 
         .timer-badge {
-          font-size: 0.7rem;
+          font-size: 0.65rem;
           font-weight: 900;
-          padding: 0.25rem 0.65rem;
-          border-radius: 8px;
-          letter-spacing: 0.25px;
+          padding: 0.15rem 0.45rem;
+          border-radius: 6px;
+          letter-spacing: 0.15px;
         }
         .timer-badge.active { background: rgba(16, 185, 129, 0.08); color: #10b981; }
         .timer-badge.scheduled { background: #f8fafc; color: #64748b; border: 1px dashed #cbd5e1; }
 
         .route-bar {
           background: #f1f5f9;
-          height: 8px;
+          height: 6px;
           border-radius: 99px;
           position: relative;
-          margin-bottom: 0.5rem;
+          margin-bottom: 0.25rem;
           overflow: hidden;
         }
         .route-fill {
@@ -1651,12 +2547,12 @@ const DispatchDashboardPage = () => {
           position: absolute;
           top: 50%;
           transform: translate(-50%, -50%);
-          width: 22px;
-          height: 22px;
+          width: 16px;
+          height: 16px;
           border-radius: 50%;
           background: #3b82f6;
-          border: 3px solid white;
-          box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+          border: 2px solid white;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.15);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -1666,7 +2562,7 @@ const DispatchDashboardPage = () => {
         .time-meta {
           display: flex;
           justify-content: space-between;
-          font-size: 0.72rem;
+          font-size: 0.68rem;
           color: #64748b;
           font-weight: 800;
         }
@@ -1680,16 +2576,20 @@ const DispatchDashboardPage = () => {
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          height: 220px;
+          height: 120px;
           color: #3b82f6;
+        }
+        .loading-spinner-area p {
+          font-size: 0.8rem;
+          margin-top: 0.5rem;
         }
         .loading-spinner-area-small {
           display: flex;
           align-items: center;
-          gap: 0.6rem;
+          gap: 0.4rem;
           color: #64748b;
-          padding: 1.25rem;
-          font-size: 0.8rem;
+          padding: 0.5rem;
+          font-size: 0.75rem;
           font-weight: 600;
         }
         .no-records-area {
@@ -1697,9 +2597,13 @@ const DispatchDashboardPage = () => {
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          height: 220px;
+          height: 120px;
           color: #94a3b8;
           text-align: center;
+        }
+        .no-records-area p {
+          font-size: 0.8rem;
+          margin-top: 0.5rem;
         }
         .spin-icon {
           animation: spin 2s linear infinite;
@@ -1712,11 +2616,12 @@ const DispatchDashboardPage = () => {
         /* 📊 NEXT-GEN CHARTS STYLING */
         .analytics-charts-grid {
           display: grid;
-          grid-template-columns: 1.6fr 1fr;
-          gap: 1rem;
+          grid-template-columns: 1.5fr 1fr;
+          gap: 0.5rem;
+          flex-shrink: 0;
         }
 
-        @media (max-width: 1200px) {
+        @media (max-width: 768px) {
           .analytics-charts-grid {
             grid-template-columns: 1fr;
           }
@@ -1726,13 +2631,13 @@ const DispatchDashboardPage = () => {
           background: rgba(255, 255, 255, 0.85);
           backdrop-filter: blur(20px);
           -webkit-backdrop-filter: blur(20px);
-          border-radius: 20px;
-          padding: 1.1rem 1.25rem;
+          border-radius: 14px;
+          padding: 0.4rem 0.6rem;
           border: 1px solid rgba(255, 255, 255, 0.7);
-          box-shadow: 0 10px 25px -10px rgba(51, 65, 85, 0.05);
+          box-shadow: 0 6px 15px -10px rgba(51, 65, 85, 0.05);
           display: flex;
           flex-direction: column;
-          gap: 1rem;
+          gap: 0.3rem;
           transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
           position: relative;
           overflow: hidden;
@@ -1744,14 +2649,14 @@ const DispatchDashboardPage = () => {
           top: 0;
           left: 0;
           width: 100%;
-          height: 4px;
+          height: 3px;
           opacity: 0.85;
         }
 
         .analytics-chart-card:hover {
-          transform: translateY(-3px);
+          transform: translateY(-2px);
           background: rgba(255, 255, 255, 0.95);
-          box-shadow: 0 15px 30px -8px rgba(51, 65, 85, 0.1);
+          box-shadow: 0 10px 20px -8px rgba(51, 65, 85, 0.08);
         }
 
         .chart-header {
@@ -1763,28 +2668,28 @@ const DispatchDashboardPage = () => {
         .header-icon-title {
           display: flex;
           align-items: center;
-          gap: 0.6rem;
+          gap: 0.4rem;
         }
 
         .header-icon-title h4 {
-          font-size: 0.95rem;
+          font-size: 0.85rem;
           font-weight: 900;
           color: #0f172a;
           margin: 0;
-          letter-spacing: -0.4px;
+          letter-spacing: -0.3px;
         }
 
         .chart-sub {
-          font-size: 0.68rem;
+          font-size: 0.62rem;
           color: #64748b;
           font-weight: 600;
-          margin: 0.05rem 0 0 0;
+          margin: 0.02rem 0 0 0;
         }
 
         .icon-wrapper.small {
-          width: 28px;
-          height: 28px;
-          border-radius: 8px;
+          width: 22px;
+          height: 22px;
+          border-radius: 6px;
         }
 
         .chart-body {
@@ -1796,11 +2701,11 @@ const DispatchDashboardPage = () => {
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          height: 180px;
+          height: 140px;
           color: #94a3b8;
-          font-size: 0.8rem;
+          font-size: 0.75rem;
           font-weight: 600;
-          gap: 0.4rem;
+          gap: 0.25rem;
         }
 
         .pie-chart-body {
@@ -1815,9 +2720,198 @@ const DispatchDashboardPage = () => {
           justify-content: center;
           align-items: center;
         }
+
+        .custom-pie-legend {
+          display: flex;
+          flex-wrap: wrap;
+          justify-content: center;
+          gap: 0.3rem 0.5rem;
+          margin-top: 0.3rem;
+          width: 100%;
+        }
+        .legend-item {
+          display: flex;
+          align-items: center;
+          gap: 0.25rem;
+          font-size: 0.68rem;
+          font-weight: 800;
+          color: #475569;
+          white-space: nowrap;
+        }
+        .legend-dot {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          display: inline-block;
+        }
+        .legend-label {
+          color: #475569;
+        }
+        .legend-val {
+          color: #94a3b8;
+        }
+
+        .pagination-wrapper {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 0.8rem 0.25rem 0.2rem 0.25rem;
+          border-top: 1px solid #e2e8f0;
+          margin-top: 0.5rem;
+          flex-shrink: 0;
+        }
+        .pagination-info {
+          font-size: 0.8rem;
+          color: #64748b;
+          font-weight: 600;
+        }
+        .pagination-info b {
+          color: #0f172a;
+        }
+        .pagination-controls {
+          display: flex;
+          align-items: center;
+          gap: 0.4rem;
+        }
+        .pagination-arrow {
+          border: 1px solid #cbd5e1;
+          background: white;
+          color: #475569;
+          width: 32px;
+          height: 32px;
+          border-radius: 8px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 1.15rem;
+          cursor: pointer;
+          font-weight: 700;
+          transition: all 0.2s ease;
+        }
+        .pagination-arrow:hover:not(:disabled) {
+          background: #f1f5f9;
+          color: #0f172a;
+          border-color: #cbd5e1;
+        }
+        .pagination-arrow:disabled {
+          opacity: 0.4;
+          cursor: not-allowed;
+        }
+        .page-indicator {
+          font-size: 0.8rem;
+          color: #475569;
+          font-weight: 600;
+          margin: 0 0.6rem;
+        }
+        .page-indicator b {
+          color: #0f172a;
+        }
+
+        /* 🏢 PARTNER PORTAL SPECIFIC STYLING */
+        .partner-analytics-portal {
+          display: flex;
+          flex-direction: column;
+          gap: 0.6rem;
+        }
+        .portal-header {
+          display: flex;
+          align-items: center;
+          gap: 1.5rem;
+          background: white;
+          padding: 0.75rem 1.25rem;
+          border-radius: 14px;
+          border: 1px solid rgba(226, 232, 240, 0.8);
+          box-shadow: 0 4px 15px -5px rgba(51, 65, 85, 0.05);
+        }
+        .btn-back {
+          border: 1px solid #cbd5e1;
+          background: white;
+          color: #475569;
+          font-weight: 700;
+          font-size: 0.78rem;
+          padding: 0.4rem 0.8rem;
+          border-radius: 8px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 0.25rem;
+          transition: all 0.2s ease;
+        }
+        .btn-back:hover {
+          background: #f1f5f9;
+          color: #0f172a;
+          border-color: #94a3b8;
+        }
+        .partner-title-area {
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+        }
+        .partner-avatar {
+          width: 38px;
+          height: 38px;
+          border-radius: 10px;
+          background: rgba(1, 86, 44, 0.08);
+          color: #01562c;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .partner-title-area h2 {
+          font-size: 1.2rem;
+          font-weight: 900;
+          color: #0f172a;
+          margin: 0;
+          letter-spacing: -0.3px;
+        }
+        .partner-badge {
+          font-size: 0.68rem;
+          font-weight: 700;
+          color: #64748b;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+        .portal-loading {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          height: 300px;
+          color: #01562c;
+          gap: 0.5rem;
+        }
+        .portal-loading p {
+          font-size: 0.85rem;
+          font-weight: 600;
+          color: #64748b;
+        }
+        .portal-content {
+          display: flex;
+          flex-direction: column;
+          gap: 0.6rem;
+        }
+        .partner-bento {
+          grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+        }
+        @media (min-width: 1200px) {
+          .partner-bento {
+            grid-template-columns: repeat(7, 1fr);
+          }
+        }
+        .font-bold {
+          font-weight: 800;
+        }
+        .link-style {
+          cursor: pointer;
+          color: #01562c;
+          text-decoration: underline;
+          text-underline-offset: 2px;
+          font-weight: 800;
+        }
+        .link-style:hover {
+          color: #0369a1;
+        }
       `}</style>
-    </Layout>
-  );
-};
+);
 
 export default DispatchDashboardPage;

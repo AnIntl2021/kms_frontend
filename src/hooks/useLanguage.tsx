@@ -530,7 +530,18 @@ const translations: Record<Language, Record<string, string>> = {
     gathering_configs: 'Gathering system configurations...',
     settings_updated_success: 'System Settings Updated Successfully! ⚙️',
     failed_update_configs: 'Failed to update system configurations.',
-    dispatch_dashboard: 'Dispatch Dashboard'
+    dispatch_dashboard: 'Dispatch Dashboard',
+    sales_velocity: 'Sales Velocity (Daily)',
+    forecasted_return_rate: 'Forecasted Return Rate',
+    optimal_next_dispatch: 'Optimal Next Dispatch',
+    expected_savings: 'Expected Cost Savings',
+    daily_sales_velocity: 'Daily Sales Run-rate',
+    stable: 'Stable',
+    reduce_dispatch: 'Reduce Dispatch',
+    expand_supply: 'Expand Supply',
+    maintain: 'Maintain Supply',
+    optimal_dispatch_units: 'Optimal Dispatch Units',
+    return_loss_savings: 'Return Loss Savings'
   },
   ar: {
     dashboard: 'لوحة القيادة',
@@ -954,6 +965,17 @@ const translations: Record<Language, Record<string, string>> = {
     most_profitable: 'الأكثر ربحية',
     dispatch_unit: 'وحدة',
     dispatch_dashboard: 'لوحة تحكم التوزيع',
+    sales_velocity: 'سرعة المبيعات (يومياً)',
+    forecasted_return_rate: 'معدل المرتجعات المتوقع',
+    optimal_next_dispatch: 'التوزيع المثالي القادم',
+    expected_savings: 'الوفورات المتوقعة',
+    daily_sales_velocity: 'معدل المبيعات اليومي',
+    stable: 'مستقر',
+    reduce_dispatch: 'تقليل التوزيع',
+    expand_supply: 'توسيع التوريد',
+    maintain: 'الحفاظ على التوريد',
+    optimal_dispatch_units: 'وحدات التوزيع المثالية',
+    return_loss_savings: 'وفورات خسارة المرتجعات'
   }
 };
 

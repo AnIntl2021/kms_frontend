@@ -91,6 +91,17 @@ const InventoryPage = () => {
     return () => clearTimeout(debounceFetch);
   }, [fetchInventory]);
 
+  // Auto-open Add Stock Item modal if URL contains ?addNew=true
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('addNew') === 'true') {
+      setIsModalOpen(true);
+      // Clean the URL so refreshing doesn't reopen it
+      const cleanUrl = window.location.pathname;
+      window.history.replaceState({}, '', cleanUrl);
+    }
+  }, []);
+
   // Safe checks for rendering
   const safeItems = Array.isArray(items) ? items : [];
   const totalItems = safeItems.length;
