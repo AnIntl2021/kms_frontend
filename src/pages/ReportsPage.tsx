@@ -160,7 +160,7 @@ const ReportsPage = () => {
         d.status
       ]);
     } else if (activeTab === 'products') {
-      headers = ["Item Name", "Category", "Total Qty Sold", "Revenue (KWD)", "Total Cost", "Net Profit", "Contribution %", "Return Rate %"];
+      headers = ["Item Name", "Category", "Total Qty Sold", "Revenue (KWD)", "Total Cost", "Gross Profit", "Contribution %", "Return Rate %"];
       rows = data.map(d => [
         d.name_en || 'N/A',
         d.category || 'General',
@@ -433,12 +433,12 @@ const ReportsPage = () => {
             <div className="summary-card profit">
               <div className="summary-icon"><ShoppingCart size={24} /></div>
               <div className="summary-data">
-                <span className="summary-label">{t('net_profit')}</span>
+                <span className="summary-label">{t('net_revenue')}</span>
                 <span className="summary-value">
                   {(filteredData.reduce((acc, curr) => acc + Number(curr.final_amount || 0), 0) - 
                     filteredData.reduce((acc, curr) => acc + Number(curr.returns_amount || 0), 0)).toFixed(3)} {t('kd_currency')}
                 </span>
-                <span className="summary-sublabel">Net Receivable (Total - Returns)</span>
+                <span className="summary-sublabel">Net Sales kept (Final Amt - Returns)</span>
               </div>
             </div>
           </div>
@@ -483,7 +483,7 @@ const ReportsPage = () => {
                 <h3><TrendingUp size={18} /> {t('revenue_profit_trend')}</h3>
                 <div className="legend-pills">
                    <span className="pill revenue">{t('revenue')}</span>
-                   <span className="pill profit">{t('net_profit')}</span>
+                   <span className="pill profit">{t('gross_profit')}</span>
                 </div>
               </div>
               <div className="chart-container">
@@ -491,7 +491,7 @@ const ReportsPage = () => {
                   options={trendOptions} 
                   series={[
                     { name: t('revenue'), data: analytics.dailyTrend.map((d: any) => Number(d.revenue || 0).toFixed(2)) },
-                    { name: t('net_profit'), data: analytics.dailyTrend.map((d: any) => Number(d.profit || 0).toFixed(2)) }
+                    { name: t('gross_profit'), data: analytics.dailyTrend.map((d: any) => Number(d.profit || 0).toFixed(2)) }
                   ]} 
                   type="area" 
                   height={300} 
@@ -536,172 +536,172 @@ const ReportsPage = () => {
             </div>
           ) : (
             <div className="table-responsive">
-              <table className="premium-table">
-                <thead>
-                  {activeTab === 'sales' && (
-                    <tr>
-                      <th>{t('order_id')}</th>
-                      <th>{t('customer')}</th>
-                       <th>{t('branch')}</th>
-                      <th>{t('salesman')}</th>
-                      <th>{t('date')}</th>
-                      <th>{t('total_amt')}</th>
-                      <th>{t('disc')}</th>
-                      <th>{t('final_amt')}</th>
-                      <th>{t('returns')}</th>
-                      <th>{t('net_profit')}</th>
-                      <th>{t('status')}</th>
-                    </tr>
-                  )}
-                  {activeTab === 'production' && (
-                    <tr>
-                      <th>{t('batch_number_caps')}</th>
-                      <th>{t('date')}</th>
-                      <th>{t('product')}</th>
-                      <th>{t('qty_produced')}</th>
-                      <th>{t('cost_price')}</th>
-                      <th>{t('total_cost')}</th>
-                    </tr>
-                  )}
-                  {activeTab === 'wastage' && (
-                    <tr>
-                      <th>{t('date')}</th>
-                      <th>{t('product')}</th>
-                      <th>{t('vendor')}</th>
-                       <th>{t('branch')}</th>
-                      <th>{t('qty_wasted_caps')}</th>
-                      <th>{t('loss_value')}</th>
-                      <th>{t('reason')}</th>
-                    </tr>
-                  )}
-                  {activeTab === 'purchase' && (
-                    <tr>
-                      <th>{t('po_number')}</th>
-                      <th>{t('supplier')}</th>
-                      <th>{t('branch')}</th>
-                      <th>{t('date')}</th>
-                      <th>{t('total_amt')}</th>
-                      <th>{t('tax')}</th>
-                      <th>{t('disc')}</th>
-                      <th>{t('final_amt')}</th>
-                      <th>{t('status')}</th>
-                    </tr>
-                  )}
-                  {activeTab === 'products' && (
-                    <tr>
-                      <th>{t('item_name')}</th>
-                      <th>{t('total_sold')}</th>
-                      <th>{t('revenue')}</th>
-                      <th>{t('total_cost')}</th>
-                      <th>{t('net_profit')}</th>
-                    </tr>
-                  )}
-                </thead>
-                <tbody>
-                  {filteredData.length > 0 ? filteredData.map((item, idx) => (
-                    <tr key={idx}>
-                      {activeTab === 'sales' && (
-                        <>
-                          <td><strong>FNFI-{100000 + item.sale_id}</strong></td>
-                          <td>{language === 'ar' ? (item.vendor_name_ar || item.vendor_name) : item.vendor_name}</td>
-                           <td>{language === 'ar' ? (item.branch_name_ar || item.branch_name || 'الرئيسي') : (item.branch_name || 'Main')}</td>
-                          <td><span className="salesman-badge">{language === 'ar' ? (item.salesman_name_ar || item.salesman_name || 'N/A') : (item.salesman_name || 'N/A')}</span></td>
-                          <td>{item.report_date}</td>
-                          <td>{Number(item.total_amount || 0).toFixed(3)}</td>
-                          <td><span className="discount-tag">-{item.discount_percentage || 0}%</span></td>
-                          <td><span className="profit-text">{Number(item.final_amount || 0).toFixed(3)}</span></td>
-                          <td><span className="loss-text">{Number(item.returns_amount || 0).toFixed(3)}</span></td>
-                          <td>
-                            <span className="profit-badge">
-                              {(Number(item.final_amount || 0) - Number(item.returns_amount || 0)).toFixed(3)}
-                            </span>
-                          </td>
-                          <td><span className={`status-pill ${item.dispatch_status}`}>{t(item.dispatch_status)}</span></td>
-                        </>
-                      )}
-                      {activeTab === 'production' && (
-                        <>
-                          <td><strong>{item.batch_number}</strong></td>
-                          <td>{item.report_date}</td>
-                          <td>{language === 'ar' ? (item.product_name_ar || item.product_name) : item.product_name}</td>
-                          <td>{item.quantity_produced || 0} {t('dispatch_unit')}</td>
-                          <td>{Number(item.cost_price || 0).toFixed(3)}</td>
-                          <td>{Number((item.quantity_produced || 0) * (item.cost_price || 0)).toFixed(3)}</td>
-                        </>
-                      )}
-                      {activeTab === 'wastage' && (
-                        <>
-                          <td>{item.report_date}</td>
-                          <td><strong>{language === 'ar' ? (item.product_name_ar || item.product_name) : item.product_name}</strong></td>
-                          <td>{language === 'ar' ? (item.vendor_name_ar || item.vendor_name || 'المصنع') : (item.vendor_name || 'Factory')}</td>
-                           <td>{language === 'ar' ? (item.branch_name_ar || item.branch_name || 'الرئيسي') : (item.branch_name || 'Main')}</td>
-                          <td>{item.quantity || 0}</td>
-                          <td><span className="loss-text">{Number((item.quantity || 0) * (item.cost_price || 0)).toFixed(3)}</span></td>
-                          <td>{language === 'ar' ? (item.reason_ar || item.reason_en) : item.reason_en}</td>
-                        </>
-                      )}
-                      {activeTab === 'purchase' && (
-                        <>
-                          <td><strong>{item.po_number}</strong></td>
-                          <td>{language === 'ar' ? (item.vendor_name_ar || item.vendor_name) : item.vendor_name}</td>
-                          <td>{language === 'ar' ? (item.branch_name_ar || item.branch_name || 'الرئيسي') : (item.branch_name || 'Main')}</td>
-                          <td>{item.report_date}</td>
-                          <td>{Number(item.total_amount || 0).toFixed(3)}</td>
-                          <td>{Number(item.tax_amount || 0).toFixed(3)}</td>
-                          <td><span className="discount-tag">-{Number(item.discount_amount || 0).toFixed(3)}</span></td>
-                          <td><span className="profit-text">{Number(item.final_amount || 0).toFixed(3)}</span></td>
-                          <td><span className={`status-pill ${item.status}`}>{t(item.status)}</span></td>
-                        </>
-                      )}
-                      {activeTab === 'products' && (
-                        <>
-                          <td>
-                            <div className="product-info-cell">
-                              <div className="product-icon">
-                                <Package size={16} />
+                <table className="premium-table">
+                  <thead>
+                    {activeTab === 'sales' && (
+                      <tr>
+                        <th>{t('order_id')}</th>
+                        <th>{t('customer')}</th>
+                         <th>{t('branch')}</th>
+                        <th>{t('salesman')}</th>
+                        <th>{t('date')}</th>
+                        <th>{t('total_amt')}</th>
+                        <th>{t('disc')}</th>
+                        <th>{t('final_amt')}</th>
+                        <th>{t('returns')}</th>
+                        <th>{t('net_revenue')}</th>
+                        <th>{t('status')}</th>
+                      </tr>
+                    )}
+                    {activeTab === 'production' && (
+                      <tr>
+                        <th>{t('batch_number_caps')}</th>
+                        <th>{t('date')}</th>
+                        <th>{t('product')}</th>
+                        <th>{t('qty_produced')}</th>
+                        <th>{t('cost_price')}</th>
+                        <th>{t('total_cost')}</th>
+                      </tr>
+                    )}
+                    {activeTab === 'wastage' && (
+                      <tr>
+                        <th>{t('date')}</th>
+                        <th>{t('product')}</th>
+                        <th>{t('vendor')}</th>
+                         <th>{t('branch')}</th>
+                        <th>{t('qty_wasted_caps')}</th>
+                        <th>{t('loss_value')}</th>
+                        <th>{t('reason')}</th>
+                      </tr>
+                    )}
+                    {activeTab === 'purchase' && (
+                      <tr>
+                        <th>{t('po_number')}</th>
+                        <th>{t('supplier')}</th>
+                        <th>{t('branch')}</th>
+                        <th>{t('date')}</th>
+                        <th>{t('total_amt')}</th>
+                        <th>{t('tax')}</th>
+                        <th>{t('disc')}</th>
+                        <th>{t('final_amt')}</th>
+                        <th>{t('status')}</th>
+                      </tr>
+                    )}
+                    {activeTab === 'products' && (
+                      <tr>
+                        <th>{t('item_name')}</th>
+                        <th>{t('total_sold')}</th>
+                        <th>{t('revenue')}</th>
+                        <th>{t('total_cost')}</th>
+                        <th>{t('gross_profit')}</th>
+                      </tr>
+                    )}
+                  </thead>
+                  <tbody>
+                    {filteredData.length > 0 ? filteredData.map((item, idx) => (
+                      <tr key={idx}>
+                        {activeTab === 'sales' && (
+                          <>
+                            <td><strong>FNFI-{100000 + item.sale_id}</strong></td>
+                            <td>{language === 'ar' ? (item.vendor_name_ar || item.vendor_name) : item.vendor_name}</td>
+                             <td>{language === 'ar' ? (item.branch_name_ar || item.branch_name || 'الرئيسي') : (item.branch_name || 'Main')}</td>
+                            <td><span className="salesman-badge">{language === 'ar' ? (item.salesman_name_ar || item.salesman_name || 'N/A') : (item.salesman_name || 'N/A')}</span></td>
+                            <td>{item.report_date}</td>
+                            <td>{Number(item.total_amount || 0).toFixed(3)}</td>
+                            <td><span className="discount-tag">-{item.discount_percentage || 0}%</span></td>
+                            <td><span className="profit-text">{Number(item.final_amount || 0).toFixed(3)}</span></td>
+                            <td><span className="loss-text">{Number(item.returns_amount || 0).toFixed(3)}</span></td>
+                            <td>
+                              <span className="profit-badge">
+                                {(Number(item.final_amount || 0) - Number(item.returns_amount || 0)).toFixed(3)}
+                              </span>
+                            </td>
+                            <td><span className={`status-pill ${item.dispatch_status}`}>{t(item.dispatch_status)}</span></td>
+                          </>
+                        )}
+                        {activeTab === 'production' && (
+                          <>
+                            <td><strong>{item.batch_number}</strong></td>
+                            <td>{item.report_date}</td>
+                            <td>{language === 'ar' ? (item.product_name_ar || item.product_name) : item.product_name}</td>
+                            <td>{item.quantity_produced || 0} {t('dispatch_unit')}</td>
+                            <td>{Number(item.cost_price || 0).toFixed(3)}</td>
+                            <td>{Number((item.quantity_produced || 0) * (item.cost_price || 0)).toFixed(3)}</td>
+                          </>
+                        )}
+                        {activeTab === 'wastage' && (
+                          <>
+                            <td>{item.report_date}</td>
+                            <td><strong>{language === 'ar' ? (item.product_name_ar || item.product_name) : item.product_name}</strong></td>
+                            <td>{language === 'ar' ? (item.vendor_name_ar || item.vendor_name || 'المصنع') : (item.vendor_name || 'Factory')}</td>
+                             <td>{language === 'ar' ? (item.branch_name_ar || item.branch_name || 'الرئيسي') : (item.branch_name || 'Main')}</td>
+                            <td>{item.quantity || 0}</td>
+                            <td><span className="loss-text">{Number((item.quantity || 0) * (item.cost_price || 0)).toFixed(3)}</span></td>
+                            <td>{language === 'ar' ? (item.reason_ar || item.reason_en) : item.reason_en}</td>
+                          </>
+                        )}
+                        {activeTab === 'purchase' && (
+                          <>
+                            <td><strong>{item.po_number}</strong></td>
+                            <td>{language === 'ar' ? (item.vendor_name_ar || item.vendor_name) : item.vendor_name}</td>
+                            <td>{language === 'ar' ? (item.branch_name_ar || item.branch_name || 'الرئيسي') : (item.branch_name || 'Main')}</td>
+                            <td>{item.report_date}</td>
+                            <td>{Number(item.total_amount || 0).toFixed(3)}</td>
+                            <td>{Number(item.tax_amount || 0).toFixed(3)}</td>
+                            <td><span className="discount-tag">-{Number(item.discount_amount || 0).toFixed(3)}</span></td>
+                            <td><span className="profit-text">{Number(item.final_amount || 0).toFixed(3)}</span></td>
+                            <td><span className={`status-pill ${item.status}`}>{t(item.status)}</span></td>
+                          </>
+                        )}
+                        {activeTab === 'products' && (
+                          <>
+                            <td>
+                              <div className="product-info-cell">
+                                <div className="product-icon">
+                                  <Package size={16} />
+                                </div>
+                                <div className="product-details">
+                                  <strong>{language === 'ar' ? (item.name_ar || item.name_en) : item.name_en}</strong>
+                                  <span>{item.category || 'General'}</span>
+                                </div>
                               </div>
-                              <div className="product-details">
-                                <strong>{language === 'ar' ? (item.name_ar || item.name_en) : item.name_en}</strong>
-                                <span>{item.category || 'General'}</span>
+                            </td>
+                            <td>
+                              <div className="qty-indicator">
+                                 <span className="qty-val">{Number(item.total_sold || 0).toLocaleString()}</span>
+                                 <span className="qty-unit">Units Sold</span>
                               </div>
-                            </div>
-                          </td>
-                          <td>
-                            <div className="qty-indicator">
-                               <span className="qty-val">{Number(item.total_sold || 0).toLocaleString()}</span>
-                               <span className="qty-unit">Units Sold</span>
-                            </div>
-                          </td>
-                          <td>
-                            <div className="revenue-stack">
-                               <span className="rev-main">{Number(item.revenue || 0).toFixed(3)} د.ك</span>
-                               <div className="contribution-bar">
-                                  <div className="fill" style={{ width: `${item.contribution}%` }}></div>
-                                  <span>{item.contribution}% of total</span>
-                               </div>
-                            </div>
-                          </td>
-                          <td><span className="cost-text">{Number(item.total_cost || 0).toFixed(3)}</span></td>
-                          <td>
-                            <div className={`profit-stack ${Number(item.net_profit) < 0 ? 'negative' : 'positive'}`}>
-                               <span className="profit-val">{Number(item.net_profit || 0).toFixed(3)} د.ك</span>
-                               {Number(item.return_rate) > 5 && (
-                                 <span className="return-alert">
-                                    <RotateCcw size={10} /> {item.return_rate}% Returns
-                                 </span>
-                               )}
-                            </div>
-                          </td>
-                        </>
-                      )}
-                    </tr>
-                  )) : (
-                    <tr>
-                      <td colSpan={11} className="empty-row">{t('no_records_period')}</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                            </td>
+                            <td>
+                              <div className="revenue-stack">
+                                 <span className="rev-main">{Number(item.revenue || 0).toFixed(3)} د.ك</span>
+                                 <div className="contribution-bar">
+                                    <div className="fill" style={{ width: `${item.contribution}%` }}></div>
+                                    <span>{item.contribution}% of total</span>
+                                 </div>
+                              </div>
+                            </td>
+                            <td><span className="cost-text">{Number(item.total_cost || 0).toFixed(3)}</span></td>
+                            <td>
+                              <div className={`profit-stack ${Number(item.net_profit) < 0 ? 'negative' : 'positive'}`}>
+                                 <span className="profit-val">{Number(item.net_profit || 0).toFixed(3)} د.ك</span>
+                                 {Number(item.return_rate) > 5 && (
+                                   <span className="return-alert">
+                                      <RotateCcw size={10} /> {item.return_rate}% Returns
+                                   </span>
+                                 )}
+                              </div>
+                            </td>
+                          </>
+                        )}
+                      </tr>
+                    )) : (
+                      <tr>
+                        <td colSpan={11} className="empty-row">{t('no_records_period')}</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
             </div>
           )}
         </div>
@@ -713,8 +713,8 @@ const ReportsPage = () => {
           <hr />
           <table className="print-table">
              <thead>
-                <tr>
-                   {activeTab === 'sales' ? <><th>ID</th><th>Customer</th><th>Date</th><th>Final</th><th>Returns</th><th>Profit</th></> : null}
+                 <tr>
+                    {activeTab === 'sales' ? <><th>ID</th><th>Customer</th><th>Date</th><th>Final</th><th>Returns</th><th>Net Revenue</th></> : null}
                    {activeTab === 'production' ? <><th>Batch</th><th>Date</th><th>Product</th><th>Qty</th><th>Cost</th></> : null}
                    {activeTab === 'wastage' ? <><th>Date</th><th>Product</th><th>Qty</th><th>Loss</th><th>Reason</th></> : null}
                    {activeTab === 'purchase' ? <><th>PO #</th><th>Supplier</th><th>Date</th><th>Total</th><th>Status</th></> : null}

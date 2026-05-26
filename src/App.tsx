@@ -16,8 +16,10 @@ import FactoryDispatchPage from './pages/FactoryDispatchPage';
 import SettingsPage from './pages/SettingsPage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import ReportsPage from './pages/ReportsPage';
+import FoodCostPage from './pages/FoodCostPage';
 import DispatchDashboardPage from './pages/DispatchDashboardPage';
 import SalesmenPage from './pages/SalesmenPage';
+import PNLReportPage from './pages/PNLReportPage';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { LanguageProvider, useLanguage } from './hooks/useLanguage';
@@ -65,7 +67,9 @@ function AppContent() {
         <Route path="/factory-dispatch" element={<ProtectedRoute><FactoryDispatchPage /></ProtectedRoute>} />
         <Route path="/analytics" element={<ProtectedRoute><AnalyticsPage /></ProtectedRoute>} />
         <Route path="/reports" element={<ProtectedRoute><ReportsPage /></ProtectedRoute>} />
+        <Route path="/food-cost" element={<ProtectedRoute><FoodCostPage /></ProtectedRoute>} />
         <Route path="/dispatch-dashboard" element={<ProtectedRoute><DispatchDashboardPage /></ProtectedRoute>} />
+        <Route path="/pnl-report" element={<ProtectedRoute><PNLReportPage /></ProtectedRoute>} />
         <Route path="/salesmen" element={<ProtectedRoute><SalesmenPage /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
 

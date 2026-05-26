@@ -78,8 +78,8 @@ interface ReturnLog {
 
 const DispatchDashboardPage = () => {
   const { t, language } = useLanguage();
-  const [dispatches, setDispatches] = useState<Dispatch[]>([]);
-  const [returns, setReturns] = useState<ReturnLog[]>([]);
+  const [rawDispatches, setRawDispatches] = useState<Dispatch[]>([]);
+  const [rawReturns, setRawReturns] = useState<ReturnLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -93,21 +93,72 @@ const DispatchDashboardPage = () => {
   const [partnerReturnedItems, setPartnerReturnedItems] = useState<any[]>([]);
   const [activeOrdersModalBranch, setActiveOrdersModalBranch] = useState<string | null>(null);
 
-  // Dynamic Calculated KPI States
-  const [totalReturnsValue, setTotalReturnsValue] = useState(0);
-  const [totalWastageValue, setTotalWastageValue] = useState(0);
-  const [totalDeliveredValue, setTotalDeliveredValue] = useState(0);
-  const [totalInTransitValue, setTotalInTransitValue] = useState(0);
-  const [totalPreparedValue, setTotalPreparedValue] = useState(0);
+  // Date range filters (default to last 30 days)
+  const [startDate, setStartDate] = useState(new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+
+  const formatDate = (dateInput: any) => {
+    if (!dateInput) return '';
+    try {
+      const d = new Date(dateInput);
+      if (isNaN(d.getTime())) return '';
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    } catch (e) {
+      return '';
+    }
+  };
+
+  // Derived filtered arrays by date range
+  const dispatches = rawDispatches.filter(d => {
+    const dDate = formatDate(d.dispatch_date || d.created_at);
+    return (!startDate || dDate >= startDate) && (!endDate || dDate <= endDate);
+  });
+
+  const returns = rawReturns.filter(r => {
+    const rDate = formatDate(r.created_at);
+    return (!startDate || rDate >= startDate) && (!endDate || rDate <= endDate);
+  });
+
+  // Calculate dispatches and returns values dynamically based on filtered data
+  const totalDeliveredValue = dispatches
+    .filter(d => d.dispatch_status === 'delivered')
+    .reduce((acc, d) => acc + Number(d.total_amount || 0), 0);
+
+  const totalInTransitValue = dispatches
+    .filter(d => d.dispatch_status === 'in_transit' || d.dispatch_status === 'dispatched')
+    .reduce((acc, d) => acc + Number(d.total_amount || 0), 0);
+
+  const totalPreparedValue = dispatches
+    .filter(d => d.dispatch_status === 'pending')
+    .reduce((acc, d) => acc + Number(d.total_amount || 0), 0);
+
+  const totalReturnsValue = returns.reduce((acc, r) => acc + Number(r.total_credit_amount || 0), 0);
+  const totalWastageValue = returns.reduce((acc, r) => acc + Number(r.wastage_loss || 0), 0);
 
   useEffect(() => {
     fetchDashboardData();
   }, []);
 
-  // Reset pagination to first page when search or status filters change
+  // Reset pagination to first page when search, status, or date filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, statusFilter]);
+  }, [searchTerm, statusFilter, startDate, endDate]);
+
+  // Auto-select logic when filters change
+  useEffect(() => {
+    if (dispatches.length > 0) {
+      const exists = dispatches.some(d => d.sale_id === selectedDispatch?.sale_id);
+      if (!exists) {
+        handleSelectDispatch(dispatches[0]);
+      }
+    } else {
+      setSelectedDispatch(null);
+      setDispatchItems([]);
+    }
+  }, [startDate, endDate, searchTerm, statusFilter, rawDispatches]);
 
   const fetchDashboardData = async () => {
     try {
@@ -127,45 +178,8 @@ const DispatchDashboardPage = () => {
         return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       });
 
-      setDispatches(sortedDispatches);
-      setReturns(rData);
-
-      // Calculate dispatches values dynamically
-      let deliveredVal = 0;
-      let inTransitVal = 0;
-      let preparedVal = 0;
-
-      sortedDispatches.forEach((d: any) => {
-        const amt = Number(d.total_amount || 0);
-        if (d.dispatch_status === 'delivered') {
-          deliveredVal += amt;
-        } else if (d.dispatch_status === 'in_transit' || d.dispatch_status === 'dispatched') {
-          inTransitVal += amt;
-        } else if (d.dispatch_status === 'pending') {
-          preparedVal += amt;
-        }
-      });
-
-      setTotalDeliveredValue(deliveredVal);
-      setTotalInTransitValue(inTransitVal);
-      setTotalPreparedValue(preparedVal);
-
-      // Calculate returns and wastage values dynamically (from direct DB telemetry)
-      let calculatedReturnsVal = 0;
-      let calculatedWastageVal = 0;
-
-      rData.forEach((r: any) => {
-        calculatedReturnsVal += Number(r.total_credit_amount || 0);
-        calculatedWastageVal += Number(r.wastage_loss || 0);
-      });
-
-      setTotalReturnsValue(calculatedReturnsVal);
-      setTotalWastageValue(calculatedWastageVal);
-
-      // Auto select first dispatch if available
-      if (sortedDispatches.length > 0) {
-        handleSelectDispatch(sortedDispatches[0]);
-      }
+      setRawDispatches(sortedDispatches);
+      setRawReturns(rData);
     } catch (error) {
       console.error('Failed to load dispatch dashboard data:', error);
     } finally {
@@ -213,21 +227,27 @@ const DispatchDashboardPage = () => {
       const perfData = perfRes.data?.data || perfRes.data || [];
       const wastageData = wastageRes.data?.data || wastageRes.data || [];
 
-      const soldMap: { [key: string]: { name: string, qty: number, totalVal: number, returnsQty: number, returnsLoss: number, netVal: number } } = {};
+      const soldMap: { [key: string]: { name: string, qty: number, totalVal: number, returnsQty: number, returnsLoss: number, netVal: number, totalCost: number, grossProfit: number } } = {};
       perfData.forEach((item: any) => {
         const key = language === 'ar' ? (item.name_ar || item.name_en) : item.name_en;
         const qty = Number(item.total_sold || 0);
         const val = Number(item.revenue || 0);
         const rQty = Number(item.returns_qty || 0);
         const rLoss = Number(item.returns_loss || 0);
+        const cost = Number(item.total_cost || 0);
         if (!soldMap[key]) {
-          soldMap[key] = { name: key, qty: 0, totalVal: 0, returnsQty: 0, returnsLoss: 0, netVal: 0 };
+          soldMap[key] = { name: key, qty: 0, totalVal: 0, returnsQty: 0, returnsLoss: 0, netVal: 0, totalCost: 0, grossProfit: 0 };
         }
         soldMap[key].qty += qty;
         soldMap[key].totalVal += val;
         soldMap[key].returnsQty += rQty;
         soldMap[key].returnsLoss += rLoss;
-        soldMap[key].netVal += (val - rLoss);
+        soldMap[key].totalCost += cost;
+        
+        // Calculate derived values
+        const netRev = soldMap[key].totalVal - soldMap[key].returnsLoss;
+        soldMap[key].netVal = netRev;
+        soldMap[key].grossProfit = netRev - soldMap[key].totalCost;
       });
 
       const returnedMap: { [key: string]: { name: string, qty: number, totalLoss: number, branches: { [branch: string]: number } } } = {};
@@ -301,11 +321,17 @@ const DispatchDashboardPage = () => {
     const groups: { [key: string]: number } = {};
     dispatches.forEach(d => {
       if (!d.created_at) return;
-      const dateStr = new Date(d.created_at).toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', {
-        month: 'short',
-        day: 'numeric'
-      });
-      groups[dateStr] = (groups[dateStr] || 0) + Number(d.total_amount || 0);
+      try {
+        const dateObj = new Date(d.created_at);
+        if (isNaN(dateObj.getTime())) return;
+        const dateStr = dateObj.toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US', {
+          month: 'short',
+          day: 'numeric'
+        });
+        groups[dateStr] = (groups[dateStr] || 0) + Number(d.total_amount || 0);
+      } catch (e) {
+        console.error("Failed to parse timeline date:", d.created_at, e);
+      }
     });
 
     // Convert to sorted array and take last 7 entries (chronological order)
@@ -360,7 +386,11 @@ const DispatchDashboardPage = () => {
     const pGrossValue = partnerDispatches.reduce((sum, d) => sum + Number(d.total_amount || 0), 0);
     const pSoldValue = partnerDispatches.filter(d => d.dispatch_status === 'delivered').reduce((sum, d) => sum + Number(d.total_amount || 0), 0);
     const pReturnedValue = partnerReturns.reduce((sum, r) => sum + Number(r.total_credit_amount || 0), 0);
-    const pNetProfit = pSoldValue - pReturnedValue;
+    const pNetRevenue = pSoldValue - pReturnedValue;
+
+    const partnerCOGS = partnerSoldItems.reduce((sum, item) => sum + (item.totalCost || 0), 0);
+    const partnerGrossProfit = pNetRevenue - partnerCOGS;
+    const partnerMargin = pNetRevenue > 0 ? (partnerGrossProfit / pNetRevenue) * 100 : 0;
 
     const pReturnRate = pSoldValue > 0 ? Math.round((pReturnedValue / pSoldValue) * 100) : 0;
 
@@ -376,16 +406,16 @@ const DispatchDashboardPage = () => {
       const bActiveCount = bDispatches.filter(d => d.dispatch_status === 'in_transit' || d.dispatch_status === 'dispatched' || d.dispatch_status === 'pending').length;
       const bSoldValue = bDispatches.filter(d => d.dispatch_status === 'delivered').reduce((sum, d) => sum + Number(d.total_amount || 0), 0);
       const bReturnedValue = bReturns.reduce((sum, r) => sum + Number(r.total_credit_amount || 0), 0);
-      const bNetProfit = bSoldValue - bReturnedValue;
+      const bNetRevenue = bSoldValue - bReturnedValue;
 
       return {
         name: branchName,
         activeCount: bActiveCount,
         soldValue: bSoldValue,
         returnedValue: bReturnedValue,
-        netProfit: bNetProfit
+        netRevenue: bNetRevenue
       };
-    }).sort((a, b) => b.netProfit - a.netProfit);
+    }).sort((a, b) => b.netRevenue - a.netRevenue);
 
     return (
       <Layout title={`Partner Analytics • ${selectedPartner}`}>
@@ -486,17 +516,31 @@ const DispatchDashboardPage = () => {
                   </div>
                 </div>
 
-                {/* Net Earnings */}
-                <div className="hud-card glass-glow-green" style={{ gridColumn: 'span 2' }}>
+                {/* Net Revenue */}
+                <div className="hud-card glass-glow-blue">
+                  <div className="hud-header">
+                    <div className="icon-wrapper bg-blue">
+                      <TrendingUp size={24} />
+                    </div>
+                    <span className="hud-title">NET REVENUE</span>
+                  </div>
+                  <div className="hud-body">
+                    <div className="big-value text-blue">{pNetRevenue.toFixed(3)} <span className="currency">KD</span></div>
+                    <div className="hud-sub">Net sales value kept</div>
+                  </div>
+                </div>
+
+                {/* Gross Profit */}
+                <div className="hud-card glass-glow-green">
                   <div className="hud-header">
                     <div className="icon-wrapper bg-green">
                       <CheckCircle2 size={24} />
                     </div>
-                    <span className="hud-title">NET EARNINGS / PARTNER PROFIT</span>
+                    <span className="hud-title">GROSS PROFIT</span>
                   </div>
                   <div className="hud-body">
-                    <div className="big-value text-green" style={{ fontSize: '1.4rem' }}>{pNetProfit.toFixed(3)} <span className="currency">KD</span></div>
-                    <div className="hud-sub">Net profitability from this client</div>
+                    <div className="big-value text-green">{partnerGrossProfit.toFixed(3)} <span className="currency">KD</span></div>
+                    <div className="hud-sub">Margin: <b className="text-green">{partnerMargin.toFixed(1)}%</b></div>
                   </div>
                 </div>
 
@@ -524,7 +568,7 @@ const DispatchDashboardPage = () => {
                             <th className="text-center">ACTIVE DISPATCHES</th>
                             <th>REVENUE SOLD</th>
                             <th>RETURNS VALUE</th>
-                            <th>NET PROFIT</th>
+                            <th>NET REVENUE</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -543,8 +587,8 @@ const DispatchDashboardPage = () => {
                               </td>
                               <td>{branch.soldValue.toFixed(3)} KD</td>
                               <td className="text-rose">{branch.returnedValue.toFixed(3)} KD</td>
-                              <td className={branch.netProfit >= 0 ? 'text-green font-bold' : 'text-rose font-bold'}>
-                                {branch.netProfit.toFixed(3)} KD
+                              <td className={branch.netRevenue >= 0 ? 'text-green font-bold' : 'text-rose font-bold'}>
+                                {branch.netRevenue.toFixed(3)} KD
                               </td>
                             </tr>
                           ))}
@@ -572,31 +616,44 @@ const DispatchDashboardPage = () => {
                             <tr>
                               <th>PRODUCT NAME</th>
                               <th className="text-center">QTY SOLD</th>
-                              <th>REVENUE</th>
+                              <th>GROSS REVENUE</th>
                               <th className="text-center text-rose">RETURNS</th>
                               <th>NET REVENUE</th>
+                              <th>GROSS PROFIT</th>
+                              <th className="text-center">MARGIN</th>
                             </tr>
                           </thead>
                           <tbody>
-                            {partnerSoldItems.map((item, idx) => (
-                              <tr key={idx}>
-                                <td><strong>{item.name}</strong></td>
-                                <td className="text-center"><span className="loaded-qty">{item.qty}</span></td>
-                                <td>{item.totalVal.toFixed(3)} KD</td>
-                                <td className="text-center">
-                                  {item.returnsQty > 0 ? (
-                                    <span className="returns-tag-highlight">
-                                      {item.returnsQty} u ({item.returnsLoss.toFixed(3)} KD)
+                            {partnerSoldItems.map((item, idx) => {
+                              const marginPercent = item.netVal > 0 ? (item.grossProfit / item.netVal) * 100 : 0;
+                              return (
+                                <tr key={idx}>
+                                  <td><strong>{item.name}</strong></td>
+                                  <td className="text-center"><span className="loaded-qty">{item.qty}</span></td>
+                                  <td>{item.totalVal.toFixed(3)} KD</td>
+                                  <td className="text-center">
+                                    {item.returnsQty > 0 ? (
+                                      <span className="returns-tag-highlight">
+                                        {item.returnsQty} u ({item.returnsLoss.toFixed(3)} KD)
+                                      </span>
+                                    ) : (
+                                      <span className="text-slate-400 font-normal">0</span>
+                                    )}
+                                  </td>
+                                  <td className="text-blue font-bold">
+                                    {item.netVal.toFixed(3)} KD
+                                  </td>
+                                  <td className={item.grossProfit >= 0 ? "text-green font-bold" : "text-rose font-bold"}>
+                                    {item.grossProfit.toFixed(3)} KD
+                                  </td>
+                                  <td className="text-center">
+                                    <span className={`status-badge-premium ${item.grossProfit >= 0 ? "delivered" : "returned"}`} style={{ fontSize: '0.62rem', padding: '0.1rem 0.4rem' }}>
+                                      {marginPercent.toFixed(1)}%
                                     </span>
-                                  ) : (
-                                    <span className="text-slate-400 font-normal">0</span>
-                                  )}
-                                </td>
-                                <td className="text-green font-bold">
-                                  {item.netVal.toFixed(3)} KD
-                                </td>
-                              </tr>
-                            ))}
+                                  </td>
+                                </tr>
+                              );
+                            })}
                           </tbody>
                         </table>
                       )}
@@ -761,6 +818,31 @@ const DispatchDashboardPage = () => {
   return (
     <Layout title={t('dispatch_dashboard') || 'Dispatch Dashboard & Pulse'}>
       <div className="dispatch-dashboard-hud animated fadeIn">
+
+        {/* Top Control Bar with Premium Date Range Filter */}
+        <div className="premium-filter-card animated fadeIn">
+          <div className="filter-inner">
+            <div className="date-picker-lux">
+              <span className="lux-label"><Calendar size={14} /> {t('date_range') || 'Date Range'}</span>
+              <div className="lux-date-inputs">
+                <input 
+                  type="date" 
+                  value={startDate} 
+                  max={endDate}
+                  onChange={(e) => setStartDate(e.target.value)} 
+                />
+                <span className="lux-connector">{t('to') || 'to'}</span>
+                <input 
+                  type="date" 
+                  value={endDate} 
+                  min={startDate}
+                  max={new Date().toISOString().split('T')[0]}
+                  onChange={(e) => setEndDate(e.target.value)} 
+                />
+              </div>
+            </div>
+          </div>
+        </div>
         
         {/* 🌟 PREMIUM BENTO-GRID KPI SUITE */}
         <div className="bento-grid">
@@ -1430,6 +1512,77 @@ const DashboardStyles = () => (
   <style>{`
         .page-body {
           padding: 0.5rem !important;
+        }
+
+        /* 💎 Premium Filter Card Glassmorphism */
+        .premium-filter-card {
+          background: rgba(255, 255, 255, 0.85);
+          backdrop-filter: blur(20px);
+          -webkit-backdrop-filter: blur(20px);
+          border: 1px solid rgba(255, 255, 255, 0.7);
+          border-radius: 14px;
+          padding: 0.5rem 0.75rem;
+          box-shadow: 0 4px 15px -5px rgba(51, 65, 85, 0.05);
+          margin-bottom: 0.1rem;
+          transition: all 0.3s ease;
+        }
+
+        .premium-filter-card:hover {
+          background: rgba(255, 255, 255, 0.95);
+          box-shadow: 0 10px 20px -5px rgba(51, 65, 85, 0.08);
+        }
+
+        .filter-inner {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          flex-wrap: wrap;
+          gap: 1rem;
+        }
+
+        .lux-label {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 0.62rem;
+          font-weight: 800;
+          color: #64748b;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          margin-bottom: 4px;
+        }
+
+        .lux-date-inputs {
+          display: flex;
+          align-items: center;
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          border-radius: 10px;
+          padding: 2px 6px;
+          transition: all 0.3s ease;
+        }
+
+        .lux-date-inputs:focus-within {
+          border-color: var(--primary, #01562c);
+          box-shadow: 0 0 0 3px rgba(1, 86, 44, 0.1);
+          background: #fff;
+        }
+
+        .lux-date-inputs input {
+          border: none;
+          background: transparent;
+          padding: 4px 6px;
+          font-size: 0.78rem;
+          font-weight: 600;
+          color: #0f172a;
+          outline: none;
+        }
+
+        .lux-connector {
+          font-size: 0.75rem;
+          font-weight: 700;
+          color: #94a3b8;
+          padding: 0 4px;
         }
 
         /* 💎 NEXT-GEN LOSS ORACLE & PRODUCTS RETURNS WIDGETS */

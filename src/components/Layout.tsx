@@ -22,7 +22,9 @@ import {
   BarChart2,
   FileText,
   Users,
-  Navigation
+  Navigation,
+  Calculator,
+  BadgeCent
 } from 'lucide-react';
 import './Layout.css';
 import logo from '../assets/logo.jpeg';
@@ -96,7 +98,9 @@ const Layout: React.FC<LayoutProps> = ({ children, title }) => {
     { name: t('direct_sales'), path: '/sales', icon: <Truck size={20} />, section: 'Operations' },
     { name: t('analytics_forecasts'), path: '/analytics', icon: <BarChart2 size={20} />, section: 'Operations' },
     { name: t('reports_bi'), path: '/reports', icon: <FileText size={20} />, section: 'Operations' },
+    { name: t('food_cost'), path: '/food-cost', icon: <Calculator size={20} />, section: 'Operations' },
     { name: t('dispatch_dashboard'), path: '/dispatch-dashboard', icon: <Navigation size={20} />, section: 'Operations' },
+    { name: t('profit_loss_report'), path: '/pnl-report', icon: <BadgeCent size={20} />, section: 'Operations' },
     { name: t('accounts'), path: '/accounts', icon: <Wallet size={20} />, section: 'Operations' },
     { name: t('sales_team'), path: '/salesmen', icon: <Users size={20} />, section: 'Operations' },
     { name: t('administration'), path: '/administration', icon: <ShieldCheck size={20} />, section: 'Admin' },

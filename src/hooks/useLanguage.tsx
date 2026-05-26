@@ -179,6 +179,8 @@ const translations: Record<Language, Record<string, string>> = {
     total_revenue: 'Total Revenue',
     total_expenses: 'Total Expenses',
     net_profit: 'Net Profit',
+    net_revenue: 'Net Revenue',
+    gross_profit: 'Gross Profit',
     estimated_tax: 'Estimated Tax',
     live_tracking: 'Live tracking',
     expenditures: 'Expenditures',
@@ -541,7 +543,18 @@ const translations: Record<Language, Record<string, string>> = {
     expand_supply: 'Expand Supply',
     maintain: 'Maintain Supply',
     optimal_dispatch_units: 'Optimal Dispatch Units',
-    return_loss_savings: 'Return Loss Savings'
+    return_loss_savings: 'Return Loss Savings',
+    food_cost: 'Food Cost',
+    opening_stock: 'Opening Stock',
+    receiving: 'Receiving Stock',
+    transfers_in: 'Transfer In',
+    transfers_out: 'Transfer Out',
+    wastage_title: 'Wastage (Expired)',
+    closing_stock: 'Closing Stock (EOM)',
+    food_cost_report: 'Food Cost Report',
+    food_cost_percentage: 'Food Cost % of Sales',
+    profit_loss_report: 'Profit & Loss Report',
+    formula_desc: 'Calculation: Opening Stock + Receiving Stock + Transfer In - Transfer Out + Wastage - Closing Stock = Food Cost'
   },
   ar: {
     dashboard: 'لوحة القيادة',
@@ -709,6 +722,8 @@ const translations: Record<Language, Record<string, string>> = {
     total_revenue: 'إجمالي الإيرادات',
     total_expenses: 'إجمالي المصاريف',
     net_profit: 'صافي الربح',
+    net_revenue: 'صافي الإيرادات',
+    gross_profit: 'إجمالي الربح',
     estimated_tax: 'الضريبة المقدرة',
     live_tracking: 'تتبع مباشر',
     expenditures: 'المصروفات',
@@ -975,7 +990,18 @@ const translations: Record<Language, Record<string, string>> = {
     expand_supply: 'توسيع التوريد',
     maintain: 'الحفاظ على التوريد',
     optimal_dispatch_units: 'وحدات التوزيع المثالية',
-    return_loss_savings: 'وفورات خسارة المرتجعات'
+    return_loss_savings: 'وفورات خسارة المرتجعات',
+    food_cost: 'تكلفة الأغذية',
+    opening_stock: 'مخزون أول المدة',
+    receiving: 'مخزون مستلم',
+    transfers_in: 'تحويل وارد',
+    transfers_out: 'تحويل صادر',
+    wastage_title: 'تالف (منتهي الصلاحية)',
+    closing_stock: 'مخزون آخر المدة',
+    food_cost_report: 'تقرير تكلفة الأغذية',
+    food_cost_percentage: 'نسبة تكلفة الأغذية من المبيعات',
+    profit_loss_report: 'تقرير الأرباح والخسائر',
+    formula_desc: 'المعادلة: مخزون أول المدة + مخزون مستلم + تحويل وارد - تحويل صادر + التالف - مخزون آخر المدة = تكلفة الأغذية'
   }
 };
 
