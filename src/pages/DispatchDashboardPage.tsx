@@ -392,6 +392,10 @@ const DispatchDashboardPage = () => {
     const partnerGrossProfit = pNetRevenue - partnerCOGS;
     const partnerMargin = pNetRevenue > 0 ? (partnerGrossProfit / pNetRevenue) * 100 : 0;
 
+    const partnerWastageLoss = partnerReturnedItems.reduce((sum, item) => sum + (item.totalLoss || 0), 0);
+    const partnerNetProfit = partnerGrossProfit - partnerWastageLoss;
+    const partnerNetMargin = pNetRevenue > 0 ? (partnerNetProfit / pNetRevenue) * 100 : 0;
+
     const pReturnRate = pSoldValue > 0 ? Math.round((pReturnedValue / pSoldValue) * 100) : 0;
 
     const pBranchesSet = new Set<string>();
@@ -433,6 +437,34 @@ const DispatchDashboardPage = () => {
                 <h2>{selectedPartner}</h2>
                 <span className="partner-badge">Corporate Partner Ledger</span>
               </div>
+            </div>
+            {/* Date Range Filter */}
+            <div className="partner-date-filter">
+              <Calendar size={14} />
+              <input
+                type="date"
+                value={startDate}
+                max={endDate || undefined}
+                onChange={e => setStartDate(e.target.value)}
+                className="partner-date-input"
+              />
+              <span className="partner-date-sep">→</span>
+              <input
+                type="date"
+                value={endDate}
+                min={startDate || undefined}
+                onChange={e => setEndDate(e.target.value)}
+                className="partner-date-input"
+              />
+              {(startDate || endDate) && (
+                <button
+                  className="partner-date-clear"
+                  onClick={() => { setStartDate(''); setEndDate(''); }}
+                  title="Clear date filter"
+                >
+                  ✕ Clear
+                </button>
+              )}
             </div>
           </div>
 
@@ -544,7 +576,43 @@ const DispatchDashboardPage = () => {
                   </div>
                 </div>
 
+                {/* Wastage Loss */}
+                <div className="hud-card glass-glow-rose">
+                  <div className="hud-header">
+                    <div className="icon-wrapper bg-rose">
+                      <TrendingDown size={24} />
+                    </div>
+                    <span className="hud-title">WASTAGE LOSS</span>
+                  </div>
+                  <div className="hud-body">
+                    <div className="big-value text-rose">{partnerWastageLoss.toFixed(3)} <span className="currency">KD</span></div>
+                    <div className="hud-sub">Spoilage &amp; expired items cost</div>
+                  </div>
+                </div>
+
+                {/* Net Profit — Full Bottom Line */}
+                <div className={`hud-card ${partnerNetProfit >= 0 ? 'glass-glow-green' : 'glass-glow-rose'}`}
+                  style={{ gridColumn: 'span 2', background: partnerNetProfit >= 0 ? 'linear-gradient(135deg, #f0fdf4, #dcfce7)' : 'linear-gradient(135deg, #fff1f2, #ffe4e6)', border: `2px solid ${partnerNetProfit >= 0 ? '#22c55e' : '#f43f5e'}` }}>
+                  <div className="hud-header">
+                    <div className="icon-wrapper" style={{ background: partnerNetProfit >= 0 ? '#dcfce7' : '#ffe4e6', color: partnerNetProfit >= 0 ? '#16a34a' : '#e11d48' }}>
+                      {partnerNetProfit >= 0 ? <TrendingUp size={24} /> : <TrendingDown size={24} />}
+                    </div>
+                    <span className="hud-title" style={{ color: partnerNetProfit >= 0 ? '#15803d' : '#be123c', fontSize: '0.9rem' }}>NET PROFIT (BOTTOM LINE)</span>
+                  </div>
+                  <div className="hud-body">
+                    <div className="big-value" style={{ color: partnerNetProfit >= 0 ? '#16a34a' : '#e11d48', fontSize: '2rem' }}>
+                      {partnerNetProfit.toFixed(3)} <span className="currency">KD</span>
+                    </div>
+                    <div className="hud-sub">
+                      Net Margin: <b style={{ color: partnerNetProfit >= 0 ? '#16a34a' : '#e11d48' }}>{partnerNetMargin.toFixed(1)}%</b>
+                      &nbsp;•&nbsp; After COGS ({partnerCOGS.toFixed(3)} KD) &amp; Wastage ({partnerWastageLoss.toFixed(3)} KD)
+                    </div>
+                  </div>
+                </div>
+
               </div>
+
+
 
               {/* Grid Layout for branches & products */}
               <div className="main-content-layout">
@@ -2975,6 +3043,52 @@ const DashboardStyles = () => (
           border-radius: 14px;
           border: 1px solid rgba(226, 232, 240, 0.8);
           box-shadow: 0 4px 15px -5px rgba(51, 65, 85, 0.05);
+          flex-wrap: wrap;
+        }
+        .partner-date-filter {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          margin-left: auto;
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          border-radius: 10px;
+          padding: 0.4rem 0.75rem;
+          color: #64748b;
+        }
+        .partner-date-input {
+          border: 1px solid #e2e8f0;
+          border-radius: 7px;
+          padding: 0.3rem 0.5rem;
+          font-size: 0.8rem;
+          font-weight: 600;
+          color: #1e293b;
+          background: white;
+          outline: none;
+          cursor: pointer;
+          transition: border-color 0.2s;
+        }
+        .partner-date-input:focus {
+          border-color: #01562c;
+        }
+        .partner-date-sep {
+          font-size: 0.8rem;
+          color: #94a3b8;
+          font-weight: 700;
+        }
+        .partner-date-clear {
+          background: #fee2e2;
+          color: #e11d48;
+          border: none;
+          border-radius: 6px;
+          padding: 0.25rem 0.6rem;
+          font-size: 0.72rem;
+          font-weight: 700;
+          cursor: pointer;
+          transition: background 0.2s;
+        }
+        .partner-date-clear:hover {
+          background: #fecdd3;
         }
         .btn-back {
           border: 1px solid #cbd5e1;

@@ -114,6 +114,10 @@ const SearchableSelect = ({ options, value, onChange, placeholder = "Select...",
         backgroundColor: 'var(--primary)',
         color: 'white'
       }
+    }),
+    menuPortal: (base: any) => ({
+      ...base,
+      zIndex: 99999
     })
   };
 
@@ -150,6 +154,7 @@ const SearchableSelect = ({ options, value, onChange, placeholder = "Select...",
       isDisabled={isDisabled}
       styles={customStyles}
       classNamePrefix="react-select"
+      menuPortalTarget={typeof document !== 'undefined' ? document.body : null}
     />
   );
 };

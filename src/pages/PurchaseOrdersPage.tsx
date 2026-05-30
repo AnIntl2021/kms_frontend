@@ -386,9 +386,9 @@ const PurchaseOrdersPage = () => {
                   <span className="text-xs font-bold text-slate-400 uppercase">{formData.items.length} {t('products_added')}</span>
                 </div>
                 
-                <div className="overflow-auto" style={{ maxHeight: '40vh' }}>
+                <div className="po-line-items-scroll">
                   <table className="po-table">
-                    <thead>
+                    <thead className="po-table-sticky-head">
                       <tr>
                         <th style={{ width: '25%' }}>{t('product_name')}</th>
                         <th style={{ width: '12%' }}>{t('variant')}</th>
