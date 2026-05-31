@@ -713,7 +713,7 @@ const PNLReportPage = () => {
                             <span className="bar-amount">{pRev.toFixed(3)} KD</span>
                           </div>
                           <div className="bar-track">
-                            <div className="bar-fill" style={{ width: `${pct}%`, background: 'var(--primary)' }}></div>
+                            <div className="bar-fill" style={{ width: `${pct}%`, background: ['var(--primary)', 'var(--accent)', '#2e7d32', '#859b50', '#c62828'][idx % 5] }}></div>
                           </div>
                         </div>
                       );
@@ -1365,12 +1365,24 @@ const PNLReportPage = () => {
         .pnl-glass-header::before {
           content: '';
           position: absolute;
-          top: -40%;
-          right: -10%;
-          width: 450px;
-          height: 450px;
-          background: radial-gradient(circle, rgba(255, 255, 255, 0.08) 0%, transparent 70%);
+          top: -80px;
+          right: -80px;
+          width: 320px;
+          height: 320px;
           border-radius: 50%;
+          background: radial-gradient(circle, rgba(245, 127, 23, 0.12) 0%, transparent 70%);
+          pointer-events: none;
+        }
+
+        .pnl-glass-header::after {
+          content: '';
+          position: absolute;
+          bottom: -40px;
+          left: 200px;
+          width: 200px;
+          height: 200px;
+          border-radius: 50%;
+          background: radial-gradient(circle, rgba(13, 124, 67, 0.15) 0%, transparent 70%);
           pointer-events: none;
         }
 
