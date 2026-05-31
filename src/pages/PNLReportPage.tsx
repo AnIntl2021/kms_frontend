@@ -682,7 +682,7 @@ const PNLReportPage = () => {
                   <div className="trend-grid">
                     {trendData.length > 0 ? (
                       (() => {
-                        const maxVal = Math.max(...trendData.map(d => d.revenue), 10);
+                        const maxVal = Math.max(...trendData.map((d: any) => d.revenue), 10);
                         return trendData.map((t: any, idx: number) => {
                           const height = Math.max(4, Math.round((t.revenue / maxVal) * 72));
                           return (
@@ -843,10 +843,10 @@ const PNLReportPage = () => {
                               <line key={i} x1="60" y1={40 + i * 45} x2="960" y2="40 + i * 45" stroke="#f1f5f9" strokeWidth="1.5" />
                             ))}
                             {(() => {
-                              const maxVal = Math.max(...trendData.map(d => Math.max(d.revenue, d.cogs)), 10);
+                              const maxVal = Math.max(...trendData.map((d: any) => Math.max(d.revenue, d.cogs)), 10);
                               const pointsCount = trendData.length;
                               const spacing = 900 / pointsCount;
-                              return trendData.map((d, index) => {
+                              return trendData.map((d: any, index) => {
                                 const xOffset = 60 + index * spacing + spacing / 4;
                                 const revHeight = (d.revenue / maxVal) * 180;
                                 const cogsHeight = (d.cogs / maxVal) * 180;

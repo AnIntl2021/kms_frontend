@@ -14,7 +14,8 @@ import {
   Building,
   Truck,
   Coins,
-  AlertCircle
+  AlertCircle,
+  RotateCcw
 } from 'lucide-react';
 import { useReactToPrint } from 'react-to-print';
 import { useLanguage } from '../hooks/useLanguage';
@@ -55,6 +56,7 @@ interface StatementOrder {
   client_address: string;
   branch_name: string | null;
   branch_name_ar: string | null;
+  returns_amount: number;
   items: StatementItem[];
 }
 
@@ -74,6 +76,11 @@ const ClientStatementsPage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [expandedOrders, setExpandedOrders] = useState<Record<number, boolean>>({});
 
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const itemsPerPage = 20;
+  const [isSummaryPrint, setIsSummaryPrint] = useState<boolean>(false);
+
   // Printing Statement Reference
   const printComponentRef = useRef<HTMLDivElement>(null);
 
@@ -83,7 +90,12 @@ const ClientStatementsPage: React.FC = () => {
 
   useEffect(() => {
     setSelectedBranchId('all');
+    setCurrentPage(1);
   }, [selectedClientId]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedBranchId, startDate, endDate, statusFilter]);
 
   useEffect(() => {
     fetchStatements();
@@ -135,9 +147,9 @@ const ClientStatementsPage: React.FC = () => {
       @media print {
         @page {
           size: A4 portrait;
-          margin: 20mm 10mm 20mm 10mm;
+          margin: 12mm 10mm 12mm 10mm;
           @bottom-left {
-            content: "Fresh 'n' Fast Statement";
+            content: "Fresh & Fast Statement";
             font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
             font-size: 10px;
             color: #64748b;
@@ -163,6 +175,20 @@ const ClientStatementsPage: React.FC = () => {
       }
     `
   });
+
+  const handlePrintDetail = () => {
+    setIsSummaryPrint(false);
+    setTimeout(() => {
+      handlePrint();
+    }, 150);
+  };
+
+  const handlePrintSummary = () => {
+    setIsSummaryPrint(true);
+    setTimeout(() => {
+      handlePrint();
+    }, 150);
+  };
 
   const toggleExpandOrder = (id: number) => {
     setExpandedOrders(prev => ({
@@ -202,8 +228,9 @@ const ClientStatementsPage: React.FC = () => {
 
   // Calculate stats
   const totalSent = filteredOrders.reduce((sum, o) => sum + Number(o.final_amount), 0);
-  const paidAmount = filteredOrders.filter(o => o.payment_status === 'paid').reduce((sum, o) => sum + Number(o.final_amount), 0);
-  const balanceDue = totalSent - paidAmount;
+  const totalReturns = filteredOrders.reduce((sum, o) => sum + Number(o.returns_amount || 0), 0);
+  const paidAmount = filteredOrders.filter(o => o.payment_status === 'paid').reduce((sum, o) => sum + (Number(o.final_amount) - Number(o.returns_amount || 0)), 0);
+  const balanceDue = Math.max(0, totalSent - totalReturns - paidAmount);
 
   const paymentStatusText = () => {
     if (totalSent === 0) return t('no_statements');
@@ -220,6 +247,105 @@ const ClientStatementsPage: React.FC = () => {
   };
 
   const clientInfo = selectedClientInfo();
+
+  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
+  const paginatedOrders = filteredOrders.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  const renderPaginationControls = () => {
+    if (totalPages <= 1) return null;
+    return (
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: '1.25rem 1.5rem',
+        background: 'white',
+        borderTop: '1px solid #f1f5f9',
+        borderBottomLeftRadius: '20px',
+        borderBottomRightRadius: '20px',
+      }} className="no-print">
+        <span style={{ fontSize: '13px', fontWeight: 600, color: '#64748b' }}>
+          {language === 'ar' 
+            ? <>عرض <b>{((currentPage - 1) * itemsPerPage) + 1}</b> - <b>{Math.min(currentPage * itemsPerPage, filteredOrders.length)}</b> من <b>{filteredOrders.length}</b> فواتير</>
+            : <>Showing <b>{((currentPage - 1) * itemsPerPage) + 1}</b> to <b>{Math.min(currentPage * itemsPerPage, filteredOrders.length)}</b> of <b>{filteredOrders.length}</b> invoices</>
+          }
+        </span>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <button 
+            onClick={() => setCurrentPage(1)} 
+            disabled={currentPage === 1}
+            style={{
+              padding: '6px 12px',
+              border: '1px solid #e2e8f0',
+              background: currentPage === 1 ? '#f8fafc' : 'white',
+              color: currentPage === 1 ? '#cbd5e1' : '#01562c',
+              cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+              borderRadius: '8px',
+              fontWeight: 'bold',
+              fontSize: '14px',
+              transition: 'all 0.2s'
+            }}
+          >
+            «
+          </button>
+          <button 
+            onClick={() => setCurrentPage(currentPage - 1)} 
+            disabled={currentPage === 1}
+            style={{
+              padding: '6px 12px',
+              border: '1px solid #e2e8f0',
+              background: currentPage === 1 ? '#f8fafc' : 'white',
+              color: currentPage === 1 ? '#cbd5e1' : '#01562c',
+              cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+              borderRadius: '8px',
+              fontWeight: 'bold',
+              fontSize: '14px',
+              transition: 'all 0.2s'
+            }}
+          >
+            ‹
+          </button>
+          <span style={{ fontSize: '13px', fontWeight: 700, color: '#334155', margin: '0 8px' }}>
+            {currentPage} / {totalPages}
+          </span>
+          <button 
+            onClick={() => setCurrentPage(currentPage + 1)} 
+            disabled={currentPage === totalPages}
+            style={{
+              padding: '6px 12px',
+              border: '1px solid #e2e8f0',
+              background: currentPage === totalPages ? '#f8fafc' : 'white',
+              color: currentPage === totalPages ? '#cbd5e1' : '#01562c',
+              cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+              borderRadius: '8px',
+              fontWeight: 'bold',
+              fontSize: '14px',
+              transition: 'all 0.2s'
+            }}
+          >
+            ›
+          </button>
+          <button 
+            onClick={() => setCurrentPage(totalPages)} 
+            disabled={currentPage === totalPages}
+            style={{
+              padding: '6px 12px',
+              border: '1px solid #e2e8f0',
+              background: currentPage === totalPages ? '#f8fafc' : 'white',
+              color: currentPage === totalPages ? '#cbd5e1' : '#01562c',
+              cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+              borderRadius: '8px',
+              fontWeight: 'bold',
+              fontSize: '14px',
+              transition: 'all 0.2s'
+            }}
+          >
+            »
+          </button>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <Layout title={t('client_statements')}>
@@ -353,26 +479,49 @@ const ClientStatementsPage: React.FC = () => {
             </div>
 
             <button 
-              onClick={handlePrint}
+              onClick={handlePrintDetail}
               disabled={orders.length === 0}
               style={{
                 background: orders.length === 0 ? '#94a3b8' : 'var(--primary)',
                 color: 'white',
                 border: 'none',
                 borderRadius: '10px',
-                padding: '10px 20px',
+                padding: '10px 16px',
                 fontWeight: 700,
-                fontSize: '14px',
+                fontSize: '13px',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '8px',
+                gap: '6px',
                 cursor: orders.length === 0 ? 'not-allowed' : 'pointer',
                 height: '42px',
                 transition: 'all 0.2s'
               }}
             >
               <Printer size={16} />
-              {t('print_statement')}
+              {language === 'ar' ? 'طباعة التفصيلي' : 'Print Detail'}
+            </button>
+
+            <button 
+              onClick={handlePrintSummary}
+              disabled={orders.length === 0}
+              style={{
+                background: orders.length === 0 ? '#94a3b8' : '#475569',
+                color: 'white',
+                border: 'none',
+                borderRadius: '10px',
+                padding: '10px 16px',
+                fontWeight: 700,
+                fontSize: '13px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                cursor: orders.length === 0 ? 'not-allowed' : 'pointer',
+                height: '42px',
+                transition: 'all 0.2s'
+              }}
+            >
+              <FileText size={16} />
+              {language === 'ar' ? 'طباعة الإجمالي' : 'Print Summary'}
             </button>
           </div>
 
@@ -448,6 +597,58 @@ const ClientStatementsPage: React.FC = () => {
               height: '80px',
               borderRadius: '50%',
               background: 'rgba(16, 185, 129, 0.03)',
+              filter: 'blur(15px)',
+              pointerEvents: 'none'
+            }} />
+          </div>
+
+          {/* Card: Total Returns */}
+          <div className="metric-card" style={{
+            background: 'linear-gradient(135deg, #ffffff 0%, #fff5f5 100%)',
+            border: '1px solid rgba(239, 68, 68, 0.15)',
+            boxShadow: '0 10px 25px -5px rgba(239, 68, 68, 0.05), 0 8px 10px -6px rgba(239, 68, 68, 0.03)',
+            borderRadius: '24px',
+            padding: '20px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '20px',
+            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            position: 'relative',
+            overflow: 'hidden'
+          }}>
+            <div style={{
+              width: '52px',
+              height: '52px',
+              borderRadius: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)',
+              boxShadow: '0 4px 12px rgba(239, 68, 68, 0.12)',
+              color: '#ef4444',
+              flexShrink: 0
+            }}>
+              <RotateCcw size={24} color="#ef4444" strokeWidth={2.2} />
+            </div>
+            <div className="metric-details" style={{ flexGrow: 1 }}>
+              <span style={{ color: '#475569', fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block' }}>
+                {language === 'ar' ? 'إجمالي المرتجعات' : 'Total Returns'}
+              </span>
+              <h3 style={{ color: '#450a0a', fontSize: '24px', fontWeight: 900, margin: '4px 0 2px' }}>
+                {totalReturns.toFixed(3)} <span style={{ fontSize: '14px', fontWeight: 700, color: '#ef4444' }}>{t('kd_currency')}</span>
+              </h3>
+              <p style={{ color: '#64748b', fontSize: '11px', margin: 0, fontWeight: 500 }}>
+                {language === 'ar' ? 'قيمة المنتجات المرتجعة' : 'Total return credits'}
+              </p>
+            </div>
+            <div style={{
+              position: 'absolute',
+              top: '-20px',
+              right: '-20px',
+              width: '80px',
+              height: '80px',
+              borderRadius: '50%',
+              background: 'rgba(239, 68, 68, 0.03)',
               filter: 'blur(15px)',
               pointerEvents: 'none'
             }} />
@@ -621,18 +822,21 @@ const ClientStatementsPage: React.FC = () => {
                   <th>{language === 'ar' ? 'الفرع المستلم' : 'Destination Branch'}</th>
                   <th>{language === 'ar' ? 'تاريخ التوزيع' : 'Dispatch Date'}</th>
                   <th>{language === 'ar' ? 'مجموع المنتجات' : 'Products Total'}</th>
-                  <th>{t('total_amount')}</th>
+                  <th>{language === 'ar' ? 'إجمالي الفاتورة' : 'Invoice Total'}</th>
+                  <th>{language === 'ar' ? 'المرتجع' : 'Returns'}</th>
+                  <th>{language === 'ar' ? 'صافي المستحق' : 'Net Due'}</th>
                   <th>{t('payment')}</th>
                   <th>{language === 'ar' ? 'حالة الشحن' : 'Delivery'}</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={8} className="text-center py-5">{t('loading_data')}</td></tr>
+                  <tr><td colSpan={10} className="text-center py-5">{t('loading_data')}</td></tr>
                 ) : filteredOrders.length === 0 ? (
-                  <tr><td colSpan={8} className="text-center py-5" style={{ color: '#94a3b8' }}>{t('no_statements')}</td></tr>
-                ) : filteredOrders.map(order => {
+                  <tr><td colSpan={10} className="text-center py-5" style={{ color: '#94a3b8' }}>{t('no_statements')}</td></tr>
+                ) : paginatedOrders.map(order => {
                   const isExpanded = !!expandedOrders[order.sale_id];
+                  const orderNetDue = Number(order.final_amount) - Number(order.returns_amount || 0);
                   return (
                     <React.Fragment key={order.sale_id}>
                       <tr 
@@ -662,7 +866,15 @@ const ClientStatementsPage: React.FC = () => {
                           </span>
                         </td>
                         <td>
-                          <strong style={{ fontSize: '14px', color: 'var(--primary)' }}>{Number(order.final_amount).toFixed(3)} {t('kd_currency')}</strong>
+                          <span style={{ fontSize: '13px', fontWeight: 600, color: '#475569' }}>{Number(order.final_amount).toFixed(3)} {t('kd_currency')}</span>
+                        </td>
+                        <td>
+                          <span style={{ fontSize: '13px', fontWeight: 700, color: '#ef4444' }}>
+                            {Number(order.returns_amount || 0) > 0 ? `-${Number(order.returns_amount).toFixed(3)}` : '0.000'} {t('kd_currency')}
+                          </span>
+                        </td>
+                        <td>
+                          <strong style={{ fontSize: '14px', color: 'var(--primary)' }}>{orderNetDue.toFixed(3)} {t('kd_currency')}</strong>
                         </td>
                         <td>
                           <span style={{
@@ -693,7 +905,7 @@ const ClientStatementsPage: React.FC = () => {
                       {/* Collapsible Order Itemized List */}
                       {isExpanded && (
                         <tr>
-                          <td colSpan={8} style={{ padding: '0 1.5rem 1.5rem 1.5rem', background: '#f8fafc' }}>
+                          <td colSpan={10} style={{ padding: '0 1.5rem 1.5rem 1.5rem', background: '#f8fafc' }}>
                             <div style={{
                               background: 'white',
                               borderRadius: '12px',
@@ -755,9 +967,19 @@ const ClientStatementsPage: React.FC = () => {
                                     <span style={{ fontWeight: 700 }}>-{Number(order.discount_amount).toFixed(3)} {t('kd_currency')}</span>
                                   </div>
                                 )}
+                                <div style={{ display: 'flex', gap: '1rem', fontSize: '12px', color: '#64748b' }}>
+                                  <span>{language === 'ar' ? 'المبلغ المفوتر' : 'Invoice Total'}:</span>
+                                  <span style={{ fontWeight: 700 }}>{Number(order.final_amount).toFixed(3)} {t('kd_currency')}</span>
+                                </div>
+                                {Number(order.returns_amount || 0) > 0 && (
+                                  <div style={{ display: 'flex', gap: '1rem', fontSize: '12px', color: '#ef4444' }}>
+                                    <span>{language === 'ar' ? '(-) مرتجعات' : '(-) Returns'}:</span>
+                                    <span style={{ fontWeight: 700 }}>-{Number(order.returns_amount).toFixed(3)} {t('kd_currency')}</span>
+                                  </div>
+                                )}
                                 <div style={{ display: 'flex', gap: '1rem', fontSize: '13px', color: 'var(--primary)', fontWeight: 800 }}>
-                                  <span>{language === 'ar' ? 'الصافي' : 'Net Total'}:</span>
-                                  <span>{Number(order.final_amount).toFixed(3)} {t('kd_currency')}</span>
+                                  <span>{language === 'ar' ? 'الصافي المستحق' : 'Net Due'}:</span>
+                                  <span>{Number(order.final_amount - (order.returns_amount || 0)).toFixed(3)} {t('kd_currency')}</span>
                                 </div>
                               </div>
                             </div>
@@ -770,6 +992,7 @@ const ClientStatementsPage: React.FC = () => {
               </tbody>
             </table>
           </div>
+          {renderPaginationControls()}
         </div>
       </div>
 
@@ -778,14 +1001,14 @@ const ClientStatementsPage: React.FC = () => {
       {/* STATEMENT PRINTABLE TEMPLATE (HIDDEN ON SCREEN, RENDERED IN PRINT PREVIEW) */}
       {/* ========================================================================= */}
       <div style={{ display: 'none' }}>
-        <div ref={printComponentRef} style={{ padding: '15mm 10mm', width: '100%', boxSizing: 'border-box', direction: isRTL ? 'rtl' : 'ltr', fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif", color: '#1e293b' }}>
+        <div ref={printComponentRef} style={{ padding: isSummaryPrint ? '0mm' : '10mm 5mm', width: '100%', boxSizing: 'border-box', direction: isRTL ? 'rtl' : 'ltr', fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif", color: '#1e293b' }}>
           
           {/* Header Identity */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '3px double #01562c', paddingBottom: '1.5rem', marginBottom: '2rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '3px double #01562c', paddingBottom: isSummaryPrint ? '0.75rem' : '1.5rem', marginBottom: isSummaryPrint ? '1rem' : '2rem' }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <div style={{ width: '10px', height: '30px', background: '#01562c', borderRadius: '2px' }} />
-                <h1 style={{ fontSize: '32px', color: '#01562c', margin: 0, fontWeight: 900, letterSpacing: '-1px' }}>Fresh 'n' Fast</h1>
+                <h1 style={{ fontSize: '32px', color: '#01562c', margin: 0, fontWeight: 900, letterSpacing: '-1px' }}>Fresh & Fast</h1>
               </div>
               <p style={{ margin: '6px 0 0 12px', fontSize: '13px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px' }}>Elite Food Distribution ERP</p>
             </div>
@@ -800,10 +1023,10 @@ const ClientStatementsPage: React.FC = () => {
           </div>
 
           {/* Client & Company Addresses Grid */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '2rem', marginBottom: '2rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '2rem', marginBottom: isSummaryPrint ? '1rem' : '2rem' }}>
             <div style={{ 
               flex: 1, 
-              padding: '1.25rem', 
+              padding: isSummaryPrint ? '0.75rem 1rem' : '1.25rem', 
               background: '#f8fafc', 
               borderRadius: '12px', 
               border: '1px solid #e2e8f0',
@@ -824,47 +1047,57 @@ const ClientStatementsPage: React.FC = () => {
               </div>
             </div>
             
-            <div style={{ width: '260px', padding: '1.25rem', border: '1px dashed #cbd5e1', borderRadius: '12px', fontSize: '12px', color: '#475569', background: '#fcfcfc' }}>
+            <div style={{ width: '260px', padding: isSummaryPrint ? '0.75rem 1rem' : '1.25rem', border: '1px dashed #cbd5e1', borderRadius: '12px', fontSize: '12px', color: '#475569', background: '#fcfcfc' }}>
               <h4 style={{ margin: '0 0 8px 0', fontSize: '12px', color: '#0f172a', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 {language === 'ar' ? 'تعليمات السداد والتحصيل' : 'Remittance & Terms'}
               </h4>
               <p style={{ margin: '0 0 8px 0', fontSize: '11px', lineHeight: '1.4', color: '#64748b' }}>
                 {language === 'ar' ? 'الرجاء مطابقة كشف الحساب وسداد الأرصدة المستحقة في غضون ٧ أيام.' : 'Please reconcile the listed statement and settle outstanding balances within 7 days.'}</p>
               <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '8px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                <p style={{ margin: 0 }}><b>Bank:</b> Gulf Bank Kuwait</p>
-                <p style={{ margin: 0 }}><b>IBAN:</b> KW73GFBK000010892738</p>
-                <p style={{ margin: 0 }}><b>Currency:</b> Kuwaiti Dinar (KWD)</p>
+                <p style={{ margin: 0 }}><b>Bank:</b> {language === 'ar' ? 'البنك التجاري الكويتي (التجاري)' : 'Commercial Bank of Kuwait (Al-Tijari)'}</p>
+                <p style={{ margin: 0 }}><b>IBAN:</b> KW13COMB0000509625032100414014</p>
+                <p style={{ margin: 0 }}><b>Swift Code:</b> COMBKWKW</p>
+                <p style={{ margin: 0 }}><b>Currency:</b> {language === 'ar' ? 'دينار كويتي' : 'Kuwaiti Dinar (KWD)'}</p>
               </div>
             </div>
           </div>
 
           {/* Statement Shipments List */}
-          <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '2.5rem', fontSize: '13px' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: isSummaryPrint ? '1rem' : '2.5rem', fontSize: '13px' }}>
             <thead>
               <tr style={{ background: '#01562c', color: 'white' }}>
                 <th style={{ padding: '12px 14px', textAlign: isRTL ? 'right' : 'left', fontWeight: 700, borderBottom: '2px solid #014020' }}>{language === 'ar' ? 'رقم الطلب' : 'Order No'}</th>
                 <th style={{ padding: '12px 14px', textAlign: isRTL ? 'right' : 'left', fontWeight: 700, borderBottom: '2px solid #014020' }}>{language === 'ar' ? 'الفرع المستلم' : 'Destination Branch'}</th>
                 <th style={{ padding: '12px 14px', textAlign: isRTL ? 'right' : 'left', fontWeight: 700, borderBottom: '2px solid #014020' }}>{language === 'ar' ? 'التاريخ' : 'Date'}</th>
-                <th style={{ padding: '12px 14px', textAlign: isRTL ? 'left' : 'right', fontWeight: 700, borderBottom: '2px solid #014020' }}>{t('total_amount')}</th>
+                <th style={{ padding: '12px 14px', textAlign: isRTL ? 'left' : 'right', fontWeight: 700, borderBottom: '2px solid #014020' }}>{language === 'ar' ? 'المبلغ' : 'Billed'}</th>
+                <th style={{ padding: '12px 14px', textAlign: isRTL ? 'left' : 'right', fontWeight: 700, borderBottom: '2px solid #014020' }}>{language === 'ar' ? 'المرتجع' : 'Returns'}</th>
+                <th style={{ padding: '12px 14px', textAlign: isRTL ? 'left' : 'right', fontWeight: 700, borderBottom: '2px solid #014020' }}>{language === 'ar' ? 'الصافي' : 'Net Total'}</th>
                 <th style={{ padding: '12px 14px', textAlign: 'center', fontWeight: 700, borderBottom: '2px solid #014020' }}>{t('payment')}</th>
               </tr>
             </thead>
-            {filteredOrders.map((order, idx) => (
-              <tbody key={order.sale_id} style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
-                <tr style={{ 
-                  borderBottom: '1px solid #e2e8f0', 
-                  background: idx % 2 === 0 ? 'white' : '#f8fafc',
-                  transition: 'background 0.2s',
-                  pageBreakInside: 'avoid',
-                  breakInside: 'avoid'
-                }}>
-                  <td style={{ padding: '12px 14px', fontWeight: 700, color: '#0f172a' }}>FNFI-{100000 + order.sale_id}</td>
-                  <td style={{ padding: '12px 14px', fontWeight: 600 }}>
-                    {language === 'ar' ? (order.branch_name_ar || order.branch_name || 'الرئيسي') : (order.branch_name || 'Main Hub')}
+            {isSummaryPrint ? (
+              <tbody style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                <tr style={{ borderBottom: '1px solid #e2e8f0', background: 'white' }}>
+                  <td style={{ padding: '12px 14px', fontWeight: 700, color: '#0f172a' }}>
+                    {language === 'ar' ? 'ملخص الفترات' : 'Period Summary'}
                   </td>
-                  <td style={{ padding: '12px 14px', color: '#475569' }}>{order.report_date}</td>
+                  <td style={{ padding: '12px 14px', fontWeight: 600 }}>
+                    {selectedBranchId === 'all' 
+                      ? (language === 'ar' ? 'جميع الفروع' : 'All Branches')
+                      : (filteredOrders[0]?.branch_name_ar || filteredOrders[0]?.branch_name || (language === 'ar' ? 'الفرع الرئيسي' : 'Main Hub'))
+                    }
+                  </td>
+                  <td style={{ padding: '12px 14px', color: '#475569' }}>
+                    {startDate} {language === 'ar' ? 'إلى' : 'to'} {endDate}
+                  </td>
+                  <td style={{ padding: '12px 14px', fontWeight: 600, color: '#475569', textAlign: isRTL ? 'left' : 'right' }}>
+                    {totalSent.toFixed(3)} {t('kd_currency')}
+                  </td>
+                  <td style={{ padding: '12px 14px', fontWeight: 600, color: '#ef4444', textAlign: isRTL ? 'left' : 'right' }}>
+                    {totalReturns > 0 ? `-${totalReturns.toFixed(3)}` : '0.000'} {t('kd_currency')}
+                  </td>
                   <td style={{ padding: '12px 14px', fontWeight: 800, color: '#01562c', textAlign: isRTL ? 'left' : 'right' }}>
-                    {Number(order.final_amount).toFixed(3)} {t('kd_currency')}
+                    {(totalSent - totalReturns).toFixed(3)} {t('kd_currency')}
                   </td>
                   <td style={{ padding: '12px 14px', textAlign: 'center' }}>
                     <span style={{
@@ -873,42 +1106,85 @@ const ClientStatementsPage: React.FC = () => {
                       fontSize: '10px',
                       fontWeight: 800,
                       textTransform: 'uppercase',
-                      background: order.payment_status === 'paid' ? '#e6f4ea' : '#fce8e6',
-                      color: order.payment_status === 'paid' ? '#137333' : '#c5221f',
+                      background: balanceDue <= 0 ? '#e6f4ea' : '#fce8e6',
+                      color: balanceDue <= 0 ? '#137333' : '#c5221f',
                       display: 'inline-block'
                     }}>
-                      {order.payment_status?.toUpperCase()}
+                      {balanceDue <= 0 ? (language === 'ar' ? 'مدفوع' : 'PAID') : (language === 'ar' ? 'مستحق' : 'UNPAID')}
                     </span>
                   </td>
                 </tr>
-                {/* Detailed nested items inside the print view */}
-                <tr style={{ background: idx % 2 === 0 ? 'white' : '#f8fafc', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
-                  <td colSpan={5} style={{ padding: '0px 14px 12px 14px', borderBottom: '1px solid #e2e8f0' }}>
-                    <div style={{ 
-                      background: '#ffffff', 
-                      padding: '8px 12px', 
-                      borderRadius: '8px', 
-                      border: '1px solid #e2e8f0', 
-                      display: 'flex', 
-                      flexWrap: 'wrap', 
-                      gap: '12px' 
-                    }}>
-                      {order.items?.map(it => (
-                        <span key={it.sale_item_id} style={{ fontSize: '11px', color: '#475569', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                          <span style={{ color: '#16a34a' }}>•</span>
-                          <span style={{ fontWeight: 600 }}>{language === 'ar' ? (it.name_ar || it.name_en) : it.name_en}</span>
-                          <span style={{ color: '#64748b' }}>({it.quantity})</span>
-                        </span>
-                      ))}
-                    </div>
-                  </td>
-                </tr>
               </tbody>
-            ))}
+            ) : (
+              filteredOrders.map((order, idx) => (
+                <tbody key={order.sale_id} style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                  <tr style={{ 
+                    borderBottom: '1px solid #e2e8f0', 
+                    background: idx % 2 === 0 ? 'white' : '#f8fafc',
+                    transition: 'background 0.2s',
+                    pageBreakInside: 'avoid',
+                    breakInside: 'avoid'
+                  }}>
+                    <td style={{ padding: '12px 14px', fontWeight: 700, color: '#0f172a' }}>FNFI-{100000 + order.sale_id}</td>
+                    <td style={{ padding: '12px 14px', fontWeight: 600 }}>
+                      {language === 'ar' ? (order.branch_name_ar || order.branch_name || 'الرئيسي') : (order.branch_name || 'Main Hub')}
+                    </td>
+                    <td style={{ padding: '12px 14px', color: '#475569' }}>{order.report_date}</td>
+                    <td style={{ padding: '12px 14px', fontWeight: 600, color: '#475569', textAlign: isRTL ? 'left' : 'right' }}>
+                      {Number(order.final_amount).toFixed(3)} {t('kd_currency')}
+                    </td>
+                    <td style={{ padding: '12px 14px', fontWeight: 600, color: '#ef4444', textAlign: isRTL ? 'left' : 'right' }}>
+                      {Number(order.returns_amount || 0) > 0 ? `-${Number(order.returns_amount).toFixed(3)}` : '0.000'} {t('kd_currency')}
+                    </td>
+                    <td style={{ padding: '12px 14px', fontWeight: 800, color: '#01562c', textAlign: isRTL ? 'left' : 'right' }}>
+                      {Number(order.final_amount - (order.returns_amount || 0)).toFixed(3)} {t('kd_currency')}
+                    </td>
+                    <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                      <span style={{
+                        padding: '4px 10px',
+                        borderRadius: '20px',
+                        fontSize: '10px',
+                        fontWeight: 800,
+                        textTransform: 'uppercase',
+                        background: order.payment_status === 'paid' ? '#e6f4ea' : '#fce8e6',
+                        color: order.payment_status === 'paid' ? '#137333' : '#c5221f',
+                        display: 'inline-block'
+                      }}>
+                        {order.payment_status?.toUpperCase()}
+                      </span>
+                    </td>
+                  </tr>
+                  {/* Detailed nested items inside the print view */}
+                  {!isSummaryPrint && (
+                    <tr style={{ background: idx % 2 === 0 ? 'white' : '#f8fafc', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                      <td colSpan={7} style={{ padding: '0px 14px 12px 14px', borderBottom: '1px solid #e2e8f0' }}>
+                        <div style={{ 
+                          background: '#ffffff', 
+                          padding: '8px 12px', 
+                          borderRadius: '8px', 
+                          border: '1px solid #e2e8f0', 
+                          display: 'flex', 
+                          flexWrap: 'wrap', 
+                          gap: '12px' 
+                        }}>
+                          {order.items?.map(it => (
+                            <span key={it.sale_item_id} style={{ fontSize: '11px', color: '#475569', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                              <span style={{ color: '#16a34a' }}>•</span>
+                              <span style={{ fontWeight: 600 }}>{language === 'ar' ? (it.name_ar || it.name_en) : it.name_en}</span>
+                              <span style={{ color: '#64748b' }}>({it.quantity})</span>
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              ))
+            )}
           </table>
 
           {/* Totals Summary Card */}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '2rem', pageBreakInside: 'avoid' }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: isSummaryPrint ? '1rem' : '2rem', pageBreakInside: 'avoid' }}>
             <div style={{ 
               width: '340px', 
               padding: '1.25rem', 
@@ -918,8 +1194,16 @@ const ClientStatementsPage: React.FC = () => {
               boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #e2e8f0', fontSize: '13px' }}>
-                <span style={{ fontWeight: 600, color: '#475569' }}>{language === 'ar' ? 'إجمالي فواتير المرسل' : 'Total Amount Sent'}:</span>
+                <span style={{ fontWeight: 600, color: '#475569' }}>{language === 'ar' ? 'إجمالي الفواتير' : 'Total Invoice Amount'}:</span>
                 <span style={{ fontWeight: 700, color: '#0f172a' }}>{totalSent.toFixed(3)} {t('kd_currency')}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #e2e8f0', fontSize: '13px', color: '#be123c' }}>
+                <span style={{ fontWeight: 600 }}>{language === 'ar' ? 'إجمالي المرتجعات' : 'Total Returns Amount'}:</span>
+                <span style={{ fontWeight: 700 }}>-{totalReturns.toFixed(3)} {t('kd_currency')}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #e2e8f0', fontSize: '13px', color: '#01562c' }}>
+                <span style={{ fontWeight: 600 }}>{language === 'ar' ? 'الصافي المستحق' : 'Net Total Due'}:</span>
+                <span style={{ fontWeight: 700 }}>{(totalSent - totalReturns).toFixed(3)} {t('kd_currency')}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #e2e8f0', fontSize: '13px', color: '#166534' }}>
                 <span style={{ fontWeight: 600 }}>{language === 'ar' ? 'إجمالي المبلغ المدفوع' : 'Total Amount Paid'}:</span>
@@ -933,11 +1217,11 @@ const ClientStatementsPage: React.FC = () => {
           </div>
 
           {/* Signature / Stamp Area */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4cm', fontSize: '12px', color: '#475569', pageBreakInside: 'avoid' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: isSummaryPrint ? '1cm' : '3cm', fontSize: '12px', color: '#475569', pageBreakInside: 'avoid' }}>
             <div style={{ textAlign: 'center', width: '220px' }}>
               <div style={{ borderBottom: '1.5px dashed #cbd5e1', height: '45px', marginBottom: '8px' }} />
               <p style={{ margin: 0, fontWeight: 700 }}>{language === 'ar' ? 'توقيع العميل المستلم' : 'Recipient Customer Sign'}</p>
-              <p style={{ margin: '2px 0 0 0', fontSize: '10px', color: '#94a3b8' }}>Fresh 'n' Fast Partner Network</p>
+              <p style={{ margin: '2px 0 0 0', fontSize: '10px', color: '#94a3b8' }}>Fresh & Fast Partner Network</p>
             </div>
             <div style={{ textAlign: 'center', width: '220px' }}>
               <div style={{ borderBottom: '1.5px dashed #cbd5e1', height: '45px', marginBottom: '8px' }} />

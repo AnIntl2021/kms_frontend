@@ -21,6 +21,7 @@ import {
   Users,
   Eye,
   Pencil,
+  Calendar,
 } from "lucide-react";
 import "./InventoryPage.css";
 import Swal from "sweetalert2";
@@ -74,6 +75,7 @@ const FactoryDispatchPage = () => {
     sale_ids: [] as string[],
     reason: "Expired / Unsold",
     salesman_id: "",
+    return_date: new Date().toISOString().split("T")[0],
     items: [] as any[],
   });
 
@@ -395,7 +397,7 @@ const FactoryDispatchPage = () => {
       }
       setShowReturnModal(false);
       setEditingReturnId(null);
-      setReturnForm({ vendor_id: "", branch_id: "", sale_ids: [], salesman_id: "", reason: "Expired / Unsold", items: [] });
+      setReturnForm({ vendor_id: "", branch_id: "", sale_ids: [], salesman_id: "", reason: "Expired / Unsold", return_date: new Date().toISOString().split("T")[0], items: [] });
       fetchBaseData();
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Failed to process return.");
@@ -553,7 +555,8 @@ const FactoryDispatchPage = () => {
               style={{ background: "#be123c" }}
               onClick={() => {
                 fetchBaseData();
-                 setShowReturnModal(true);
+                setReturnForm({ vendor_id: "", branch_id: "", sale_ids: [], salesman_id: "", reason: "Expired / Unsold", return_date: new Date().toISOString().split("T")[0], items: [] });
+                setShowReturnModal(true);
               }}
             >
               <RotateCcw size={18} /> {t('process_sales_return')}
@@ -820,6 +823,7 @@ const FactoryDispatchPage = () => {
                                        sale_ids: [String(r.sale_id)],
                                        reason: r.reason,
                                        salesman_id: String(r.salesman_id),
+                                       return_date: r.created_at ? new Date(r.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
                                        items: mergedItems
                                      });
                                      
@@ -1437,6 +1441,15 @@ const FactoryDispatchPage = () => {
                          value={returnForm.reason}
                          onChange={(e) => setReturnForm({...returnForm, reason: e.target.value})}
                          placeholder="e.g. Expired / Unsold"
+                       />
+                    </div>
+                    <div className="form-group">
+                       <label><Calendar size={14} /> Return Date</label>
+                       <input 
+                         type="date" 
+                         value={returnForm.return_date}
+                         onChange={(e) => setReturnForm({...returnForm, return_date: e.target.value})}
+                         required
                        />
                     </div>
                 </div>
