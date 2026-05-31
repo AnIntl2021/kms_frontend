@@ -64,8 +64,7 @@ const ClientStatementsPage: React.FC = () => {
   const [selectedClientId, setSelectedClientId] = useState<string>('');
   const [selectedBranchId, setSelectedBranchId] = useState<string>('all');
   const [startDate, setStartDate] = useState<string>(() => {
-    const d = new Date();
-    return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().split('T')[0];
+    return new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0];
   });
   const [endDate, setEndDate] = useState<string>(() => {
     return new Date().toISOString().split('T')[0];

@@ -38,14 +38,26 @@ const AnalyticsPage = () => {
     fetchAnalytics();
   }, []);
 
+
+  
   const fetchAnalytics = async () => {
     try {
       setLoading(true);
-      const [foreRow, healthRow] = await Promise.all([
+      const [foreRow, healthRow, vendorsRow] = await Promise.all([
         api.get('/analytics/forecasting'),
-        api.get('/analytics/health')
+        api.get('/analytics/health'),
+        api.get('/vendors').catch(() => ({ data: { data: [] } }))
       ]);
-      setForecasting(foreRow.data.data.forecasting);
+      
+      const clientVendors = (vendorsRow.data.data || []).filter((v: any) => v.type === 'client');
+      const clientIds = new Set(clientVendors.map((v: any) => String(v.vendor_id)));
+      
+      // Filter out non-client vendors (such as suppliers)
+      const filteredForecasting = (foreRow.data.data.forecasting || []).filter((f: any) => 
+        clientIds.has(String(f.vendor_id))
+      );
+      
+      setForecasting(filteredForecasting);
       setHealth(healthRow.data.data);
     } catch (error) {
       console.error('Failed to fetch analytics:', error);
@@ -53,7 +65,7 @@ const AnalyticsPage = () => {
       setLoading(false);
     }
   };
-  
+
   const handleExport = () => {
     // Generate a detailed CSV export for the user
     const headers = [
