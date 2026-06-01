@@ -228,6 +228,9 @@ const ClientStatementsPage: React.FC = () => {
 
   // Calculate stats
   const totalSent = filteredOrders.reduce((sum, o) => sum + Number(o.final_amount), 0);
+  const totalGross = filteredOrders.reduce((sum, o) => sum + Number(o.total_amount || 0), 0);
+  const totalDiscount = filteredOrders.reduce((sum, o) => sum + Number(o.discount_amount || 0), 0);
+  const totalDiscountPercentage = totalGross > 0 ? ((totalDiscount / totalGross) * 100).toFixed(1) : '0.0';
   const totalReturns = filteredOrders.reduce((sum, o) => sum + Number(o.returns_amount || 0), 0);
   const paidAmount = filteredOrders.filter(o => o.payment_status === 'paid').reduce((sum, o) => sum + (Number(o.final_amount) - Number(o.returns_amount || 0)), 0);
   const balanceDue = Math.max(0, totalSent - totalReturns - paidAmount);
@@ -1006,11 +1009,10 @@ const ClientStatementsPage: React.FC = () => {
           {/* Header Identity */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '3px double #01562c', paddingBottom: isSummaryPrint ? '0.75rem' : '1.5rem', marginBottom: isSummaryPrint ? '1rem' : '2rem' }}>
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div style={{ width: '10px', height: '30px', background: '#01562c', borderRadius: '2px' }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <img src="/logo_fnf.png" alt="Fresh & Fast Logo" style={{ height: '40px', objectFit: 'contain' }} />
                 <h1 style={{ fontSize: '32px', color: '#01562c', margin: 0, fontWeight: 900, letterSpacing: '-1px' }}>Fresh & Fast</h1>
               </div>
-              <p style={{ margin: '6px 0 0 12px', fontSize: '13px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '1px' }}>Elite Food Distribution ERP</p>
             </div>
             <div style={{ textAlign: isRTL ? 'left' : 'right' }}>
               <span style={{ background: 'rgba(1, 86, 44, 0.1)', color: '#01562c', padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', display: 'inline-block', marginBottom: '8px' }}>
@@ -1026,38 +1028,54 @@ const ClientStatementsPage: React.FC = () => {
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: '2rem', marginBottom: isSummaryPrint ? '1rem' : '2rem' }}>
             <div style={{ 
               flex: 1, 
-              padding: isSummaryPrint ? '0.75rem 1rem' : '1.25rem', 
-              background: '#f8fafc', 
-              borderRadius: '12px', 
-              border: '1px solid #e2e8f0',
-              borderLeft: isRTL ? '1px solid #e2e8f0' : '4px solid #01562c',
-              borderRight: isRTL ? '4px solid #01562c' : '1px solid #e2e8f0'
+              background: '#ffffff', 
+              borderRadius: '10px', 
+              border: '1px solid #cbd5e1',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column'
             }}>
-              <h4 style={{ margin: '0 0 10px 0', fontSize: '13px', color: '#01562c', borderBottom: '1px solid #e2e8f0', paddingBottom: '6px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                {language === 'ar' ? 'بيانات العميل المستلم' : 'Client Delivery Details'}
-              </h4>
-              <p style={{ margin: '0 0 8px 0', fontSize: '16px', fontWeight: 800, color: '#0f172a' }}>
-                {language === 'ar' ? (clientInfo?.name_ar || clientInfo?.name_en) : clientInfo?.name_en}
-              </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '12px', color: '#475569' }}>
-                {clientInfo?.contact_person && <p style={{ margin: 0 }}><span style={{ fontWeight: 600 }}>{language === 'ar' ? 'المسؤول:' : 'Contact:'}</span> {clientInfo.contact_person}</p>}
-                {clientInfo?.phone && <p style={{ margin: 0 }}><span style={{ fontWeight: 600 }}>{language === 'ar' ? 'الهاتف:' : 'Phone:'}</span> {clientInfo.phone}</p>}
-                {clientInfo?.email && <p style={{ margin: 0 }}><span style={{ fontWeight: 600 }}>{language === 'ar' ? 'البريد:' : 'Email:'}</span> {clientInfo.email}</p>}
-                {clientInfo?.address && <p style={{ margin: 0 }}><span style={{ fontWeight: 600 }}>{language === 'ar' ? 'العنوان:' : 'Address:'}</span> {clientInfo.address}</p>}
+              <div style={{ background: '#f8fafc', padding: '10px 14px', borderBottom: '1px solid #cbd5e1' }}>
+                <h4 style={{ margin: 0, fontSize: '11px', color: '#01562c', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  {language === 'ar' ? 'بيانات العميل المستلم' : 'Client Delivery Details'}
+                </h4>
+              </div>
+              <div style={{ padding: '12px 14px' }}>
+                <p style={{ margin: '0 0 10px 0', fontSize: '15px', fontWeight: 800, color: '#0f172a' }}>
+                  {language === 'ar' ? (clientInfo?.name_ar || clientInfo?.name_en) : clientInfo?.name_en}
+                </p>
+                <div style={{ display: 'grid', gridTemplateColumns: '65px 1fr', gap: '6px', fontSize: '11.5px', color: '#475569' }}>
+                  {clientInfo?.contact_person && <><b style={{color: '#334155'}}>{language === 'ar' ? 'المسؤول:' : 'Contact:'}</b> <span>{clientInfo.contact_person}</span></>}
+                  {clientInfo?.phone && <><b style={{color: '#334155'}}>{language === 'ar' ? 'الهاتف:' : 'Phone:'}</b> <span>{clientInfo.phone}</span></>}
+                  {clientInfo?.email && <><b style={{color: '#334155'}}>{language === 'ar' ? 'البريد:' : 'Email:'}</b> <span>{clientInfo.email}</span></>}
+                  {clientInfo?.address && <><b style={{color: '#334155'}}>{language === 'ar' ? 'العنوان:' : 'Address:'}</b> <span>{clientInfo.address}</span></>}
+                </div>
               </div>
             </div>
             
-            <div style={{ width: '260px', padding: isSummaryPrint ? '0.75rem 1rem' : '1.25rem', border: '1px dashed #cbd5e1', borderRadius: '12px', fontSize: '12px', color: '#475569', background: '#fcfcfc' }}>
-              <h4 style={{ margin: '0 0 8px 0', fontSize: '12px', color: '#0f172a', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                {language === 'ar' ? 'تعليمات السداد والتحصيل' : 'Remittance & Terms'}
-              </h4>
-              <p style={{ margin: '0 0 8px 0', fontSize: '11px', lineHeight: '1.4', color: '#64748b' }}>
-                {language === 'ar' ? 'الرجاء مطابقة كشف الحساب وسداد الأرصدة المستحقة في غضون ٧ أيام.' : 'Please reconcile the listed statement and settle outstanding balances within 7 days.'}</p>
-              <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '8px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                <p style={{ margin: 0 }}><b>Bank:</b> {language === 'ar' ? 'البنك التجاري الكويتي (التجاري)' : 'Commercial Bank of Kuwait (Al-Tijari)'}</p>
-                <p style={{ margin: 0 }}><b>IBAN:</b> KW13COMB0000509625032100414014</p>
-                <p style={{ margin: 0 }}><b>Swift Code:</b> COMBKWKW</p>
-                <p style={{ margin: 0 }}><b>Currency:</b> {language === 'ar' ? 'دينار كويتي' : 'Kuwaiti Dinar (KWD)'}</p>
+            <div style={{ 
+              width: '320px', 
+              background: '#ffffff', 
+              borderRadius: '10px', 
+              border: '1px solid #cbd5e1',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column'
+            }}>
+              <div style={{ background: '#f8fafc', padding: '10px 14px', borderBottom: '1px solid #cbd5e1' }}>
+                <h4 style={{ margin: 0, fontSize: '11px', color: '#0f172a', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  {language === 'ar' ? 'تعليمات السداد والتحصيل' : 'Remittance & Terms'}
+                </h4>
+              </div>
+              <div style={{ padding: '12px 14px' }}>
+                <p style={{ margin: '0 0 10px 0', fontSize: '10.5px', lineHeight: '1.4', color: '#64748b' }}>
+                  {language === 'ar' ? 'الرجاء مطابقة كشف الحساب وسداد الأرصدة المستحقة في غضون ٧ أيام.' : 'Please reconcile the listed statement and settle outstanding balances within 7 days.'}</p>
+                <div style={{ display: 'grid', gridTemplateColumns: '70px 1fr', gap: '6px', fontSize: '11px', color: '#475569' }}>
+                  <b style={{color: '#334155'}}>Bank:</b> <span>{language === 'ar' ? 'البنك التجاري الكويتي (التجاري)' : 'Commercial Bank of Kuwait (Al-Tijari)'}</span>
+                  <b style={{color: '#334155'}}>IBAN:</b> <span style={{fontFamily: 'monospace', fontSize: '11px', letterSpacing: '0.5px', color: '#0f172a', fontWeight: 600}}>KW13COMB0000509625032100414014</span>
+                  <b style={{color: '#334155'}}>Swift Code:</b> <span style={{fontWeight: 600}}>COMBKWKW</span>
+                  <b style={{color: '#334155'}}>Currency:</b> <span>{language === 'ar' ? 'دينار كويتي' : 'Kuwaiti Dinar (KWD)'}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -1065,51 +1083,30 @@ const ClientStatementsPage: React.FC = () => {
           {/* Statement Shipments List */}
           <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: isSummaryPrint ? '1rem' : '2.5rem', fontSize: '13px' }}>
             <thead>
-              <tr style={{ background: '#01562c', color: 'white' }}>
-                <th style={{ padding: '12px 14px', textAlign: isRTL ? 'right' : 'left', fontWeight: 700, borderBottom: '2px solid #014020' }}>{language === 'ar' ? 'رقم الطلب' : 'Order No'}</th>
-                <th style={{ padding: '12px 14px', textAlign: isRTL ? 'right' : 'left', fontWeight: 700, borderBottom: '2px solid #014020' }}>{language === 'ar' ? 'الفرع المستلم' : 'Destination Branch'}</th>
-                <th style={{ padding: '12px 14px', textAlign: isRTL ? 'right' : 'left', fontWeight: 700, borderBottom: '2px solid #014020' }}>{language === 'ar' ? 'التاريخ' : 'Date'}</th>
-                <th style={{ padding: '12px 14px', textAlign: isRTL ? 'left' : 'right', fontWeight: 700, borderBottom: '2px solid #014020' }}>{language === 'ar' ? 'المبلغ' : 'Billed'}</th>
-                <th style={{ padding: '12px 14px', textAlign: isRTL ? 'left' : 'right', fontWeight: 700, borderBottom: '2px solid #014020' }}>{language === 'ar' ? 'المرتجع' : 'Returns'}</th>
-                <th style={{ padding: '12px 14px', textAlign: isRTL ? 'left' : 'right', fontWeight: 700, borderBottom: '2px solid #014020' }}>{language === 'ar' ? 'الصافي' : 'Net Total'}</th>
-                <th style={{ padding: '12px 14px', textAlign: 'center', fontWeight: 700, borderBottom: '2px solid #014020' }}>{t('payment')}</th>
+              <tr style={{ background: '#f8fafc', color: '#475569', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <th style={{ padding: '10px 6px', textAlign: isRTL ? 'right' : 'left', fontWeight: 800, borderBottom: '2px solid #01562c' }}>{language === 'ar' ? 'رقم الطلب' : 'Order No'}</th>
+                <th style={{ padding: '10px 6px', textAlign: isRTL ? 'right' : 'left', fontWeight: 800, borderBottom: '2px solid #01562c' }}>{language === 'ar' ? 'الفرع المستلم' : 'Destination'}</th>
+                <th style={{ padding: '10px 6px', textAlign: isRTL ? 'right' : 'left', fontWeight: 800, borderBottom: '2px solid #01562c' }}>{language === 'ar' ? 'التاريخ' : 'Date'}</th>
+                <th style={{ padding: '10px 6px', textAlign: 'center', fontWeight: 800, borderBottom: '2px solid #01562c' }}>{language === 'ar' ? 'الكمية' : 'Qty Sold'}</th>
+                <th style={{ padding: '10px 6px', textAlign: 'center', fontWeight: 800, borderBottom: '2px solid #01562c' }}>{language === 'ar' ? 'مرتجع' : 'Qty Ret'}</th>
+                {!isSummaryPrint && <th style={{ padding: '10px 6px', textAlign: isRTL ? 'left' : 'right', fontWeight: 800, borderBottom: '2px solid #01562c' }}>{language === 'ar' ? 'الإجمالي' : 'Gross Amt'}</th>}
+                {!isSummaryPrint && <th style={{ padding: '10px 6px', textAlign: 'center', fontWeight: 800, borderBottom: '2px solid #01562c' }}>{language === 'ar' ? 'الخصم' : 'Discount'}</th>}
+                {!isSummaryPrint && <th style={{ padding: '10px 6px', textAlign: isRTL ? 'left' : 'right', fontWeight: 800, borderBottom: '2px solid #01562c' }}>{language === 'ar' ? 'المبلغ المفوتر' : 'Net Billed'}</th>}
+                {!isSummaryPrint && <th style={{ padding: '10px 6px', textAlign: isRTL ? 'left' : 'right', fontWeight: 800, borderBottom: '2px solid #01562c' }}>{language === 'ar' ? 'قيمة المرتجع' : 'Ret Amt'}</th>}
+                {!isSummaryPrint && <th style={{ padding: '10px 6px', textAlign: isRTL ? 'left' : 'right', fontWeight: 800, borderBottom: '2px solid #01562c' }}>{language === 'ar' ? 'الصافي' : 'Net Total'}</th>}
+                <th style={{ padding: '10px 6px', textAlign: 'center', fontWeight: 800, borderBottom: '2px solid #01562c' }}>{t('payment')}</th>
               </tr>
             </thead>
             {isSummaryPrint ? (
               <tbody style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
-                <tr style={{ borderBottom: '1px solid #e2e8f0', background: 'white' }}>
-                  <td style={{ padding: '12px 14px', fontWeight: 700, color: '#0f172a' }}>
-                    {language === 'ar' ? 'ملخص الفترات' : 'Period Summary'}
-                  </td>
-                  <td style={{ padding: '12px 14px', fontWeight: 600 }}>
-                    {selectedBranchId === 'all' 
-                      ? (language === 'ar' ? 'جميع الفروع' : 'All Branches')
-                      : (filteredOrders[0]?.branch_name_ar || filteredOrders[0]?.branch_name || (language === 'ar' ? 'الفرع الرئيسي' : 'Main Hub'))
-                    }
-                  </td>
-                  <td style={{ padding: '12px 14px', color: '#475569' }}>
-                    {startDate} {language === 'ar' ? 'إلى' : 'to'} {endDate}
-                  </td>
-                  <td style={{ padding: '12px 14px', fontWeight: 600, color: '#475569', textAlign: isRTL ? 'left' : 'right' }}>
-                    {totalSent.toFixed(3)} {t('kd_currency')}
-                  </td>
-                  <td style={{ padding: '12px 14px', fontWeight: 600, color: '#ef4444', textAlign: isRTL ? 'left' : 'right' }}>
-                    {totalReturns > 0 ? `-${totalReturns.toFixed(3)}` : '0.000'} {t('kd_currency')}
-                  </td>
-                  <td style={{ padding: '12px 14px', fontWeight: 800, color: '#01562c', textAlign: isRTL ? 'left' : 'right' }}>
-                    {(totalSent - totalReturns).toFixed(3)} {t('kd_currency')}
-                  </td>
-                  <td style={{ padding: '12px 14px', textAlign: 'center' }}>
-                    <span style={{
-                      padding: '4px 10px',
-                      borderRadius: '20px',
-                      fontSize: '10px',
-                      fontWeight: 800,
-                      textTransform: 'uppercase',
-                      background: balanceDue <= 0 ? '#e6f4ea' : '#fce8e6',
-                      color: balanceDue <= 0 ? '#137333' : '#c5221f',
-                      display: 'inline-block'
-                    }}>
+                <tr style={{ borderBottom: '1px solid #e2e8f0', background: 'white', fontSize: '11.5px' }}>
+                  <td style={{ padding: '12px 6px', fontWeight: 800, color: '#01562c', fontSize: '12.5px' }}>{language === 'ar' ? 'ملخص الفترات' : 'Period Summary'}</td>
+                  <td style={{ padding: '12px 6px', fontWeight: 600, color: '#334155', fontSize: '11.5px' }}>{selectedBranchId === 'all' ? (language === 'ar' ? 'جميع الفروع' : 'All Branches') : (filteredOrders[0]?.branch_name_ar || filteredOrders[0]?.branch_name || (language === 'ar' ? 'الفرع الرئيسي' : 'Main Hub'))}</td>
+                  <td style={{ padding: '12px 6px', color: '#64748b', fontSize: '11px' }}>{startDate} {language === 'ar' ? 'إلى' : 'to'} {endDate}</td>
+                  <td style={{ padding: '12px 6px', textAlign: 'center', fontWeight: 800, color: 'var(--primary)', fontSize: '12.5px' }}>{filteredOrders.reduce((sum, o) => sum + (o.items?.reduce((s, i) => s + Number(i.quantity || 0), 0) || 0), 0)}</td>
+                  <td style={{ padding: '12px 6px', textAlign: 'center', fontWeight: 800, color: '#ef4444', fontSize: '12.5px' }}>{filteredOrders.reduce((sum, o) => sum + Number((o as any).returns_qty || 0), 0) || '-'}</td>
+                  <td style={{ padding: '12px 6px', textAlign: 'center' }}>
+                    <span style={{ padding: '4px 10px', borderRadius: '4px', fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', background: balanceDue <= 0 ? '#e6f4ea' : '#fce8e6', color: balanceDue <= 0 ? '#137333' : '#c5221f', display: 'inline-block', letterSpacing: '0.5px' }}>
                       {balanceDue <= 0 ? (language === 'ar' ? 'مدفوع' : 'PAID') : (language === 'ar' ? 'مستحق' : 'UNPAID')}
                     </span>
                   </td>
@@ -1118,57 +1115,32 @@ const ClientStatementsPage: React.FC = () => {
             ) : (
               filteredOrders.map((order, idx) => (
                 <tbody key={order.sale_id} style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
-                  <tr style={{ 
-                    borderBottom: '1px solid #e2e8f0', 
-                    background: idx % 2 === 0 ? 'white' : '#f8fafc',
-                    transition: 'background 0.2s',
-                    pageBreakInside: 'avoid',
-                    breakInside: 'avoid'
-                  }}>
-                    <td style={{ padding: '12px 14px', fontWeight: 700, color: '#0f172a' }}>FNFI-{100000 + order.sale_id}</td>
-                    <td style={{ padding: '12px 14px', fontWeight: 600 }}>
-                      {language === 'ar' ? (order.branch_name_ar || order.branch_name || 'الرئيسي') : (order.branch_name || 'Main Hub')}
+                  <tr style={{ borderBottom: '1px solid #e2e8f0', background: idx % 2 === 0 ? 'white' : '#fcfcfc', transition: 'background 0.2s', pageBreakInside: 'avoid', breakInside: 'avoid', fontSize: '11px' }}>
+                    <td style={{ padding: '10px 6px', fontWeight: 700, color: '#0f172a' }}>FNFI-{100000 + order.sale_id}</td>
+                    <td style={{ padding: '10px 6px', fontWeight: 600, color: '#334155' }}>{language === 'ar' ? (order.branch_name_ar || order.branch_name || 'الرئيسي') : (order.branch_name || 'Main Hub')}</td>
+                    <td style={{ padding: '10px 6px', color: '#64748b' }}>{order.report_date}</td>
+                    <td style={{ padding: '10px 6px', textAlign: 'center', fontWeight: 700, color: 'var(--primary)' }}>{order.items?.reduce((s, i) => s + Number(i.quantity || 0), 0) || 0}</td>
+                    <td style={{ padding: '10px 6px', textAlign: 'center', fontWeight: 700, color: '#ef4444' }}>{(order as any).returns_qty || '-'}</td>
+                    <td style={{ padding: '10px 6px', fontWeight: 600, color: '#475569', textAlign: isRTL ? 'left' : 'right' }}>{Number(order.total_amount).toFixed(3)}</td>
+                    <td style={{ padding: '10px 6px', textAlign: 'center' }}>
+                      <div style={{ fontWeight: 600, color: '#f59e0b' }}>{Number(order.discount_amount) > 0 ? Number(order.discount_amount).toFixed(3) : '0.000'}</div>
+                      {Number(order.discount_amount) > 0 && <div style={{ fontSize: '9px', color: '#94a3b8' }}>({order.discount_percentage}%)</div>}
                     </td>
-                    <td style={{ padding: '12px 14px', color: '#475569' }}>{order.report_date}</td>
-                    <td style={{ padding: '12px 14px', fontWeight: 600, color: '#475569', textAlign: isRTL ? 'left' : 'right' }}>
-                      {Number(order.final_amount).toFixed(3)} {t('kd_currency')}
-                    </td>
-                    <td style={{ padding: '12px 14px', fontWeight: 600, color: '#ef4444', textAlign: isRTL ? 'left' : 'right' }}>
-                      {Number(order.returns_amount || 0) > 0 ? `-${Number(order.returns_amount).toFixed(3)}` : '0.000'} {t('kd_currency')}
-                    </td>
-                    <td style={{ padding: '12px 14px', fontWeight: 800, color: '#01562c', textAlign: isRTL ? 'left' : 'right' }}>
-                      {Number(order.final_amount - (order.returns_amount || 0)).toFixed(3)} {t('kd_currency')}
-                    </td>
-                    <td style={{ padding: '12px 14px', textAlign: 'center' }}>
-                      <span style={{
-                        padding: '4px 10px',
-                        borderRadius: '20px',
-                        fontSize: '10px',
-                        fontWeight: 800,
-                        textTransform: 'uppercase',
-                        background: order.payment_status === 'paid' ? '#e6f4ea' : '#fce8e6',
-                        color: order.payment_status === 'paid' ? '#137333' : '#c5221f',
-                        display: 'inline-block'
-                      }}>
+                    <td style={{ padding: '10px 6px', fontWeight: 600, color: '#475569', textAlign: isRTL ? 'left' : 'right' }}>{Number(order.final_amount).toFixed(3)}</td>
+                    <td style={{ padding: '10px 6px', fontWeight: 600, color: '#ef4444', textAlign: isRTL ? 'left' : 'right' }}>{Number(order.returns_amount || 0) > 0 ? `-${Number(order.returns_amount).toFixed(3)}` : '0.000'}</td>
+                    <td style={{ padding: '10px 6px', fontWeight: 800, color: '#01562c', textAlign: isRTL ? 'left' : 'right' }}>{Number(order.final_amount - (order.returns_amount || 0)).toFixed(3)}</td>
+                    <td style={{ padding: '10px 6px', textAlign: 'center' }}>
+                      <span style={{ padding: '3px 8px', borderRadius: '4px', fontSize: '8.5px', fontWeight: 800, textTransform: 'uppercase', background: order.payment_status === 'paid' ? '#e6f4ea' : '#fce8e6', color: order.payment_status === 'paid' ? '#137333' : '#c5221f', display: 'inline-block', letterSpacing: '0.5px' }}>
                         {order.payment_status?.toUpperCase()}
                       </span>
                     </td>
                   </tr>
-                  {/* Detailed nested items inside the print view */}
                   {!isSummaryPrint && (
                     <tr style={{ background: idx % 2 === 0 ? 'white' : '#f8fafc', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
-                      <td colSpan={7} style={{ padding: '0px 14px 12px 14px', borderBottom: '1px solid #e2e8f0' }}>
-                        <div style={{ 
-                          background: '#ffffff', 
-                          padding: '8px 12px', 
-                          borderRadius: '8px', 
-                          border: '1px solid #e2e8f0', 
-                          display: 'flex', 
-                          flexWrap: 'wrap', 
-                          gap: '12px' 
-                        }}>
+                      <td colSpan={11} style={{ padding: '0px 8px 10px 8px', borderBottom: '1px solid #e2e8f0' }}>
+                        <div style={{ background: '#ffffff', padding: '6px 10px', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
                           {order.items?.map(it => (
-                            <span key={it.sale_item_id} style={{ fontSize: '11px', color: '#475569', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                            <span key={it.sale_item_id} style={{ fontSize: '10.5px', color: '#475569', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
                               <span style={{ color: '#16a34a' }}>•</span>
                               <span style={{ fontWeight: 600 }}>{language === 'ar' ? (it.name_ar || it.name_en) : it.name_en}</span>
                               <span style={{ color: '#64748b' }}>({it.quantity})</span>
@@ -1193,6 +1165,16 @@ const ClientStatementsPage: React.FC = () => {
               border: '1px solid #01562c',
               boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
             }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #e2e8f0', fontSize: '13px' }}>
+                <span style={{ fontWeight: 600, color: '#475569' }}>{language === 'ar' ? 'الإجمالي قبل الخصم' : 'Gross Amount'}:</span>
+                <span style={{ fontWeight: 700, color: '#0f172a' }}>{totalGross.toFixed(3)} {t('kd_currency')}</span>
+              </div>
+              {totalDiscount > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #e2e8f0', fontSize: '13px', color: '#d97706' }}>
+                  <span style={{ fontWeight: 600 }}>{language === 'ar' ? 'إجمالي الخصم' : 'Total Discount'} ({totalDiscountPercentage}%):</span>
+                  <span style={{ fontWeight: 700 }}>-{totalDiscount.toFixed(3)} {t('kd_currency')}</span>
+                </div>
+              )}
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #e2e8f0', fontSize: '13px' }}>
                 <span style={{ fontWeight: 600, color: '#475569' }}>{language === 'ar' ? 'إجمالي الفواتير' : 'Total Invoice Amount'}:</span>
                 <span style={{ fontWeight: 700, color: '#0f172a' }}>{totalSent.toFixed(3)} {t('kd_currency')}</span>
@@ -1219,14 +1201,15 @@ const ClientStatementsPage: React.FC = () => {
           {/* Signature / Stamp Area */}
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: isSummaryPrint ? '1cm' : '3cm', fontSize: '12px', color: '#475569', pageBreakInside: 'avoid' }}>
             <div style={{ textAlign: 'center', width: '220px' }}>
-              <div style={{ borderBottom: '1.5px dashed #cbd5e1', height: '45px', marginBottom: '8px' }} />
+              <div style={{ borderBottom: '1.5px dashed #cbd5e1', height: '120px', marginBottom: '10px' }} />
               <p style={{ margin: 0, fontWeight: 700 }}>{language === 'ar' ? 'توقيع العميل المستلم' : 'Recipient Customer Sign'}</p>
               <p style={{ margin: '2px 0 0 0', fontSize: '10px', color: '#94a3b8' }}>Fresh & Fast Partner Network</p>
             </div>
-            <div style={{ textAlign: 'center', width: '220px' }}>
-              <div style={{ borderBottom: '1.5px dashed #cbd5e1', height: '45px', marginBottom: '8px' }} />
-              <p style={{ margin: 0, fontWeight: 700 }}>{language === 'ar' ? 'الختم والمصادقة' : 'Authorized Signature & Stamp'}</p>
-              <p style={{ margin: '2px 0 0 0', fontSize: '10px', color: '#94a3b8' }}>Corporate Food Distribution ERP</p>
+            <div style={{ textAlign: 'center', width: '280px', position: 'relative' }}>
+              <div style={{ borderBottom: '2px dashed #cbd5e1', height: '120px', marginBottom: '10px', display: 'flex', justifyContent: 'center', alignItems: 'flex-end', paddingBottom: '5px' }}>
+                <img src="/sign.jpg" alt="Signature" style={{ height: '120px', objectFit: 'contain', mixBlendMode: 'multiply', marginBottom: '-10px' }} />
+              </div>
+              <p style={{ margin: 0, fontWeight: 800, fontSize: '16px', color: '#334155' }}>{language === 'ar' ? 'توقيع معتمد' : 'Authorized Signature'}</p>
             </div>
           </div>
         </div>

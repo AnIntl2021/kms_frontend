@@ -502,6 +502,28 @@ const PNLReportPage = () => {
                 </div>
               </div>
 
+              <div className="kpi-strip-tile border-accent-orange">
+                <div className="kpi-tile-header">
+                  <div className="tile-icon-bg icon-orange"><Percent size={16} /></div>
+                  <span className="tile-title">{language === 'ar' ? 'الخصومات الممنوحة' : 'Discounts Allowed'}</span>
+                </div>
+                <div className="kpi-tile-body">
+                  <h3>-{discounts.toFixed(3)} <small className="kpi-unit">KD</small></h3>
+                  <span className="tile-desc">{language === 'ar' ? 'الخصومات والخصم المطبق' : 'Discounts & credits allowed'}</span>
+                </div>
+              </div>
+
+              <div className="kpi-strip-tile border-accent-red">
+                <div className="kpi-tile-header">
+                  <div className="tile-icon-bg icon-red"><TrendingDown size={16} /></div>
+                  <span className="tile-title">{language === 'ar' ? 'مردودات المبيعات' : 'Sales Returns'}</span>
+                </div>
+                <div className="kpi-tile-body">
+                  <h3>-{salesReturns.toFixed(3)} <small className="kpi-unit">KD</small></h3>
+                  <span className="tile-desc">{language === 'ar' ? 'قيمة المنتجات المرتجعة' : 'Total returned credits'}</span>
+                </div>
+              </div>
+
               <div className="kpi-strip-tile border-accent-green">
                 <div className="kpi-tile-header">
                   <div className="tile-icon-bg icon-green"><TrendingUp size={16} /></div>
