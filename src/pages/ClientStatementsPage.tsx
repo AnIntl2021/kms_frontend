@@ -1206,8 +1206,9 @@ const ClientStatementsPage: React.FC = () => {
               <p style={{ margin: '2px 0 0 0', fontSize: '10px', color: '#94a3b8' }}>Fresh & Fast Partner Network</p>
             </div>
             <div style={{ textAlign: 'center', width: '280px', position: 'relative' }}>
-              <div style={{ borderBottom: '2px dashed #cbd5e1', height: '120px', marginBottom: '10px', display: 'flex', justifyContent: 'center', alignItems: 'flex-end', paddingBottom: '5px' }}>
-                <img src="/sign.jpg" alt="Signature" style={{ height: '120px', objectFit: 'contain', mixBlendMode: 'multiply', marginBottom: '-10px' }} />
+              <div style={{ borderBottom: '2px dashed #cbd5e1', height: '120px', marginBottom: '10px', display: 'flex', justifyContent: 'center', alignItems: 'flex-end', paddingBottom: '5px', position: 'relative' }}>
+                <img src="/withoutgroung_stamp.png" alt="Stamp" style={{ position: 'absolute', height: '140px', objectFit: 'contain', mixBlendMode: 'multiply', opacity: 0.85, bottom: '-15px', right: '40px', zIndex: 1, transform: 'rotate(-5deg)' }} />
+                <img src="/withoutgroung_sign.png" alt="Signature" style={{ position: 'relative', height: '100px', objectFit: 'contain', mixBlendMode: 'multiply', marginBottom: '0px', zIndex: 2, transform: 'rotate(2deg)' }} />
               </div>
               <p style={{ margin: 0, fontWeight: 800, fontSize: '16px', color: '#334155' }}>{language === 'ar' ? 'توقيع معتمد' : 'Authorized Signature'}</p>
             </div>
