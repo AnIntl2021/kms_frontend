@@ -1010,8 +1010,11 @@ const ClientStatementsPage: React.FC = () => {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '3px double #01562c', paddingBottom: isSummaryPrint ? '0.75rem' : '1.5rem', marginBottom: isSummaryPrint ? '1rem' : '2rem' }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <img src="/logo_fnf.png" alt="Fresh & Fast Logo" style={{ height: '40px', objectFit: 'contain' }} />
-                <h1 style={{ fontSize: '32px', color: '#01562c', margin: 0, fontWeight: 900, letterSpacing: '-1px' }}>Fresh & Fast</h1>
+                <img src="/logo_new.jpeg" alt="Fresh & Fast Logo" style={{ height: '40px', objectFit: 'contain' }} />
+                <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                  <h1 style={{ fontFamily: '"Oleo Script", cursive', fontSize: '32px', color: '#01562c', margin: 0, fontWeight: 700, letterSpacing: '0px', lineHeight: '1' }}>Fresh & Fast</h1>
+                  <span style={{ fontSize: '13px', color: '#01562c', fontWeight: 600, letterSpacing: '0.5px', marginTop: '2px' }}>Restuarant Company</span>
+                </div>
               </div>
             </div>
             <div style={{ textAlign: isRTL ? 'left' : 'right' }}>
@@ -1204,14 +1207,14 @@ const ClientStatementsPage: React.FC = () => {
             <div style={{ textAlign: 'center', width: '220px' }}>
               <div style={{ borderBottom: '1.5px dashed #cbd5e1', height: '120px', marginBottom: '10px' }} />
               <p style={{ margin: 0, fontWeight: 700 }}>{language === 'ar' ? 'توقيع العميل المستلم' : 'Recipient Customer Sign'}</p>
-              <p style={{ margin: '2px 0 0 0', fontSize: '10px', color: '#94a3b8' }}>Fresh & Fast Partner Network</p>
+              <p style={{ margin: '2px 0 0 0', fontSize: '10px', color: '#94a3b8' }}>Fresh & Fast<br />Restaurant company</p>
             </div>
             <div style={{ textAlign: 'center', width: '280px', position: 'relative' }}>
-              <div style={{ borderBottom: '2px dashed #cbd5e1', height: '120px', marginBottom: '10px', display: 'flex', justifyContent: 'center', alignItems: 'flex-end', paddingBottom: '5px', position: 'relative' }}>
-                <img src="/withoutgroung_stamp.png" alt="Stamp" style={{ position: 'absolute', height: '140px', objectFit: 'contain', mixBlendMode: 'multiply', opacity: 0.85, bottom: '-15px', right: '40px', zIndex: 1, transform: 'rotate(-5deg)' }} />
-                <img src="/withoutgroung_sign.png" alt="Signature" style={{ position: 'relative', height: '100px', objectFit: 'contain', mixBlendMode: 'multiply', marginBottom: '0px', zIndex: 2, transform: 'rotate(2deg)' }} />
+              <div style={{ borderBottom: '2px dashed #cbd5e1', height: '120px', marginBottom: '10px', position: 'relative' }}>
+                <img src="/withoutgroung_stamp.png" alt="Stamp" style={{ position: 'absolute', height: '150px', objectFit: 'contain', mixBlendMode: 'multiply', opacity: 0.85, bottom: '-65px', right: '65px', zIndex: 1, transform: 'rotate(-5deg)', pointerEvents: 'none' }} />
+                <img src="/withoutgroung_sign.png" alt="Signature" style={{ position: 'absolute', height: '170px', objectFit: 'contain', mixBlendMode: 'multiply', bottom: '-15px', right: '35px', zIndex: 2, transform: 'rotate(-2deg)', pointerEvents: 'none' }} />
               </div>
-              <p style={{ margin: 0, fontWeight: 800, fontSize: '16px', color: '#334155' }}>{language === 'ar' ? 'توقيع معتمد' : 'Authorized Signature'}</p>
+              <p style={{ margin: 0, fontWeight: 800, fontSize: '16px', color: '#334155', position: 'relative', zIndex: 0 }}>{language === 'ar' ? 'توقيع معتمد' : 'Authorized Signature'}</p>
             </div>
           </div>
         </div>
