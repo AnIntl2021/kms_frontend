@@ -1070,11 +1070,12 @@ const ClientStatementsPage: React.FC = () => {
               <div style={{ padding: '12px 14px' }}>
                 <p style={{ margin: '0 0 10px 0', fontSize: '10.5px', lineHeight: '1.4', color: '#64748b' }}>
                   {language === 'ar' ? 'الرجاء مطابقة كشف الحساب وسداد الأرصدة المستحقة في غضون ٧ أيام.' : 'Please reconcile the listed statement and settle outstanding balances within 7 days.'}</p>
-                <div style={{ display: 'grid', gridTemplateColumns: '70px 1fr', gap: '6px', fontSize: '11px', color: '#475569' }}>
-                  <b style={{color: '#334155'}}>Bank:</b> <span>{language === 'ar' ? 'البنك التجاري الكويتي (التجاري)' : 'Commercial Bank of Kuwait (Al-Tijari)'}</span>
+                <div style={{ display: 'grid', gridTemplateColumns: '100px 1fr', gap: '6px', fontSize: '11px', color: '#475569' }}>
+                  <b style={{color: '#334155'}}>{language === 'ar' ? 'البنك:' : 'Bank:'}</b> <span>{language === 'ar' ? 'البنك التجاري الكويتي (التجاري)' : 'Commercial Bank of Kuwait (Al-Tijari)'}</span>
+                  <b style={{color: '#334155'}}>{language === 'ar' ? 'رقم الحساب:' : 'Account No:'}</b> <span style={{fontFamily: 'monospace', fontSize: '11px', letterSpacing: '0.5px', color: '#0f172a', fontWeight: 600}}>9625032010</span>
                   <b style={{color: '#334155'}}>IBAN:</b> <span style={{fontFamily: 'monospace', fontSize: '11px', letterSpacing: '0.5px', color: '#0f172a', fontWeight: 600}}>KW13COMB0000509625032100414014</span>
                   <b style={{color: '#334155'}}>Swift Code:</b> <span style={{fontWeight: 600}}>COMBKWKW</span>
-                  <b style={{color: '#334155'}}>Currency:</b> <span>{language === 'ar' ? 'دينار كويتي' : 'Kuwaiti Dinar (KWD)'}</span>
+                  <b style={{color: '#334155'}}>{language === 'ar' ? 'العملة:' : 'Currency:'}</b> <span>{language === 'ar' ? 'دينار كويتي' : 'Kuwaiti Dinar (KWD)'}</span>
                 </div>
               </div>
             </div>
