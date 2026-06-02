@@ -63,7 +63,22 @@ const FactoryDispatchPage = () => {
   const hasDragged = useRef(false);
 
   const formatDisplayDate = (record: any) => {
-    return `${record.return_date} | ${record.created_at}`;
+    try {
+      const raw = record.created_at || record.return_date;
+      if (!raw) return '';
+      
+      const d = new Date(raw);
+      if (isNaN(d.getTime())) return String(raw);
+      
+      // The backend API is serializing dates with a timezone offset (e.g. 18:30 UTC for IST, 21:00 UTC for KWT)
+      // which pushes midnight into the previous day in UTC.
+      // By adding 8 hours to the UTC time, we safely push all these shifted midnight UTC times back into the correct intended day.
+      d.setUTCHours(d.getUTCHours() + 8);
+      
+      return `${d.getUTCMonth() + 1}/${d.getUTCDate()}/${d.getUTCFullYear()}`;
+    } catch {
+      return '';
+    }
   };
 
   const [showProduceModal, setShowProduceModal] = useState(false);
@@ -656,7 +671,7 @@ const FactoryDispatchPage = () => {
                       <th>{t("return_id")}</th>
                       <th>{t("client_name")}</th>
                       <th>{t("reason")}</th>
-                      <th>{t("return_date")} (v2)</th>
+                      <th>{t("return_date")}</th>
                       <th className="text-end">{t("wastage_value_loss")}</th>
                       <th className="text-center">{t("actions")}</th>
                     </tr>
