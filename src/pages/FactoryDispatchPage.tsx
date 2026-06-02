@@ -62,6 +62,19 @@ const FactoryDispatchPage = () => {
   const [draggingId, setDraggingId] = useState<number | null>(null);
   const hasDragged = useRef(false);
 
+  const formatDisplayDate = (dateString: any) => {
+    if (!dateString) return '';
+    try {
+      // Extract YYYY-MM-DD directly from the string to prevent browser timezone shifting
+      const datePart = dateString.split('T')[0].split(' ')[0];
+      const [year, month, day] = datePart.split('-');
+      if (!year || !month || !day) return new Date(dateString).toLocaleDateString();
+      return `${parseInt(month, 10)}/${parseInt(day, 10)}/${year}`;
+    } catch {
+      return new Date(dateString).toLocaleDateString();
+    }
+  };
+
   const [showProduceModal, setShowProduceModal] = useState(false);
   const [showDispatchModal, setShowDispatchModal] = useState(false);
   const [showReturnModal, setShowReturnModal] = useState(false);
@@ -811,7 +824,7 @@ const FactoryDispatchPage = () => {
                               {t(r.reason.toLowerCase().replace(/ \/ /g, '_').replace(/ /g, '_')) || r.reason}
                             </span>
                           </td>
-                          <td>{new Date(r.created_at).toLocaleDateString()}</td>
+                          <td>{formatDisplayDate(r.return_date || r.created_at)}</td>
                           <td className="text-end">
                             <strong style={{ color: '#be123c' }}>
                               {Number(r.wastage_loss || 0).toFixed(3)} {t('kd_currency')}
