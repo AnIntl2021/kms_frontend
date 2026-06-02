@@ -62,15 +62,24 @@ const FactoryDispatchPage = () => {
   const [draggingId, setDraggingId] = useState<number | null>(null);
   const hasDragged = useRef(false);
 
-  const formatDisplayDate = (dateString: any) => {
-    if (!dateString) return '';
+  const formatDisplayDate = (record: any) => {
     try {
-      const d = new Date(dateString);
-      if (isNaN(d.getTime())) return dateString;
-      // Force Kuwait timezone to prevent UTC dates from shifting to the previous day globally
+      // Use created_at as the source of truth, because return_date gets corrupted to the previous day 
+      // if submitted between Midnight and 3AM Kuwait time (due to toISOString() shifting to UTC).
+      let ds = String(record.created_at);
+      
+      // If the Ubuntu Live Server returns a MySQL timestamp like "2026-06-01 21:00:00" without a 'Z', 
+      // the browser parses it as local time. We must force it to UTC by appending 'Z'.
+      if (!ds.includes('T') && ds.includes(' ')) {
+        ds = ds.replace(' ', 'T') + 'Z';
+      }
+      
+      const d = new Date(ds);
+      if (isNaN(d.getTime())) return ds;
+      
       return d.toLocaleDateString('en-US', { timeZone: 'Asia/Kuwait' });
     } catch {
-      return dateString;
+      return '';
     }
   };
 
@@ -823,7 +832,7 @@ const FactoryDispatchPage = () => {
                               {t(r.reason.toLowerCase().replace(/ \/ /g, '_').replace(/ /g, '_')) || r.reason}
                             </span>
                           </td>
-                          <td>{formatDisplayDate(r.return_date || r.created_at)}</td>
+                          <td>{formatDisplayDate(r)}</td>
                           <td className="text-end">
                             <strong style={{ color: '#be123c' }}>
                               {Number(r.wastage_loss || 0).toFixed(3)} {t('kd_currency')}
