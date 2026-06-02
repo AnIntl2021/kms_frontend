@@ -22,6 +22,7 @@ import {
   Eye,
   Pencil,
   Calendar,
+  GripVertical,
 } from "lucide-react";
 import "./InventoryPage.css";
 import Swal from "sweetalert2";
@@ -40,6 +41,9 @@ interface MenuItem {
   current_stock: number;
   price: number;
 }
+
+type SortField = 'name' | 'stock' | 'custom';
+type SortDirection = 'asc' | 'desc';
 const FactoryDispatchPage = () => {
   const { t, language } = useLanguage();
   const [activeTab, setActiveTab] = useState<
@@ -52,6 +56,11 @@ const FactoryDispatchPage = () => {
   const [productionLogs, setProductionLogs] = useState<any[]>([]);
   const [returnsHistory, setReturnsHistory] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [sortField, setSortField] = useState<SortField>('name');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  const [customOrder, setCustomOrder] = useState<number[]>([]);
+  const [draggingId, setDraggingId] = useState<number | null>(null);
+  const hasDragged = useRef(false);
 
   const [showProduceModal, setShowProduceModal] = useState(false);
   const [showDispatchModal, setShowDispatchModal] = useState(false);
@@ -228,7 +237,12 @@ const FactoryDispatchPage = () => {
 
       setVendors(Array.isArray(vArr) ? vArr : []);
       // 🛡️ ONLY SHOW FINISHED PRODUCTS (SELLING) IN DISTRIBUTION
-      setMenuItems(Array.isArray(mArr) ? mArr.filter((i: any) => i.type === 'selling') : []);
+      const filteredItems = Array.isArray(mArr) ? mArr.filter((i: any) => i.type === 'selling') : [];
+      setMenuItems(filteredItems);
+      // Initialize custom order if empty
+      if (customOrder.length === 0 && filteredItems.length > 0) {
+        setCustomOrder(filteredItems.map((i: any) => i.menu_item_id));
+      }
       setDispatches(Array.isArray(dArr) ? dArr : []);
       setProductionLogs(Array.isArray(pArr) ? pArr : []);
       setReturnsHistory(Array.isArray(rArr) ? rArr : []);
@@ -254,7 +268,7 @@ const FactoryDispatchPage = () => {
       return;
     setProduceForm({
       ...produceForm,
-      items: [...produceForm.items, { ...item, quantity: 100 }],
+      items: [...produceForm.items, { ...item, quantity: 1 }],
     });
   };
 
@@ -280,6 +294,39 @@ const FactoryDispatchPage = () => {
         error.response?.data?.message || "Failed to record production.",
       );
     }
+  };
+
+  // Drag and drop handlers for custom ordering
+  const handleDragStart = (e: React.DragEvent, menuItemId: number) => {
+    setDraggingId(menuItemId);
+    hasDragged.current = false;
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent, overId: number) => {
+    e.preventDefault();
+    if (draggingId === null || draggingId === overId) return;
+
+    hasDragged.current = true; // Mark that actual dragging occurred
+    const newOrder = [...customOrder];
+    const dragIndex = newOrder.indexOf(draggingId);
+    const overIndex = newOrder.indexOf(overId);
+
+    if (dragIndex === -1 || overIndex === -1) return;
+
+    // Remove dragged item and insert at new position
+    newOrder.splice(dragIndex, 1);
+    newOrder.splice(overIndex, 0, draggingId);
+
+    setCustomOrder(newOrder);
+  };
+
+  const handleDragEnd = () => {
+    setDraggingId(null);
+    // Reset hasDragged after a short delay so click handler can check it
+    setTimeout(() => {
+      hasDragged.current = false;
+    }, 50);
   };
 
   const removeFromProduce = (id: number) => {
@@ -1008,26 +1055,98 @@ const FactoryDispatchPage = () => {
                       border: "1px solid #eef2f6",
                     }}
                   >
-                    <h4 style={{ fontSize: "13px", marginBottom: "15px" }}>
-                      Product Catalog
-                    </h4>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '15px' }}>
+                      <h4 style={{ fontSize: "13px", margin: 0 }}>
+                        Product Catalog
+                      </h4>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <select
+                          value={sortField}
+                          onChange={(e) => setSortField(e.target.value as SortField)}
+                          style={{
+                            fontSize: '12px',
+                            padding: '4px 8px',
+                            borderRadius: '6px',
+                            border: '1px solid #e2e8f0',
+                            background: 'white',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          <option value="name">Sort by Name</option>
+                          <option value="stock">Sort by Stock</option>
+                          <option value="custom">Custom Order</option>
+                        </select>
+                        {sortField !== 'custom' && (
+                          <button
+                            type="button"
+                            onClick={() => setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')}
+                            style={{
+                              background: 'white',
+                              border: '1px solid #e2e8f0',
+                              borderRadius: '6px',
+                              padding: '4px 8px',
+                              cursor: 'pointer',
+                              fontSize: '12px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}
+                            title={sortDirection === 'asc' ? 'Ascending' : 'Descending'}
+                          >
+                            {sortDirection === 'asc' ? '↑ A-Z' : '↓ Z-A'}
+                          </button>
+                        )}
+                        {sortField === 'custom' && (
+                          <span style={{ fontSize: '11px', color: '#64748b' }}>
+                            Drag to reorder
+                          </span>
+                        )}
+                      </div>
+                    </div>
                     <div style={{ maxHeight: "280px", overflowY: "auto", paddingRight: "5px" }}>
-                      {menuItems.map((item) => (
+                      {[...menuItems].sort((a, b) => {
+                        let comparison = 0;
+                        if (sortField === 'name') {
+                          comparison = a.name_en.localeCompare(b.name_en);
+                        } else if (sortField === 'stock') {
+                          comparison = a.current_stock - b.current_stock;
+                        } else if (sortField === 'custom') {
+                          const aIndex = customOrder.indexOf(a.menu_item_id);
+                          const bIndex = customOrder.indexOf(b.menu_item_id);
+                          comparison = (aIndex === -1 ? 999 : aIndex) - (bIndex === -1 ? 999 : bIndex);
+                        }
+                        return sortDirection === 'asc' ? comparison : -comparison;
+                      }).map((item) => (
                       <div
                         key={item.menu_item_id}
-                        onClick={() => addItemToBatch(item)}
+                        draggable={sortField === 'custom'}
+                        onDragStart={(e) => handleDragStart(e, item.menu_item_id)}
+                        onDragOver={(e) => handleDragOver(e, item.menu_item_id)}
+                        onDragEnd={handleDragEnd}
+                        onClick={() => {
+                          if (!hasDragged.current) {
+                            addItemToBatch(item);
+                          }
+                        }}
                         style={{
                           display: "flex",
                           justifyContent: "space-between",
+                          alignItems: "center",
                           padding: "10px",
                           background: "white",
                           borderRadius: "10px",
-                          cursor: "pointer",
-                          border: "1px solid #f1f5f9",
+                          cursor: sortField === 'custom' ? 'grab' : 'pointer',
+                          border: draggingId === item.menu_item_id ? '2px solid var(--primary)' : '1px solid #f1f5f9',
                           marginBottom: "8px",
+                          opacity: draggingId === item.menu_item_id ? 0.7 : 1,
                         }}
                       >
-                        <span style={{ fontWeight: 600 }}>{item.name_en}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
+                          {sortField === 'custom' && (
+                            <GripVertical size={16} color="#94a3b8" style={{ flexShrink: 0 }} />
+                          )}
+                          <span style={{ fontWeight: 600 }}>{item.name_en}</span>
+                        </div>
                         <span
                           style={{ fontSize: "12px", color: "var(--primary)" }}
                         >
@@ -1262,26 +1381,98 @@ const FactoryDispatchPage = () => {
                       border: "1px solid #eef2f6",
                     }}
                   >
-                    <h4 style={{ fontSize: "13px", marginBottom: "15px" }}>
-                      Finished Product Stock
-                    </h4>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '15px' }}>
+                      <h4 style={{ fontSize: "13px", margin: 0 }}>
+                        Finished Product Stock
+                      </h4>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <select
+                          value={sortField}
+                          onChange={(e) => setSortField(e.target.value as SortField)}
+                          style={{
+                            fontSize: '12px',
+                            padding: '4px 8px',
+                            borderRadius: '6px',
+                            border: '1px solid #e2e8f0',
+                            background: 'white',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          <option value="name">Sort by Name</option>
+                          <option value="stock">Sort by Stock</option>
+                          <option value="custom">Custom Order</option>
+                        </select>
+                        {sortField !== 'custom' && (
+                          <button
+                            type="button"
+                            onClick={() => setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')}
+                            style={{
+                              background: 'white',
+                              border: '1px solid #e2e8f0',
+                              borderRadius: '6px',
+                              padding: '4px 8px',
+                              cursor: 'pointer',
+                              fontSize: '12px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}
+                            title={sortDirection === 'asc' ? 'Ascending' : 'Descending'}
+                          >
+                            {sortDirection === 'asc' ? '↑ A-Z' : '↓ Z-A'}
+                          </button>
+                        )}
+                        {sortField === 'custom' && (
+                          <span style={{ fontSize: '11px', color: '#64748b' }}>
+                            Drag to reorder
+                          </span>
+                        )}
+                      </div>
+                    </div>
                     <div style={{ maxHeight: "280px", overflowY: "auto", paddingRight: "5px" }}>
-                      {menuItems.map((item) => (
+                      {[...menuItems].sort((a, b) => {
+                        let comparison = 0;
+                        if (sortField === 'name') {
+                          comparison = a.name_en.localeCompare(b.name_en);
+                        } else if (sortField === 'stock') {
+                          comparison = a.current_stock - b.current_stock;
+                        } else if (sortField === 'custom') {
+                          const aIndex = customOrder.indexOf(a.menu_item_id);
+                          const bIndex = customOrder.indexOf(b.menu_item_id);
+                          comparison = (aIndex === -1 ? 999 : aIndex) - (bIndex === -1 ? 999 : bIndex);
+                        }
+                        return sortDirection === 'asc' ? comparison : -comparison;
+                      }).map((item) => (
                       <div
                         key={item.menu_item_id}
-                        onClick={() => addItemToDispatch(item)}
+                        draggable={sortField === 'custom'}
+                        onDragStart={(e) => handleDragStart(e, item.menu_item_id)}
+                        onDragOver={(e) => handleDragOver(e, item.menu_item_id)}
+                        onDragEnd={handleDragEnd}
+                        onClick={() => {
+                          if (!hasDragged.current) {
+                            addItemToDispatch(item);
+                          }
+                        }}
                         style={{
                           display: "flex",
                           justifyContent: "space-between",
+                          alignItems: "center",
                           padding: "10px",
                           background: "white",
                           borderRadius: "10px",
-                          cursor: "pointer",
-                          border: "1px solid #f1f5f9",
+                          cursor: sortField === 'custom' ? 'grab' : 'pointer',
+                          border: draggingId === item.menu_item_id ? '2px solid var(--primary)' : '1px solid #f1f5f9',
                           marginBottom: "8px",
+                          opacity: draggingId === item.menu_item_id ? 0.7 : 1,
                         }}
                       >
-                        <span style={{ fontWeight: 600 }}>{item.name_en}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
+                          {sortField === 'custom' && (
+                            <GripVertical size={16} color="#94a3b8" style={{ flexShrink: 0 }} />
+                          )}
+                          <span style={{ fontWeight: 600 }}>{item.name_en}</span>
+                        </div>
                         <span
                           style={{ fontSize: "12px", color: "var(--primary)" }}
                         >

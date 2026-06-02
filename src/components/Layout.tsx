@@ -120,8 +120,8 @@ const Layout: React.FC<LayoutProps> = ({ children, title }) => {
             <img src={logo} alt="L" />
           </div>
           <div className="brand-info">
-            <span className="brand-name">Fresh 'n' Fast</span>
-            <span className="brand-sub">ERP ELITE</span>
+            <span className="brand-name" style={{ fontFamily: "'Oleo Script', cursive" }}>Fresh & Fast</span>
+            <span className="brand-sub">Restaurant Company</span>
           </div>
           <button className="mobile-close" onClick={() => setMobileMenuOpen(false)}>
             <X size={20} />

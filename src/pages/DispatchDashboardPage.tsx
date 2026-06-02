@@ -80,6 +80,8 @@ const DispatchDashboardPage = () => {
   const { t, language } = useLanguage();
   const [rawDispatches, setRawDispatches] = useState<Dispatch[]>([]);
   const [rawReturns, setRawReturns] = useState<ReturnLog[]>([]);
+  const [rawWastage, setRawWastage] = useState<any[]>([]);
+  const [rawSales, setRawSales] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -122,6 +124,16 @@ const DispatchDashboardPage = () => {
     return (!startDate || rDate >= startDate) && (!endDate || rDate <= endDate);
   });
 
+  const wastage = rawWastage.filter(w => {
+    const wDate = formatDate(w.report_date || w.created_at);
+    return (!startDate || wDate >= startDate) && (!endDate || wDate <= endDate);
+  });
+
+  const sales = rawSales.filter(s => {
+    const sDate = formatDate(s.date || s.created_at);
+    return (!startDate || sDate >= startDate) && (!endDate || sDate <= endDate);
+  });
+
   // Calculate dispatches and returns values dynamically based on filtered data
   const totalDeliveredValue = dispatches
     .filter(d => d.dispatch_status === 'delivered')
@@ -135,8 +147,8 @@ const DispatchDashboardPage = () => {
     .filter(d => d.dispatch_status === 'pending')
     .reduce((acc, d) => acc + Number(d.total_amount || 0), 0);
 
-  const totalReturnsValue = returns.reduce((acc, r) => acc + Number(r.total_credit_amount || 0), 0);
-  const totalWastageValue = returns.reduce((acc, r) => acc + Number(r.wastage_loss || 0), 0);
+  const totalReturnsValue = sales.reduce((acc, s) => acc + Number(s.returns_amount || 0), 0);
+  const totalWastageValue = wastage.reduce((acc, w) => acc + (Number(w.quantity || 0) * Number(w.cost_price || 0)), 0);
 
   useEffect(() => {
     fetchDashboardData();
@@ -163,15 +175,25 @@ const DispatchDashboardPage = () => {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const [dispatchRes, returnsRes, menuRes] = await Promise.all([
+      const [dispatchRes, returnsRes, menuRes, wastageRes, salesRes] = await Promise.all([
         api.get('/factory/dispatches').catch(() => ({ data: { data: [] } })),
         api.get('/factory/returns').catch(() => ({ data: { data: [] } })),
-        api.get('/menu').catch(() => ({ data: { data: [] } }))
+        api.get('/menu').catch(() => ({ data: { data: [] } })),
+        api.get('/reports/wastage').catch(() => ({ data: { data: [] } })),
+        api.get('/reports/sales').catch(() => ({ data: { data: [] } }))
       ]);
 
       const dData = dispatchRes.data.data || dispatchRes.data || [];
       const rData = returnsRes.data.data || returnsRes.data || [];
       const mData = menuRes.data.data || menuRes.data || [];
+      const wData = wastageRes.data.data || wastageRes.data || [];
+      const sData = salesRes.data.data || salesRes.data || [];
+
+      // Exclude vendor returns from wastage as they are tracked in Sales Returns
+      const internalWastage = wData.filter((w: any) => {
+        const reasonStr = (w.reason_en || w.reason || '').toLowerCase();
+        return !reasonStr.includes('returned from vendor');
+      });
 
       // Sort dispatches by date descending
       const sortedDispatches = [...dData].sort((a: any, b: any) => {
@@ -180,6 +202,8 @@ const DispatchDashboardPage = () => {
 
       setRawDispatches(sortedDispatches);
       setRawReturns(rData);
+      setRawWastage(internalWastage);
+      setRawSales(sData);
     } catch (error) {
       console.error('Failed to load dispatch dashboard data:', error);
     } finally {
@@ -379,13 +403,14 @@ const DispatchDashboardPage = () => {
   if (selectedPartner) {
     const partnerDispatches = dispatches.filter(d => d.client_name === selectedPartner);
     const partnerReturns = returns.filter(r => r.client_name === selectedPartner);
+    const partnerSales = sales.filter(s => s.client_name === selectedPartner);
 
     const pActiveCount = partnerDispatches.filter(d => d.dispatch_status === 'in_transit' || d.dispatch_status === 'dispatched' || d.dispatch_status === 'pending').length;
     const pDeliveredCount = partnerDispatches.filter(d => d.dispatch_status === 'delivered').length;
 
     const pGrossValue = partnerDispatches.reduce((sum, d) => sum + Number(d.total_amount || 0), 0);
     const pSoldValue = partnerDispatches.filter(d => d.dispatch_status === 'delivered').reduce((sum, d) => sum + Number(d.total_amount || 0), 0);
-    const pReturnedValue = partnerReturns.reduce((sum, r) => sum + Number(r.total_credit_amount || 0), 0);
+    const pReturnedValue = partnerSales.reduce((sum, s) => sum + Number(s.returns_amount || 0), 0);
     const pNetRevenue = pSoldValue - pReturnedValue;
 
     const partnerCOGS = partnerSoldItems.reduce((sum, item) => sum + (item.totalCost || 0), 0);
@@ -406,10 +431,11 @@ const DispatchDashboardPage = () => {
     const branchData = pBranches.map(branchName => {
       const bDispatches = partnerDispatches.filter(d => (d.branch_name || 'Main Office') === branchName);
       const bReturns = partnerReturns.filter(r => (r.branch_name || 'Main Office') === branchName);
+      const bSales = partnerSales.filter(s => (s.branch_name || 'Main Office') === branchName);
 
       const bActiveCount = bDispatches.filter(d => d.dispatch_status === 'in_transit' || d.dispatch_status === 'dispatched' || d.dispatch_status === 'pending').length;
       const bSoldValue = bDispatches.filter(d => d.dispatch_status === 'delivered').reduce((sum, d) => sum + Number(d.total_amount || 0), 0);
-      const bReturnedValue = bReturns.reduce((sum, r) => sum + Number(r.total_credit_amount || 0), 0);
+      const bReturnedValue = bSales.reduce((sum, s) => sum + Number(s.returns_amount || 0), 0);
       const bNetRevenue = bSoldValue - bReturnedValue;
 
       return {

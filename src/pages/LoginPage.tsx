@@ -131,7 +131,7 @@ const LoginPage = () => {
 
           <div className="promo-text">
             <h3>Smarter way to manage</h3>
-            <p>Welcome to Fresh 'n' Fast. Efficiently track stock, manage sales, and optimize your entire ecosystem with ease.</p>
+            <p>Welcome to <span style={{ fontFamily: "'Oleo Script', cursive" }}>Fresh & Fast Restaurant Company</span>. Efficiently track stock, manage sales, and optimize your entire ecosystem with ease.</p>
           </div>
         </div>
 

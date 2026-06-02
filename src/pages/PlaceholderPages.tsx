@@ -10,7 +10,7 @@ const PlaceholderPage = ({ title }: { title: string }) => (
       textAlign: 'center'
     }}>
       <h2 style={{ color: 'var(--primary)', marginBottom: '1rem' }}>{title} Module</h2>
-      <p style={{ color: 'var(--gray-500)' }}>This module is currently being optimized for the fresh 'n' Fast portal.</p>
+      <p style={{ color: 'var(--gray-500)' }}>This module is currently being optimized for the <span style={{ fontFamily: "'Oleo Script', cursive" }}>Fresh & Fast Restaurant Company</span> portal.</p>
     </div>
   </Layout>
 );

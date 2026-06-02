@@ -525,7 +525,7 @@ const translations: Record<Language, Record<string, string>> = {
     manufacturing_logic: 'Manufacturing Logic',
     default_expiry_buffer_days: 'Default Expiry Buffer (Days)',
     auto_expiry_hint: 'Automatically sets the [Use By] date based on production date.',
-    shelf_life_note: "Note: Typical shelf life for Fresh 'n' Fast products is 4 days including production day.",
+    shelf_life_note: "Note: Typical shelf life for Fresh & Fast Restaurant Company products is 4 days including production day.",
     accounting_localization: 'Accounting & Localization',
     service_currency_symbol: 'Service Currency Symbol',
     vat_percentage_label: 'GST/VAT Percentage (%)',

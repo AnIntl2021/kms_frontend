@@ -37,6 +37,9 @@ const WastagePage = () => {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [reasonFilter, setReasonFilter] = useState('all');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [inventoryItems, setInventoryItems] = useState<any[]>([]);
   const [menuItems, setMenuItems] = useState<any[]>([]);
   const [itemType, setItemType] = useState<'inventory' | 'menu'>('inventory');
@@ -60,7 +63,13 @@ const WastagePage = () => {
     try {
       const response = await api.get('/wastage');
       if (response.data.success) {
-        setRecords(response.data.data || []);
+        const rawData = response.data.data || [];
+        // Exclude vendor returns as they should only appear in Sales Returns
+        const internalWastage = rawData.filter((r: any) => {
+          const reasonStr = (r.reason_en || r.reason || '').toLowerCase();
+          return !reasonStr.includes('returned from vendor');
+        });
+        setRecords(internalWastage);
       }
     } catch (error) {
       console.error('Failed to fetch wastage from API:', error);
@@ -110,11 +119,40 @@ const WastagePage = () => {
     }
   };
 
+  const formatDateForFilter = (dateInput: any) => {
+    if (!dateInput) return '';
+    try {
+      const d = new Date(dateInput);
+      if (isNaN(d.getTime())) return '';
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    } catch (e) {
+      return '';
+    }
+  };
+
   const filteredRecords = records.filter(r => {
     const name = r.item_name || (r as any).item_name_en || (r as any).menu_name_en || (r as any).product_name_en || '';
     const sku = r.sku || '';
-    return name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-           sku.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          sku.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    let matchesReason = true;
+    if (reasonFilter !== 'all') {
+      const recordReason = (r as any).reason_en || r.reason || '';
+      matchesReason = recordReason === reasonFilter;
+    }
+
+    let matchesDate = true;
+    const rDate = formatDateForFilter(r.date || (r as any).created_at);
+    if (rDate) {
+      if (startDate && rDate < startDate) matchesDate = false;
+      if (endDate && rDate > endDate) matchesDate = false;
+    }
+
+    return matchesSearch && matchesReason && matchesDate;
   });
 
   const todayStr = new Date().toLocaleDateString();
@@ -180,8 +218,33 @@ const WastagePage = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <div className="action-buttons">
-            <button className="btn-filter"><Filter size={18} /> {t('reason_filter')}</button>
+          <div className="action-buttons" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <div className="date-filter-group" style={{ display: 'flex', alignItems: 'center', background: 'white', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '6px 12px' }}>
+              <input 
+                type="date" 
+                value={startDate} 
+                onChange={e => setStartDate(e.target.value)}
+                style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: '13px', color: '#475569' }}
+              />
+              <span style={{ color: '#cbd5e1', margin: '0 8px' }}>→</span>
+              <input 
+                type="date" 
+                value={endDate} 
+                onChange={e => setEndDate(e.target.value)}
+                style={{ border: 'none', outline: 'none', background: 'transparent', fontSize: '13px', color: '#475569' }}
+              />
+            </div>
+            <select 
+              className="btn-filter" 
+              style={{ padding: '8px 32px 8px 16px', background: 'white', border: '1px solid #e2e8f0', borderRadius: '12px', fontWeight: 600, color: '#475569', cursor: 'pointer', outline: 'none', appearance: 'none', backgroundImage: 'url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%23475569\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3e%3cpolyline points=\'6 9 12 15 18 9\'%3e%3c/polyline%3e%3c/svg%3e")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 8px center', backgroundSize: '16px' }}
+              value={reasonFilter}
+              onChange={(e) => setReasonFilter(e.target.value)}
+            >
+              <option value="all">{t('reason_filter') || 'All Reasons'}</option>
+              {Array.from(new Set(records.map(r => (r as any).reason_en || r.reason || ''))).filter(Boolean).map(reason => (
+                <option key={reason} value={reason}>{reason}</option>
+              ))}
+            </select>
             <button className="btn-add" onClick={() => setIsModalOpen(true)} style={{ background: '#dc2626', borderColor: '#dc2626' }}>
               <Trash2 size={18} /> {t('report_wastage')}
             </button>

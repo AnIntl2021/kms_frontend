@@ -77,15 +77,19 @@ const AnalyticsPage = () => {
       t('priority'), 
       t('adjustment_recommendation')
     ];
-    const rows = forecasting.map(f => [
-      language === 'ar' ? (f.vendor_name_ar || f.vendor_name) : f.vendor_name,
+    const rows = forecasting.map(f => {
+      const vName = language === 'ar' ? (f.vendor_name_ar || f.vendor_name) : f.vendor_name;
+      const displayName = f.branch_name ? `${vName} - ${f.branch_name}` : vName;
+      return [
+      displayName,
       f.sales_velocity + ' ' + t('units') + '/day',
       f.return_rate + '%',
       f.optimal_dispatch + ' ' + t('units'),
       parseFloat(f.expected_savings || '0').toFixed(3),
       f.priority,
       t(f.recommendation.toLowerCase().replace(' ', '_'))
-    ]);
+      ];
+    });
     
     let csvContent = "data:text/csv;charset=utf-8,\uFEFF" // Add UTF-8 BOM for Excel
       + headers.join(",") + "\n"
@@ -210,7 +214,8 @@ const AnalyticsPage = () => {
       return sorted.map((s, idx) => {
           const height = (parseFloat(s.recent_sales || '0') / maxSales) * 100;
           const salesVal = parseFloat(s.recent_sales || '0').toFixed(3);
-          const name = language === 'ar' ? (s.vendor_name_ar || s.vendor_name) : s.vendor_name;
+          let name = language === 'ar' ? (s.vendor_name_ar || s.vendor_name) : s.vendor_name;
+          if (s.branch_name) name = `${name} (${s.branch_name})`;
           const displayName = name.length > 12 ? name.substring(0, 10) + '..' : name;
           return (
               <div key={idx} className="chart-bar-v group" onClick={() => handleOpenOpportunityDetails(s)}>
@@ -429,10 +434,26 @@ const AnalyticsPage = () => {
                                 <div className="store-name-container">
                                   <span className="store-avatar">{name.charAt(0).toUpperCase()}</span>
                                   <div className="store-details">
-                                    <strong>{name}</strong>
-                                    <span className={`priority-indicator ${store.priority.toLowerCase().replace(' ', '-')}`}>
-                                      {store.priority}
-                                    </span>
+                                    <div className="store-info">
+                                      <strong>{name}</strong>
+                                      {store.branch_name ? (
+                                        <span style={{ fontSize: '11px', color: '#64748b', display: 'block', marginTop: '2px' }}>
+                                          <MapPin size={10} style={{ display: 'inline', marginRight: '2px' }} /> {store.branch_name}
+                                        </span>
+                                      ) : (
+                                        <span className={`status-badge-premium ${store.priority === 'Stable' ? 'delivered' : 'returned'}`}>
+                                          {store.priority.toUpperCase()}
+                                        </span>
+                                      )}
+                                      {!store.branch_name && (
+                                        <div style={{ marginTop: '4px' }}></div>
+                                      )}
+                                      {store.branch_name && (
+                                        <span className={`status-badge-premium ${store.priority === 'Stable' ? 'delivered' : 'returned'}`} style={{ marginTop: '4px' }}>
+                                          {store.priority.toUpperCase()}
+                                        </span>
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
                               </td>
@@ -576,7 +597,10 @@ const AnalyticsPage = () => {
                      <p>
                        {forecasting.some(f => f.priority.toLowerCase() === 'critical') ? (
                          <>
-                           Reduce dispatch orders for <b>{forecasting.filter(f => f.priority.toLowerCase() === 'critical').map(f => language === 'ar' ? (f.vendor_name_ar || f.vendor_name) : f.vendor_name).slice(0, 1).join(', ')}</b> immediately.
+                           Reduce dispatch orders for <b>{forecasting.filter(f => f.priority.toLowerCase() === 'critical').map(f => {
+                             const n = language === 'ar' ? (f.vendor_name_ar || f.vendor_name) : f.vendor_name;
+                             return f.branch_name ? `${n} (${f.branch_name})` : n;
+                           }).slice(0, 1).join(', ')}</b> immediately.
                          </>
                        ) : (
                          <>Reduce delivery for stores with <b>Critical Priority</b> immediately.</>

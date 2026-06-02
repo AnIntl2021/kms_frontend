@@ -420,7 +420,7 @@ const ReportsPage = () => {
               <div className="summary-icon"><TrendingUp size={24} /></div>
               <div className="summary-data">
                 <span className="summary-label">{t('total_revenue')}</span>
-                <span className="summary-value">{filteredData.reduce((acc, curr) => acc + Number(curr.final_amount || 0), 0).toFixed(3)} {t('kd_currency')}</span>
+                <span className="summary-value">{filteredData.reduce((acc, curr) => acc + Number(curr.total_amount || 0), 0).toFixed(3)} {t('kd_currency')}</span>
               </div>
             </div>
             <div className="summary-card loss">
@@ -435,7 +435,8 @@ const ReportsPage = () => {
               <div className="summary-data">
                 <span className="summary-label">{t('net_revenue')}</span>
                 <span className="summary-value">
-                  {(filteredData.reduce((acc, curr) => acc + Number(curr.final_amount || 0), 0) - 
+                  {(filteredData.reduce((acc, curr) => acc + Number(curr.total_amount || 0), 0) - 
+                    filteredData.reduce((acc, curr) => acc + Number(curr.discount_amount || 0), 0) -
                     filteredData.reduce((acc, curr) => acc + Number(curr.returns_amount || 0), 0)).toFixed(3)} {t('kd_currency')}
                 </span>
                 <span className="summary-sublabel">Net Sales kept (Final Amt - Returns)</span>
@@ -708,7 +709,7 @@ const ReportsPage = () => {
 
         {/* Print Only View */}
         <div className="print-view only-print">
-          <h1>Fresh 'n' Fast - {activeTab.toUpperCase()} REPORT</h1>
+          <h1><span style={{ fontFamily: "'Oleo Script', cursive" }}>Fresh & Fast Restaurant Company</span> - {activeTab.toUpperCase()} REPORT</h1>
           <p>Period: {startDate} to {endDate}</p>
           <hr />
           <table className="print-table">

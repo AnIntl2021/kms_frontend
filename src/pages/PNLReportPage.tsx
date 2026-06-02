@@ -87,9 +87,15 @@ const PNLReportPage = () => {
         api.get('/reports/products', { params: { startDate, endDate, vendor_id: selectedVendor || undefined, branch_id: selectedBranch || undefined } }).catch(() => ({ data: { data: [] } }))
       ]);
       
+      const rawWastage = returnsRes.data.data || returnsRes.data || [];
+      const internalWastage = rawWastage.filter((w: any) => {
+        const reasonStr = (w.reason_en || w.reason || '').toLowerCase();
+        return !reasonStr.includes('returned from vendor');
+      });
+
       setData({
         sales: salesRes.data.data || salesRes.data || [],
-        wastage: returnsRes.data.data || returnsRes.data || [],
+        wastage: internalWastage,
         purchases: purchaseRes.data.data || purchaseRes.data || [],
         products: productsRes.data.data || productsRes.data || []
       });
@@ -1206,7 +1212,7 @@ const PNLReportPage = () => {
           <div className="print-header">
             <div className="print-header-top">
               <div className="print-logo">
-                <span className="logo-main">Fresh 'n' Fast</span>
+                <span className="logo-main" style={{ fontFamily: "'Oleo Script', cursive" }}>Fresh & Fast Restaurant Company</span>
                 <span className="logo-sub">FOOD DISTRIBUTION CENTER</span>
               </div>
               <div className="print-title-meta">
