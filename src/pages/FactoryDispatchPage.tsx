@@ -673,7 +673,7 @@ const FactoryDispatchPage = () => {
                       <th>{t("return_id")}</th>
                       <th>{t("client_name")}</th>
                       <th>{t("reason")}</th>
-                      <th>{t("return_date")}</th>
+                      <th>{t("return_date")} (v2)</th>
                       <th className="text-end">{t("wastage_value_loss")}</th>
                       <th className="text-center">{t("actions")}</th>
                     </tr>
