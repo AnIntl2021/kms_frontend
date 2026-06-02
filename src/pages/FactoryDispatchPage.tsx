@@ -63,24 +63,7 @@ const FactoryDispatchPage = () => {
   const hasDragged = useRef(false);
 
   const formatDisplayDate = (record: any) => {
-    try {
-      // Use created_at as the source of truth, because return_date gets corrupted to the previous day 
-      // if submitted between Midnight and 3AM Kuwait time (due to toISOString() shifting to UTC).
-      let ds = String(record.created_at);
-      
-      // If the Ubuntu Live Server returns a MySQL timestamp like "2026-06-01 21:00:00" without a 'Z', 
-      // the browser parses it as local time. We must force it to UTC by appending 'Z'.
-      if (!ds.includes('T') && ds.includes(' ')) {
-        ds = ds.replace(' ', 'T') + 'Z';
-      }
-      
-      const d = new Date(ds);
-      if (isNaN(d.getTime())) return ds;
-      
-      return d.toLocaleDateString('en-US', { timeZone: 'Asia/Kuwait' });
-    } catch {
-      return '';
-    }
+    return `${record.return_date} | ${record.created_at}`;
   };
 
   const [showProduceModal, setShowProduceModal] = useState(false);
