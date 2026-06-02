@@ -65,13 +65,12 @@ const FactoryDispatchPage = () => {
   const formatDisplayDate = (dateString: any) => {
     if (!dateString) return '';
     try {
-      // Extract YYYY-MM-DD directly from the string to prevent browser timezone shifting
-      const datePart = dateString.split('T')[0].split(' ')[0];
-      const [year, month, day] = datePart.split('-');
-      if (!year || !month || !day) return new Date(dateString).toLocaleDateString();
-      return `${parseInt(month, 10)}/${parseInt(day, 10)}/${year}`;
+      const d = new Date(dateString);
+      if (isNaN(d.getTime())) return dateString;
+      // Force Kuwait timezone to prevent UTC dates from shifting to the previous day globally
+      return d.toLocaleDateString('en-US', { timeZone: 'Asia/Kuwait' });
     } catch {
-      return new Date(dateString).toLocaleDateString();
+      return dateString;
     }
   };
 
