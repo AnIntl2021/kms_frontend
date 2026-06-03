@@ -419,20 +419,25 @@ const DispatchDashboardPage = () => {
     const pDeliveredCount = partnerDispatches.filter(d => d.dispatch_status === 'delivered').length;
 
     const pGrossValue = partnerDispatches.reduce((sum, d) => sum + Number(d.total_amount || 0), 0);
+    const pDeliveredGrossValue = partnerDispatches.filter(d => d.dispatch_status === 'delivered').reduce((sum, d) => sum + Number(d.total_amount || 0), 0);
     const pSoldValue = partnerDispatches.filter(d => d.dispatch_status === 'delivered').reduce((sum, d) => sum + Number(d.final_amount || d.total_amount || 0), 0);
+    const pDiscountPercent = pDeliveredGrossValue > 0 ? Math.round(((pDeliveredGrossValue - pSoldValue) / pDeliveredGrossValue) * 100) : 0;
     const pReturnedValue = partnerSales.reduce((sum, s) => sum + Number(s.returns_amount || 0), 0);
+    const pReturnedValueGross = pDiscountPercent > 0 ? (pReturnedValue / (1 - (pDiscountPercent / 100))) : pReturnedValue;
     const pNetRevenue = pSoldValue - pReturnedValue;
 
     const partnerCOGS = partnerSoldItems.reduce((sum, item) => sum + (item.totalCost || 0), 0);
-    const partnerGrossProfit = pNetRevenue - partnerCOGS;
-    const partnerMargin = pNetRevenue > 0 ? (partnerGrossProfit / pNetRevenue) * 100 : 0;
-
     const partnerWastageLoss = partnerReturnedItems.reduce((sum, item) => sum + (item.totalLoss || 0), 0);
-    const partnerNetProfit = partnerGrossProfit - partnerWastageLoss;
+
+    const partnerGrossProfit = pGrossValue - pReturnedValue - partnerCOGS;
+    const partnerMargin = pGrossValue > 0 ? (partnerGrossProfit / pGrossValue) * 100 : 0;
+
+    const partnerNetProfit = pNetRevenue - partnerWastageLoss - partnerCOGS;
     const partnerNetMargin = pNetRevenue > 0 ? (partnerNetProfit / pNetRevenue) * 100 : 0;
     const partnerGrossDispatchMargin = pGrossValue > 0 ? (partnerNetProfit / pGrossValue) * 100 : 0;
 
-    const pReturnRate = pSoldValue > 0 ? Math.round((pReturnedValue / pSoldValue) * 100) : 0;
+    const pReturnRate = pSoldValue > 0 ? Math.round((partnerWastageLoss / pSoldValue) * 100) : 0;
+    const pReturnRateGross = pGrossValue > 0 ? Math.round((pReturnedValue / pGrossValue) * 100) : 0;
 
     const pBranchesSet = new Set<string>();
     partnerDispatches.forEach(d => pBranchesSet.add(d.branch_name || 'Main Office'));
@@ -514,20 +519,6 @@ const DispatchDashboardPage = () => {
             <div className="portal-content">
               {/* KPIs Bento Grid */}
               <div className="bento-grid partner-bento">
-                
-                {/* Active Dispatches */}
-                <div className="hud-card glass-glow-blue">
-                  <div className="hud-header">
-                    <div className="icon-wrapper bg-blue">
-                      <Truck size={24} />
-                    </div>
-                    <span className="hud-title">ACTIVE SHIPMENTS</span>
-                  </div>
-                  <div className="hud-body">
-                    <div className="big-value">{pActiveCount}</div>
-                    <div className="hud-sub">Currently en-route/prepared</div>
-                  </div>
-                </div>
 
                 {/* Total Gross Dispatched */}
                 <div className="hud-card glass-glow-blue">
@@ -535,7 +526,7 @@ const DispatchDashboardPage = () => {
                     <div className="icon-wrapper bg-blue">
                       <TrendingUp size={24} />
                     </div>
-                    <span className="hud-title">GROSS DISPATCHED</span>
+                    <span className="hud-title">GROSS INVOICE VALUE</span>
                   </div>
                   <div className="hud-body">
                     <div className="big-value">{pGrossValue.toFixed(3)} <span className="currency">KD</span></div>
@@ -549,24 +540,52 @@ const DispatchDashboardPage = () => {
                     <div className="icon-wrapper bg-green">
                       <CheckCircle2 size={24} />
                     </div>
-                    <span className="hud-title">DELIVERED REVENUE</span>
+                    <span className="hud-title" style={{ fontSize: '0.8rem' }}>INVOICE AMT AFTER DISCOUNT</span>
                   </div>
                   <div className="hud-body">
                     <div className="big-value text-green">{pSoldValue.toFixed(3)} <span className="currency">KD</span></div>
-                    <div className="hud-sub">{pDeliveredCount} completed sales</div>
+                    <div className="hud-sub">{pDeliveredCount} completed sales • <b className="text-rose">-{pDiscountPercent}%</b></div>
                   </div>
                 </div>
 
-                {/* Returns Received */}
+                {/* Total Returns As per Invoice */}
                 <div className="hud-card glass-glow-rose">
                   <div className="hud-header">
                     <div className="icon-wrapper bg-rose">
                       <RotateCcw size={24} />
                     </div>
-                    <span className="hud-title">TOTAL RETURNS</span>
+                    <span className="hud-title" style={{ fontSize: '0.75rem' }}>TOTAL RETURNS AS PER INVOICE</span>
                   </div>
                   <div className="hud-body">
                     <div className="big-value text-rose">{pReturnedValue.toFixed(3)} <span className="currency">KD</span></div>
+                    <div className="hud-sub">Without Discount: {pReturnedValueGross.toFixed(3)} KD</div>
+                  </div>
+                </div>
+
+                {/* Return Rate As Per Invoice */}
+                <div className="hud-card glass-glow-rose">
+                  <div className="hud-header">
+                    <div className="icon-wrapper bg-rose">
+                      <AlertOctagon size={24} />
+                    </div>
+                    <span className="hud-title" style={{ fontSize: '0.75rem' }}>RETURN VALUE RATE (INV)</span>
+                  </div>
+                  <div className="hud-body">
+                    <div className="big-value text-rose">{pReturnRateGross}%</div>
+                    <div className="hud-sub">Based on Gross Invoice Value</div>
+                  </div>
+                </div>
+
+                {/* Returns Received -> Total Return As per COGS */}
+                <div className="hud-card glass-glow-rose">
+                  <div className="hud-header">
+                    <div className="icon-wrapper bg-rose">
+                      <RotateCcw size={24} />
+                    </div>
+                    <span className="hud-title" style={{ fontSize: '0.75rem' }}>TOTAL RETURN AS PER COGS</span>
+                  </div>
+                  <div className="hud-body">
+                    <div className="big-value text-rose">{partnerWastageLoss.toFixed(3)} <span className="currency">KD</span></div>
                     <div className="hud-sub">{partnerReturns.length} return claims received</div>
                   </div>
                 </div>
@@ -581,7 +600,7 @@ const DispatchDashboardPage = () => {
                   </div>
                   <div className="hud-body">
                     <div className="big-value text-rose">{pReturnRate}%</div>
-                    <div className="hud-sub">Percentage of revenue returned</div>
+                    <div className="hud-sub">Based on Invoice Amt After Discount</div>
                   </div>
                 </div>
 
@@ -613,34 +632,6 @@ const DispatchDashboardPage = () => {
                   </div>
                 </div>
 
-                {/* Wastage Loss */}
-                <div className="hud-card glass-glow-rose">
-                  <div className="hud-header">
-                    <div className="icon-wrapper bg-rose">
-                      <TrendingDown size={24} />
-                    </div>
-                    <span className="hud-title">WASTAGE LOSS</span>
-                  </div>
-                  <div className="hud-body">
-                    <div className="big-value text-rose">{partnerWastageLoss.toFixed(3)} <span className="currency">KD</span></div>
-                    <div className="hud-sub">Spoilage &amp; expired items cost</div>
-                  </div>
-                </div>
-
-                {/* Gross Dispatch Margin */}
-                <div className="hud-card glass-glow-blue">
-                  <div className="hud-header">
-                    <div className="icon-wrapper bg-blue">
-                      <TrendingUp size={24} />
-                    </div>
-                    <span className="hud-title">GROSS DISPATCH MARGIN</span>
-                  </div>
-                  <div className="hud-body">
-                    <div className="big-value text-blue">{partnerGrossDispatchMargin.toFixed(1)}%</div>
-                    <div className="hud-sub">Net Profit / Gross Dispatched</div>
-                  </div>
-                </div>
-
                 {/* Net Profit — Full Bottom Line */}
                 <div className={`hud-card ${partnerNetProfit >= 0 ? 'glass-glow-green' : 'glass-glow-rose'}`}
                   style={{ gridColumn: 'span 2', background: partnerNetProfit >= 0 ? 'linear-gradient(135deg, #f0fdf4, #dcfce7)' : 'linear-gradient(135deg, #fff1f2, #ffe4e6)', border: `2px solid ${partnerNetProfit >= 0 ? '#22c55e' : '#f43f5e'}` }}>
@@ -656,7 +647,7 @@ const DispatchDashboardPage = () => {
                     </div>
                     <div className="hud-sub">
                       Net Margin: <b style={{ color: partnerNetProfit >= 0 ? '#16a34a' : '#e11d48' }}>{partnerNetMargin.toFixed(1)}%</b>
-                      &nbsp;•&nbsp; After COGS ({partnerCOGS.toFixed(3)} KD) &amp; Wastage ({partnerWastageLoss.toFixed(3)} KD)
+                      &nbsp;•&nbsp; Net Rev - Returned COGS - Sold COGS ({partnerCOGS.toFixed(3)} KD)
                     </div>
                   </div>
                 </div>
