@@ -430,6 +430,7 @@ const DispatchDashboardPage = () => {
     const partnerWastageLoss = partnerReturnedItems.reduce((sum, item) => sum + (item.totalLoss || 0), 0);
     const partnerNetProfit = partnerGrossProfit - partnerWastageLoss;
     const partnerNetMargin = pNetRevenue > 0 ? (partnerNetProfit / pNetRevenue) * 100 : 0;
+    const partnerGrossDispatchMargin = pGrossValue > 0 ? (partnerNetProfit / pGrossValue) * 100 : 0;
 
     const pReturnRate = pSoldValue > 0 ? Math.round((pReturnedValue / pSoldValue) * 100) : 0;
 
@@ -623,6 +624,20 @@ const DispatchDashboardPage = () => {
                   <div className="hud-body">
                     <div className="big-value text-rose">{partnerWastageLoss.toFixed(3)} <span className="currency">KD</span></div>
                     <div className="hud-sub">Spoilage &amp; expired items cost</div>
+                  </div>
+                </div>
+
+                {/* Gross Dispatch Margin */}
+                <div className="hud-card glass-glow-blue">
+                  <div className="hud-header">
+                    <div className="icon-wrapper bg-blue">
+                      <TrendingUp size={24} />
+                    </div>
+                    <span className="hud-title">GROSS DISPATCH MARGIN</span>
+                  </div>
+                  <div className="hud-body">
+                    <div className="big-value text-blue">{partnerGrossDispatchMargin.toFixed(1)}%</div>
+                    <div className="hud-sub">Net Profit / Gross Dispatched</div>
                   </div>
                 </div>
 
