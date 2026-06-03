@@ -14,7 +14,8 @@ import {
   ShieldAlert,
   Flame,
   Clock,
-  X
+  X,
+  MapPin
 } from 'lucide-react';
 import api from '../api/axios';
 import { useLanguage } from '../hooks/useLanguage';
@@ -214,7 +215,7 @@ const AnalyticsPage = () => {
       return sorted.map((s, idx) => {
           const height = (parseFloat(s.recent_sales || '0') / maxSales) * 100;
           const salesVal = parseFloat(s.recent_sales || '0').toFixed(3);
-          let name = language === 'ar' ? (s.vendor_name_ar || s.vendor_name) : s.vendor_name;
+          let name = language === 'ar' ? (s.vendor_name_ar || s.vendor_name) : (s.vendor_name || 'Unknown Vendor');
           if (s.branch_name) name = `${name} (${s.branch_name})`;
           const displayName = name.length > 12 ? name.substring(0, 10) + '..' : name;
           return (
@@ -421,7 +422,7 @@ const AnalyticsPage = () => {
                       </thead>
                       <tbody>
                         {currentEntries.length > 0 ? currentEntries.map((store) => {
-                          const name = language === 'ar' ? (store.vendor_name_ar || store.vendor_name) : store.vendor_name;
+                          const name = language === 'ar' ? (store.vendor_name_ar || store.vendor_name) : (store.vendor_name || 'Unknown Vendor');
                           
                           // Set colors based on return rate safety margins
                           let returnRateColor = 'rate-healthy';
@@ -429,7 +430,7 @@ const AnalyticsPage = () => {
                           else if (store.return_rate > 5) returnRateColor = 'rate-medium';
 
                           return (
-                            <tr key={store.vendor_id} className="clickable-row" onClick={() => handleOpenOpportunityDetails(store)} title="Click to view detailed Actionable Optimization recommendations">
+                            <tr key={`${store.vendor_id}-${store.branch_id || 'main'}`} className="clickable-row" onClick={() => handleOpenOpportunityDetails(store)} title="Click to view detailed Actionable Optimization recommendations">
                               <td className="store-cell">
                                 <div className="store-name-container">
                                   <span className="store-avatar">{name.charAt(0).toUpperCase()}</span>
@@ -578,7 +579,7 @@ const AnalyticsPage = () => {
                        Increase supply allocation for <b>{(() => {
                           const topStore = forecasting.find(f => f.adjustmentScore > 0);
                           if (!topStore) return 'Top Stores';
-                          return language === 'ar' ? (topStore.vendor_name_ar || topStore.vendor_name) : topStore.vendor_name;
+                          return language === 'ar' ? (topStore.vendor_name_ar || topStore.vendor_name) : (topStore.vendor_name || 'Unknown Vendor');
                        })()}</b> by 25% today. 
                        Their ongoing sales velocity is higher than current delivery volumes.
                      </p>
@@ -598,7 +599,7 @@ const AnalyticsPage = () => {
                        {forecasting.some(f => f.priority.toLowerCase() === 'critical') ? (
                          <>
                            Reduce dispatch orders for <b>{forecasting.filter(f => f.priority.toLowerCase() === 'critical').map(f => {
-                             const n = language === 'ar' ? (f.vendor_name_ar || f.vendor_name) : f.vendor_name;
+                             const n = language === 'ar' ? (f.vendor_name_ar || f.vendor_name) : (f.vendor_name || 'Unknown Vendor');
                              return f.branch_name ? `${n} (${f.branch_name})` : n;
                            }).slice(0, 1).join(', ')}</b> immediately.
                          </>
@@ -643,7 +644,7 @@ const AnalyticsPage = () => {
                         .sort((a, b) => b.return_rate - a.return_rate)
                         .slice(0, 3)
                         .map((f, i) => {
-                           const name = language === 'ar' ? (f.vendor_name_ar || f.vendor_name) : f.vendor_name;
+                           const name = language === 'ar' ? (f.vendor_name_ar || f.vendor_name) : (f.vendor_name || 'Unknown Vendor');
                            return (
                              <div key={i} className={`opp-item-premium ${f.return_rate > 15 ? 'leak' : 'growth'} clickable-opp`} onClick={() => handleOpenOpportunityDetails(f)} title="Click to view Actionable Optimization details">
                                  <div className="opp-meta">

@@ -60,6 +60,7 @@ interface Dispatch {
   dispatch_status: 'pending' | 'in_transit' | 'dispatched' | 'delivered' | 'returned';
   dispatch_date: string;
   total_amount: number;
+  final_amount?: number;
   returns_amount?: number;
   created_at: string;
 }
@@ -172,6 +173,13 @@ const DispatchDashboardPage = () => {
     }
   }, [startDate, endDate, searchTerm, statusFilter, rawDispatches]);
 
+  // Trigger partner refresh when dates change
+  useEffect(() => {
+    if (selectedPartner) {
+      handleSelectPartner(selectedPartner);
+    }
+  }, [startDate, endDate]);
+
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
@@ -243,9 +251,11 @@ const DispatchDashboardPage = () => {
         return;
       }
 
+      const dateParams = (startDate && endDate) ? `&startDate=${startDate}&endDate=${endDate}` : '';
+
       const [perfRes, wastageRes] = await Promise.all([
-        api.get(`/reports/products?vendor_id=${vendorId}`).catch(() => ({ data: { data: [] } })),
-        api.get(`/reports/wastage?vendor_id=${vendorId}`).catch(() => ({ data: { data: [] } }))
+        api.get(`/reports/products?vendor_id=${vendorId}${dateParams}`).catch(() => ({ data: { data: [] } })),
+        api.get(`/reports/wastage?vendor_id=${vendorId}${dateParams}`).catch(() => ({ data: { data: [] } }))
       ]);
 
       const perfData = perfRes.data?.data || perfRes.data || [];
@@ -403,13 +413,13 @@ const DispatchDashboardPage = () => {
   if (selectedPartner) {
     const partnerDispatches = dispatches.filter(d => d.client_name === selectedPartner);
     const partnerReturns = returns.filter(r => r.client_name === selectedPartner);
-    const partnerSales = sales.filter(s => s.client_name === selectedPartner);
+    const partnerSales = sales.filter(s => (s.client_name || s.vendor_name) === selectedPartner);
 
     const pActiveCount = partnerDispatches.filter(d => d.dispatch_status === 'in_transit' || d.dispatch_status === 'dispatched' || d.dispatch_status === 'pending').length;
     const pDeliveredCount = partnerDispatches.filter(d => d.dispatch_status === 'delivered').length;
 
     const pGrossValue = partnerDispatches.reduce((sum, d) => sum + Number(d.total_amount || 0), 0);
-    const pSoldValue = partnerDispatches.filter(d => d.dispatch_status === 'delivered').reduce((sum, d) => sum + Number(d.total_amount || 0), 0);
+    const pSoldValue = partnerDispatches.filter(d => d.dispatch_status === 'delivered').reduce((sum, d) => sum + Number(d.final_amount || d.total_amount || 0), 0);
     const pReturnedValue = partnerSales.reduce((sum, s) => sum + Number(s.returns_amount || 0), 0);
     const pNetRevenue = pSoldValue - pReturnedValue;
 
@@ -434,7 +444,7 @@ const DispatchDashboardPage = () => {
       const bSales = partnerSales.filter(s => (s.branch_name || 'Main Office') === branchName);
 
       const bActiveCount = bDispatches.filter(d => d.dispatch_status === 'in_transit' || d.dispatch_status === 'dispatched' || d.dispatch_status === 'pending').length;
-      const bSoldValue = bDispatches.filter(d => d.dispatch_status === 'delivered').reduce((sum, d) => sum + Number(d.total_amount || 0), 0);
+      const bSoldValue = bDispatches.filter(d => d.dispatch_status === 'delivered').reduce((sum, d) => sum + Number(d.final_amount || d.total_amount || 0), 0);
       const bReturnedValue = bSales.reduce((sum, s) => sum + Number(s.returns_amount || 0), 0);
       const bNetRevenue = bSoldValue - bReturnedValue;
 
