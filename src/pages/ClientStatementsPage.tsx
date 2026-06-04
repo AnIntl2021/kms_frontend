@@ -220,6 +220,7 @@ const ClientStatementsPage: React.FC = () => {
 
   // Filtered orders list (status client-side fallback)
   const filteredOrders = orders.filter(o => {
+    if (o.dispatch_status !== 'delivered') return false; // Ignore cancelled or pending orders!
     if (statusFilter === 'all') return true;
     if (statusFilter === 'paid') return o.payment_status === 'paid';
     if (statusFilter === 'credit') return o.payment_status === 'credit' || o.payment_status === 'failed';
