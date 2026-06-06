@@ -21,6 +21,9 @@ import ClientStatementsPage from './pages/ClientStatementsPage';
 import DispatchDashboardPage from './pages/DispatchDashboardPage';
 import SalesmenPage from './pages/SalesmenPage';
 import PNLReportPage from './pages/PNLReportPage';
+import AssetsManagementPage from './pages/AssetsManagementPage';
+import BalanceSheetPage from './pages/BalanceSheetPage';
+import RoleManagementPage from './pages/RoleManagementPage';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { LanguageProvider, useLanguage } from './hooks/useLanguage';
@@ -50,30 +53,38 @@ function AppContent() {
         <Route 
           path="/dashboard" 
           element={
-            <ProtectedRoute>
+            <ProtectedRoute requiredPermission="dashboard">
               <DashboardPage />
             </ProtectedRoute>
           } 
         />
 
-        <Route path="/inventory" element={<ProtectedRoute><InventoryPage /></ProtectedRoute>} />
-        <Route path="/categories" element={<ProtectedRoute><CategoriesPage /></ProtectedRoute>} />
-        <Route path="/vendors" element={<ProtectedRoute><VendorsPage /></ProtectedRoute>} />
-        <Route path="/purchases" element={<ProtectedRoute><PurchaseOrdersPage /></ProtectedRoute>} />
-        <Route path="/menu" element={<ProtectedRoute><MenuPage /></ProtectedRoute>} />
-        <Route path="/wastage" element={<ProtectedRoute><WastagePage /></ProtectedRoute>} />
-        <Route path="/sales" element={<ProtectedRoute><SalesPage /></ProtectedRoute>} />
-        <Route path="/accounts" element={<ProtectedRoute><AccountsPage /></ProtectedRoute>} />
-        <Route path="/administration" element={<ProtectedRoute><AdministrationPage /></ProtectedRoute>} />
+        <Route path="/inventory" element={<ProtectedRoute requiredPermission="inventory"><InventoryPage /></ProtectedRoute>} />
+        <Route path="/categories" element={<ProtectedRoute requiredPermission="inventory"><CategoriesPage /></ProtectedRoute>} />
+        <Route path="/vendors" element={<ProtectedRoute requiredPermission="inventory"><VendorsPage /></ProtectedRoute>} />
+        <Route path="/purchases" element={<ProtectedRoute requiredPermission="inventory"><PurchaseOrdersPage /></ProtectedRoute>} />
+        <Route path="/menu" element={<ProtectedRoute requiredPermission="inventory"><MenuPage /></ProtectedRoute>} />
+        <Route path="/wastage" element={<ProtectedRoute requiredPermission="inventory"><WastagePage /></ProtectedRoute>} />
+        
+        <Route path="/sales" element={<ProtectedRoute requiredPermission="sales"><SalesPage /></ProtectedRoute>} />
+        <Route path="/salesmen" element={<ProtectedRoute requiredPermission="sales"><SalesmenPage /></ProtectedRoute>} />
+        
+        <Route path="/accounts" element={<ProtectedRoute requiredPermission="accounts"><AccountsPage /></ProtectedRoute>} />
+        <Route path="/assets-management" element={<ProtectedRoute requiredPermission="assets"><AssetsManagementPage /></ProtectedRoute>} />
+        <Route path="/balance-sheet" element={<ProtectedRoute requiredPermission="balance-sheet"><BalanceSheetPage /></ProtectedRoute>} />
+        <Route path="/pnl-report" element={<ProtectedRoute requiredPermission="accounts"><PNLReportPage /></ProtectedRoute>} />
+        <Route path="/client-statements" element={<ProtectedRoute requiredPermission="accounts"><ClientStatementsPage /></ProtectedRoute>} />
+        
+        <Route path="/administration" element={<ProtectedRoute requiredPermission="users"><AdministrationPage /></ProtectedRoute>} />
+        <Route path="/roles-management" element={<ProtectedRoute requiredPermission="roles"><RoleManagementPage /></ProtectedRoute>} />
+        <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+        
         <Route path="/factory-dispatch" element={<ProtectedRoute><FactoryDispatchPage /></ProtectedRoute>} />
+        <Route path="/dispatch-dashboard" element={<ProtectedRoute><DispatchDashboardPage /></ProtectedRoute>} />
+        
         <Route path="/analytics" element={<ProtectedRoute><AnalyticsPage /></ProtectedRoute>} />
         <Route path="/reports" element={<ProtectedRoute><ReportsPage /></ProtectedRoute>} />
         <Route path="/food-cost" element={<ProtectedRoute><FoodCostPage /></ProtectedRoute>} />
-        <Route path="/client-statements" element={<ProtectedRoute><ClientStatementsPage /></ProtectedRoute>} />
-        <Route path="/dispatch-dashboard" element={<ProtectedRoute><DispatchDashboardPage /></ProtectedRoute>} />
-        <Route path="/pnl-report" element={<ProtectedRoute><PNLReportPage /></ProtectedRoute>} />
-        <Route path="/salesmen" element={<ProtectedRoute><SalesmenPage /></ProtectedRoute>} />
-        <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
 
         <Route path="/" element={<Navigate to="/dashboard" />} />
       </Routes>

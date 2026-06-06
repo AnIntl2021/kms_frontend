@@ -24,7 +24,10 @@ import {
   Users,
   Navigation,
   Calculator,
-  BadgeCent
+  BadgeCent,
+  Briefcase,
+  Scale,
+  Key
 } from 'lucide-react';
 import './Layout.css';
 import logo from '../assets/logo.jpeg';
@@ -86,27 +89,36 @@ const Layout: React.FC<LayoutProps> = ({ children, title }) => {
     return () => window.removeEventListener('auth-unauthorized', handleUnauthorized);
   }, [logout]);
 
-  const navItems = [
-    { name: t('dashboard'), path: '/dashboard', icon: <LayoutDashboard size={20} />, section: 'Main' },
-    { name: t('inventory_stock'), path: '/inventory', icon: <Package size={20} />, section: 'Main' },
-    { name: t('categories'), path: '/categories', icon: <FolderTree size={20} />, section: 'Main' },
-    { name: t('menu_premix'), path: '/menu', icon: <Utensils size={20} />, section: 'Main' },
-    { name: t('wastage_expiry'), path: '/wastage', icon: <AlertTriangle size={20} />, section: 'Main' },
-    { name: t('vendors_clients'), path: '/vendors', icon: <Store size={20} />, section: 'Operations' },
-    { name: t('purchase_orders'), path: '/purchases', icon: <ShoppingCart size={20} />, section: 'Operations' },
-    { name: t('production_distribution'), path: '/factory-dispatch', icon: <Zap size={20} />, section: 'Operations' },
-    { name: t('direct_sales'), path: '/sales', icon: <Truck size={20} />, section: 'Operations' },
+  const allNavItems = [
+    { name: t('dashboard'), path: '/dashboard', icon: <LayoutDashboard size={20} />, section: 'Main', permission: 'dashboard' },
+    { name: t('inventory_stock'), path: '/inventory', icon: <Package size={20} />, section: 'Main', permission: 'inventory' },
+    { name: t('categories'), path: '/categories', icon: <FolderTree size={20} />, section: 'Main', permission: 'inventory' },
+    { name: t('menu_premix'), path: '/menu', icon: <Utensils size={20} />, section: 'Main', permission: 'inventory' },
+    { name: t('wastage_expiry'), path: '/wastage', icon: <AlertTriangle size={20} />, section: 'Main', permission: 'inventory' },
+    { name: t('vendors_clients'), path: '/vendors', icon: <Store size={20} />, section: 'Operations', permission: 'inventory' },
+    { name: t('purchase_orders'), path: '/purchases', icon: <ShoppingCart size={20} />, section: 'Operations', permission: 'inventory' },
+    { name: t('production_distribution'), path: '/factory-dispatch', icon: <Zap size={20} />, section: 'Operations', permission: 'inventory' },
+    { name: t('direct_sales'), path: '/sales', icon: <Truck size={20} />, section: 'Operations', permission: 'sales' },
     { name: t('analytics_forecasts'), path: '/analytics', icon: <BarChart2 size={20} />, section: 'Operations' },
     { name: t('reports_bi'), path: '/reports', icon: <FileText size={20} />, section: 'Operations' },
     { name: t('food_cost'), path: '/food-cost', icon: <Calculator size={20} />, section: 'Operations' },
-    { name: t('client_statements'), path: '/client-statements', icon: <FileText size={20} />, section: 'Operations' },
-    { name: t('dispatch_dashboard'), path: '/dispatch-dashboard', icon: <Navigation size={20} />, section: 'Operations' },
-    { name: t('profit_loss_report'), path: '/pnl-report', icon: <BadgeCent size={20} />, section: 'Operations' },
-    { name: t('accounts'), path: '/accounts', icon: <Wallet size={20} />, section: 'Operations' },
-    { name: t('sales_team'), path: '/salesmen', icon: <Users size={20} />, section: 'Operations' },
-    { name: t('administration'), path: '/administration', icon: <ShieldCheck size={20} />, section: 'Admin' },
+    { name: t('client_statements'), path: '/client-statements', icon: <FileText size={20} />, section: 'Operations', permission: 'accounts' },
+    { name: t('dispatch_dashboard'), path: '/dispatch-dashboard', icon: <Navigation size={20} />, section: 'Operations', permission: 'inventory' },
+    { name: t('profit_loss_report'), path: '/pnl-report', icon: <BadgeCent size={20} />, section: 'Operations', permission: 'accounts' },
+    { name: t('accounts'), path: '/accounts', icon: <Wallet size={20} />, section: 'Operations', permission: 'accounts' },
+    { name: t('sales_team'), path: '/salesmen', icon: <Users size={20} />, section: 'Operations', permission: 'sales' },
+    { name: t('administration'), path: '/administration', icon: <ShieldCheck size={20} />, section: 'Admin', permission: 'users' },
+    { name: 'Role Management', path: '/roles-management', icon: <Key size={20} />, section: 'Admin', permission: 'roles' },
     { name: t('settings'), path: '/settings', icon: <Settings size={20} />, section: 'Admin' },
+    { name: 'Assets Mgt', path: '/assets-management', icon: <Briefcase size={20} />, section: 'Admin', permission: 'assets' },
+    { name: 'Balance Sheet', path: '/balance-sheet', icon: <Scale size={20} />, section: 'Operations', permission: 'balance-sheet' },
   ];
+
+  const navItems = allNavItems.filter(item => {
+    if (admin?.role === 'super_admin') return true;
+    if (!item.permission) return true; // Items without a specific permission requirement
+    return admin?.permissions?.includes(item.permission);
+  });
 
   const getRoleDisplayName = (role: string) => {
     return role.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');

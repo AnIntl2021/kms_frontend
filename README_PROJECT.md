@@ -1,4 +1,4 @@
-# Fresh 'n' Fast - Enterprise ERP
+# <span style={{ fontFamily: "'Oleo Script', cursive" }}>Fresh & Fast Restaurant Company</span> - Enterprise ERP
 
 A premium full-stack ERP system built with modern technologies.
 

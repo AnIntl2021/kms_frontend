@@ -6,6 +6,7 @@ interface Admin {
   role: string;
   firstName?: string;
   lastName?: string;
+  permissions?: string[];
 }
 
 interface AuthState {
