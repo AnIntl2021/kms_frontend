@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import { useLanguage } from '../hooks/useLanguage';
-import { Users, Briefcase, Building, Landmark, TrendingUp, TrendingDown, DollarSign, X } from 'lucide-react';
+import { Users, Briefcase, Building, Landmark, TrendingUp, TrendingDown, DollarSign, X, Trash2, Edit } from 'lucide-react';
 import api from '../api/axios';
 import './AssetsManagementPage.css';
 
@@ -21,6 +21,10 @@ const AssetsManagementPage: React.FC = () => {
   const [editingEmployee, setEditingEmployee] = useState<any>(null);
   const [editingAsset, setEditingAsset] = useState<any>(null);
   const [editingLiability, setEditingLiability] = useState<any>(null);
+
+  const [dynamicAllowances, setDynamicAllowances] = useState<{name: string, amount: string}[]>([]);
+  const [selectedRole, setSelectedRole] = useState('Staff');
+  const [selectedLiabilityType, setSelectedLiabilityType] = useState('Loan');
 
   useEffect(() => {
     fetchData();
@@ -44,16 +48,40 @@ const AssetsManagementPage: React.FC = () => {
   const handleSaveEmployee = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
+    const payload = Object.fromEntries(formData);
+    
+    if (payload.role === 'new_role') {
+      payload.role = payload.custom_role;
+    }
+    delete payload.custom_role;
+
+    payload.allowances = dynamicAllowances;
+
+    const totalAllowances = dynamicAllowances.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+    if (!payload.salary || Number(payload.salary) === 0) {
+      payload.salary = totalAllowances.toString();
+    }
+
     try {
       if (editingEmployee) {
-        await api.put(`/employees/${editingEmployee.employee_id}`, Object.fromEntries(formData));
+        await api.put(`/employees/${editingEmployee.employee_id}`, payload);
       } else {
-        await api.post('/employees', Object.fromEntries(formData));
+        await api.post('/employees', payload);
       }
       setIsPayrollModalOpen(false);
       setEditingEmployee(null);
+      setDynamicAllowances([]);
       fetchData();
     } catch(err) { console.error(err); }
+  };
+
+  const handleDeleteEmployee = async (id: number) => {
+    if (window.confirm('Are you sure you want to delete this employee?')) {
+      try {
+        await api.delete(`/employees/${id}`);
+        fetchData();
+      } catch(err) { console.error(err); }
+    }
   };
 
   const handleSaveAsset = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -74,11 +102,18 @@ const AssetsManagementPage: React.FC = () => {
   const handleSaveLiability = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
+    const payload = Object.fromEntries(formData);
+    
+    if (payload.type === 'new_type') {
+      payload.type = payload.custom_type;
+    }
+    delete payload.custom_type;
+
     try {
       if (editingLiability) {
-        await api.put(`/liabilities/${editingLiability.liability_id}`, Object.fromEntries(formData));
+        await api.put(`/liabilities/${editingLiability.liability_id}`, payload);
       } else {
-        await api.post('/liabilities', Object.fromEntries(formData));
+        await api.post('/liabilities', payload);
       }
       setIsLiabilityModalOpen(false);
       setEditingLiability(null);
@@ -91,6 +126,12 @@ const AssetsManagementPage: React.FC = () => {
   const totalAssets = assets.reduce((acc, curr) => acc + Number(curr.value || 0), 0);
   const totalLiabilities = liabilities.reduce((acc, curr) => acc + Number(curr.amount || 0), 0);
   const netValue = totalAssets - totalLiabilities;
+
+  const defaultRoles = ['Staff', 'Chef', 'Store Manager', 'Delivery Driver', 'Admin'];
+  const uniqueRoles = Array.from(new Set([...defaultRoles, ...salaries.map(s => s.role).filter(Boolean)]));
+
+  const defaultLiabilityTypes = ['Loan', 'Credit Card', 'Owner\'s Equity', 'Tax Payable'];
+  const uniqueLiabilityTypes = Array.from(new Set([...defaultLiabilityTypes, ...liabilities.map(l => l.type).filter(Boolean)]));
 
   return (
     <Layout title="Assets Management">
@@ -166,11 +207,12 @@ const AssetsManagementPage: React.FC = () => {
             <div className="data-table-wrapper fade-in">
               <div className="table-header">
                 <h2>Employee Salaries</h2>
-                <button className="primary-btn" onClick={() => { setEditingEmployee(null); setIsPayrollModalOpen(true); }}>Process Payroll</button>
+                <button className="primary-btn" onClick={() => { setEditingEmployee(null); setDynamicAllowances([]); setSelectedRole('Staff'); setIsPayrollModalOpen(true); }}>Process Payroll</button>
               </div>
               <table className="modern-table">
                 <thead>
                   <tr>
+                    <th>Employee No</th>
                     <th>Employee Name</th>
                     <th>Role</th>
                     <th>Salary</th>
@@ -181,6 +223,7 @@ const AssetsManagementPage: React.FC = () => {
                 <tbody>
                   {salaries.map(emp => (
                     <tr key={emp.employee_id}>
+                      <td>{emp.employee_no || '-'}</td>
                       <td>{emp.name}</td>
                       <td>{emp.role}</td>
                       <td>{Number(emp.salary).toLocaleString()} د.ك</td>
@@ -190,7 +233,19 @@ const AssetsManagementPage: React.FC = () => {
                         </span>
                       </td>
                       <td>
-                        <button className="action-link" onClick={() => { setEditingEmployee(emp); setIsPayrollModalOpen(true); }}>Edit</button>
+                        <div style={{ display: 'flex', gap: '15px' }}>
+                          <button className="action-link" style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: 0 }} onClick={() => { 
+                            setEditingEmployee(emp); 
+                            setDynamicAllowances(emp.allowances || []); 
+                            setSelectedRole(emp.role || 'Staff');
+                            setIsPayrollModalOpen(true); 
+                          }} title="Edit">
+                            <Edit size={16} />
+                          </button>
+                          <button className="action-link" style={{ color: '#ef4444', display: 'flex', alignItems: 'center', gap: '5px', padding: 0 }} onClick={() => handleDeleteEmployee(emp.employee_id)} title="Delete">
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -238,7 +293,7 @@ const AssetsManagementPage: React.FC = () => {
             <div className="data-table-wrapper fade-in">
               <div className="table-header">
                 <h2>Liabilities & Debts</h2>
-                <button className="primary-btn" onClick={() => { setEditingLiability(null); setIsLiabilityModalOpen(true); }}>Add Liability</button>
+                <button className="primary-btn" onClick={() => { setEditingLiability(null); setSelectedLiabilityType('Loan'); setIsLiabilityModalOpen(true); }}>Add Liability</button>
               </div>
               <table className="modern-table">
                 <thead>
@@ -260,7 +315,11 @@ const AssetsManagementPage: React.FC = () => {
                       <td>{liab.interest_rate}</td>
                       <td>{liab.due_date ? new Date(liab.due_date).toLocaleDateString() : '-'}</td>
                       <td>
-                        <button className="action-link" onClick={() => { setEditingLiability(liab); setIsLiabilityModalOpen(true); }}>Edit</button>
+                        <button className="action-link" onClick={() => { 
+                          setEditingLiability(liab); 
+                          setSelectedLiabilityType(liab.type || 'Loan');
+                          setIsLiabilityModalOpen(true); 
+                        }}>Edit</button>
                       </td>
                     </tr>
                   ))}
@@ -276,31 +335,97 @@ const AssetsManagementPage: React.FC = () => {
             <div className="modal-content" style={{maxWidth: '500px'}}>
               <div className="modal-header">
                 <h3>{editingEmployee ? 'Update Employee / Payroll' : 'Add Employee / Payroll'}</h3>
-                <button className="btn-close" onClick={() => { setIsPayrollModalOpen(false); setEditingEmployee(null); }}><X size={20} /></button>
+                <button className="btn-close" onClick={() => { setIsPayrollModalOpen(false); setEditingEmployee(null); setDynamicAllowances([]); setSelectedRole('Staff'); }}><X size={20} /></button>
               </div>
               <form onSubmit={handleSaveEmployee}>
                 <div className="modal-body">
+                  <div className="form-group">
+                    <label>Employee No</label>
+                    <input type="text" name="employee_no" defaultValue={editingEmployee?.employee_no} placeholder="e.g. EMP-001" />
+                  </div>
                   <div className="form-group">
                     <label>Employee Name</label>
                     <input type="text" name="name" defaultValue={editingEmployee?.name} placeholder="e.g. Ahmad Abdullah" required />
                   </div>
                   <div className="form-group">
                     <label>Role</label>
-                    <select name="role" defaultValue={editingEmployee?.role || "Staff"} required>
-                      <option value="Staff">Staff</option>
-                      <option value="Chef">Chef</option>
-                      <option value="Store Manager">Store Manager</option>
-                      <option value="Delivery Driver">Delivery Driver</option>
-                      <option value="Admin">Admin</option>
+                    <select name="role" value={selectedRole} onChange={(e) => setSelectedRole(e.target.value)} required>
+                      {uniqueRoles.map(r => <option key={r} value={r as string}>{r as string}</option>)}
+                      <option value="new_role">+ Add New Role</option>
                     </select>
                   </div>
+                  {selectedRole === 'new_role' && (
+                    <div className="form-group fade-in">
+                      <label>New Role Name</label>
+                      <input type="text" name="custom_role" placeholder="e.g. Supervisor" required autoFocus />
+                    </div>
+                  )}
+
+                  <div className="form-group" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <h4 className="section-title" style={{ margin: 0, border: 'none' }}>Salary Breakdown</h4>
+                    <button type="button" className="action-link" onClick={() => setDynamicAllowances([...dynamicAllowances, {name: '', amount: ''}])}>+ Add Row</button>
+                  </div>
+                  
+                  <div className="dynamic-rows-container" style={{ marginBottom: '20px' }}>
+                    {dynamicAllowances.map((allowance, index) => (
+                      <div key={index} style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
+                        <input 
+                          type="text" 
+                          placeholder="Allowance Name (e.g. Basic)" 
+                          value={allowance.name}
+                          onChange={(e) => {
+                            const newAllowances = [...dynamicAllowances];
+                            newAllowances[index].name = e.target.value;
+                            setDynamicAllowances(newAllowances);
+                          }}
+                          style={{ flex: 2, padding: '10px', border: '1px solid #cbd5e1', borderRadius: '8px' }}
+                          required
+                        />
+                        <input 
+                          type="number" 
+                          placeholder="0.000" 
+                          step="0.001"
+                          value={allowance.amount}
+                          onChange={(e) => {
+                            const newAllowances = [...dynamicAllowances];
+                            newAllowances[index].amount = e.target.value;
+                            setDynamicAllowances(newAllowances);
+                          }}
+                          style={{ flex: 1, padding: '10px', border: '1px solid #cbd5e1', borderRadius: '8px' }}
+                          required
+                        />
+                        <button 
+                          type="button" 
+                          onClick={() => {
+                            const newAllowances = dynamicAllowances.filter((_, i) => i !== index);
+                            setDynamicAllowances(newAllowances);
+                          }}
+                          style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '10px' }}
+                        >
+                          <X size={18} />
+                        </button>
+                      </div>
+                    ))}
+                    {dynamicAllowances.length === 0 && (
+                      <p style={{ fontSize: '13px', color: '#64748b', fontStyle: 'italic', margin: 0 }}>No breakdown rows added.</p>
+                    )}
+                  </div>
+
                   <div className="form-group">
-                    <label>Salary Amount (د.ك)</label>
-                    <input type="number" name="salary" defaultValue={editingEmployee?.salary} placeholder="0.000" step="0.001" required />
+                    <label>Total Salary Amount (د.ك)</label>
+                    <input 
+                      type="number" 
+                      name="salary" 
+                      defaultValue={editingEmployee?.salary} 
+                      value={dynamicAllowances.length > 0 ? dynamicAllowances.reduce((sum, item) => sum + (Number(item.amount) || 0), 0).toFixed(3) : undefined}
+                      placeholder="0.000" 
+                      step="0.001" 
+                      required 
+                    />
                   </div>
                 </div>
                 <div className="modal-footer">
-                  <button type="button" className="btn-secondary" onClick={() => { setIsPayrollModalOpen(false); setEditingEmployee(null); }}>Cancel</button>
+                  <button type="button" className="btn-secondary" onClick={() => { setIsPayrollModalOpen(false); setEditingEmployee(null); setDynamicAllowances([]); setSelectedRole('Staff'); }}>Cancel</button>
                   <button type="submit" className="primary-btn">{editingEmployee ? 'Update' : 'Save'}</button>
                 </div>
               </form>
@@ -354,7 +479,7 @@ const AssetsManagementPage: React.FC = () => {
             <div className="modal-content" style={{maxWidth: '500px'}}>
               <div className="modal-header">
                 <h3>{editingLiability ? 'Update Account' : 'Add Liability / Equity'}</h3>
-                <button className="btn-close" onClick={() => { setIsLiabilityModalOpen(false); setEditingLiability(null); }}><X size={20} /></button>
+                <button className="btn-close" onClick={() => { setIsLiabilityModalOpen(false); setEditingLiability(null); setSelectedLiabilityType('Loan'); }}><X size={20} /></button>
               </div>
               <form onSubmit={handleSaveLiability}>
                 <div className="modal-body">
@@ -364,21 +489,24 @@ const AssetsManagementPage: React.FC = () => {
                   </div>
                   <div className="form-group">
                     <label>Account Type</label>
-                    <select name="type" defaultValue={editingLiability?.type || "Loan"} required>
-                      <option value="Loan">Loan</option>
-                      <option value="Credit Card">Credit Card</option>
-                      <option value="Owner's Equity">Owner's Equity</option>
-                      <option value="Tax Payable">Tax Payable</option>
-                      <option value="Other">Other</option>
+                    <select name="type" value={selectedLiabilityType} onChange={(e) => setSelectedLiabilityType(e.target.value)} required>
+                      {uniqueLiabilityTypes.map(t => <option key={t} value={t as string}>{t as string}</option>)}
+                      <option value="new_type">+ Add New Type</option>
                     </select>
                   </div>
+                  {selectedLiabilityType === 'new_type' && (
+                    <div className="form-group fade-in">
+                      <label>New Account Type</label>
+                      <input type="text" name="custom_type" placeholder="e.g. Utility Deposit" required autoFocus />
+                    </div>
+                  )}
                   <div className="form-group">
                     <label>Amount (د.ك)</label>
                     <input type="number" name="amount" defaultValue={editingLiability?.amount} placeholder="0.000" step="0.001" required />
                   </div>
                 </div>
                 <div className="modal-footer">
-                  <button type="button" className="btn-secondary" onClick={() => { setIsLiabilityModalOpen(false); setEditingLiability(null); }}>Cancel</button>
+                  <button type="button" className="btn-secondary" onClick={() => { setIsLiabilityModalOpen(false); setEditingLiability(null); setSelectedLiabilityType('Loan'); }}>Cancel</button>
                   <button type="submit" className="primary-btn">{editingLiability ? 'Update' : 'Save'}</button>
                 </div>
               </form>

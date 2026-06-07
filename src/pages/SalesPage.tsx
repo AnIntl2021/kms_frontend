@@ -23,7 +23,11 @@ import {
   Edit,
   Settings,
   Zap,
-  Trash2
+  Globe,
+  ChevronDown,
+  Trash2,
+  LayoutGrid,
+  List
 } from 'lucide-react';
 import { useReactToPrint } from 'react-to-print';
 import FullInvoicePrint from '../components/FullInvoicePrint';
@@ -60,6 +64,10 @@ const SalesPage = () => {
   const [vendors, setVendors] = useState<any[]>([]);
   const [formData, setFormData] = useState({
     customer_name: '',
+    client_phone: '',
+    client_address: '',
+    reference_order_number: '',
+    notes: '',
     vendor_id: '',
     branch_id: '',
     batch_number: '',
@@ -72,6 +80,9 @@ const SalesPage = () => {
   const [productionLogs, setProductionLogs] = useState<any[]>([]);
   const [menuItems, setMenuItems] = useState<any[]>([]);
   const [selectedItems, setSelectedItems] = useState<any[]>([]);
+  const [showOnlineDetails, setShowOnlineDetails] = useState(false);
+  const [menuViewMode, setMenuViewMode] = useState<'grid' | 'list'>('grid');
+  const [menuSearchTerm, setMenuSearchTerm] = useState('');
 
   // Print State
   const printRef = useRef<HTMLDivElement>(null);
@@ -284,7 +295,8 @@ const SalesPage = () => {
         items: selectedItems.map(i => ({ menu_item_id: i.menu_item_id, quantity: i.quantity, price: i.price }))
       });
       setIsModalOpen(false);
-      setFormData({ customer_name: '', vendor_id: '', branch_id: '', batch_number: '', expiry_date: '', payment_status: 'credit', dispatch_status: 'pending', salesman_id: '' });
+      setShowOnlineDetails(false);
+      setFormData({ customer_name: '', client_phone: '', client_address: '', reference_order_number: '', notes: '', vendor_id: '', branch_id: '', batch_number: '', expiry_date: '', payment_status: 'credit', dispatch_status: 'pending', salesman_id: '' });
       setSelectedItems([]);
       fetchSales();
       toast.success(t('sale_recorded_success'));
@@ -342,6 +354,15 @@ const SalesPage = () => {
     } else {
       setSelectedItems([...selectedItems, { ...item, quantity: 1 }]);
     }
+  };
+
+  const updateQuantity = (id: number, delta: number) => {
+    setSelectedItems(prev => prev.map(i => {
+      if (i.menu_item_id === id) {
+         return { ...i, quantity: Math.max(0, i.quantity + delta) };
+      }
+      return i;
+    }).filter(i => i.quantity > 0));
   };
 
   const getStatusBadge = (status: string) => {
@@ -608,6 +629,10 @@ const SalesPage = () => {
               <div className="modal-body" style={{ padding: '2rem' }}>
                  <div style={{ background: '#f8fafc', padding: '1.5rem', borderRadius: '16px', marginBottom: '1.5rem', border: '1px solid #e2e8f0' }}>
                     <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>{t("customer")}: <b>{detailOrder.customer_name}</b></p>
+                    {detailOrder.client_phone && <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#64748b' }}>Phone: <b>{detailOrder.client_phone}</b></p>}
+                    {detailOrder.client_address && <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#64748b' }}>Address: <b>{detailOrder.client_address}</b></p>}
+                    {detailOrder.reference_order_number && <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#64748b' }}>Order Number: <b style={{ color: 'var(--primary)' }}>{detailOrder.reference_order_number}</b></p>}
+                    {detailOrder.notes && <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#64748b' }}>Notes: <b>{detailOrder.notes}</b></p>}
                     <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#64748b' }}>{t("batch_code")}: <b style={{ color: 'var(--primary)' }}>{detailOrder.batch_number || 'N/A'}</b></p>
                     <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#64748b' }}>{t("date")}: {detailOrder.order_date}</p>
                  </div>
@@ -700,7 +725,7 @@ const SalesPage = () => {
                          />
                        </div>
 
-                       <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                       <div className="form-group" style={{ marginTop: '1.5rem', marginBottom: '1.5rem' }}>
                           <label style={{ fontWeight: 700, fontSize: '11px', color: '#64748b' }}>{t("assign_salesman_caps")}</label>
                           <SearchableSelect
                             options={salesmen.map(s => ({ value: s.salesman_id, label: language === 'ar' ? (s.name_ar || s.name_en) : s.name_en }))}
@@ -710,17 +735,122 @@ const SalesPage = () => {
                           />
                         </div>
 
+                        <div style={{ marginTop: '1.5rem', marginBottom: '1.5rem', background: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 4px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.05)', overflow: 'hidden' }}>
+                           <button 
+                             onClick={() => setShowOnlineDetails(!showOnlineDetails)} 
+                             style={{ width: '100%', padding: '16px 20px', background: showOnlineDetails ? 'linear-gradient(to right, #f8fafc, #ffffff)' : '#ffffff', border: 'none', borderBottom: showOnlineDetails ? '1px solid #e2e8f0' : 'none', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', fontWeight: 800, color: '#0f172a', fontSize: '14px', transition: 'all 0.3s ease' }}
+                           >
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                 <Globe size={18} color="var(--primary)" />
+                                 <span>Online / Direct Sale Details (Optional)</span>
+                              </div>
+                              <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '28px', height: '28px', borderRadius: '50%', background: showOnlineDetails ? '#e2e8f0' : '#f1f5f9', color: '#64748b', transition: 'transform 0.3s ease', transform: showOnlineDetails ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+                                 <ChevronDown size={16} />
+                              </span>
+                           </button>
+                           {showOnlineDetails && (
+                             <div style={{ padding: '24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', background: '#fafbfc' }} className="fade-in">
+                               <div className="form-group" style={{ marginBottom: 0 }}>
+                                 <label style={{ fontWeight: 700, fontSize: '11px', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px', display: 'block' }}>Customer Name</label>
+                                 <input type="text" value={formData.customer_name} onChange={(e) => setFormData({...formData, customer_name: e.target.value})} placeholder="e.g. John Doe" style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid #cbd5e1', background: '#ffffff', fontSize: '14px', outline: 'none', transition: 'border 0.2s ease, box-shadow 0.2s ease' }} onFocus={(e) => { e.target.style.borderColor = 'var(--primary)'; e.target.style.boxShadow = '0 0 0 3px rgba(5, 76, 45, 0.1)'; }} onBlur={(e) => { e.target.style.borderColor = '#cbd5e1'; e.target.style.boxShadow = 'none'; }} />
+                               </div>
+                               <div className="form-group" style={{ marginBottom: 0 }}>
+                                 <label style={{ fontWeight: 700, fontSize: '11px', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px', display: 'block' }}>Phone Number</label>
+                                 <input type="text" value={formData.client_phone} onChange={(e) => setFormData({...formData, client_phone: e.target.value})} placeholder="e.g. +965 1234 5678" style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid #cbd5e1', background: '#ffffff', fontSize: '14px', outline: 'none', transition: 'border 0.2s ease, box-shadow 0.2s ease' }} onFocus={(e) => { e.target.style.borderColor = 'var(--primary)'; e.target.style.boxShadow = '0 0 0 3px rgba(5, 76, 45, 0.1)'; }} onBlur={(e) => { e.target.style.borderColor = '#cbd5e1'; e.target.style.boxShadow = 'none'; }} />
+                               </div>
+                               <div className="form-group" style={{ gridColumn: '1 / -1', marginBottom: 0 }}>
+                                 <label style={{ fontWeight: 700, fontSize: '11px', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px', display: 'block' }}>Delivery Address</label>
+                                 <input type="text" value={formData.client_address} onChange={(e) => setFormData({...formData, client_address: e.target.value})} placeholder="Block 4, Street 10, Building 22, Floor 3" style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid #cbd5e1', background: '#ffffff', fontSize: '14px', outline: 'none', transition: 'border 0.2s ease, box-shadow 0.2s ease' }} onFocus={(e) => { e.target.style.borderColor = 'var(--primary)'; e.target.style.boxShadow = '0 0 0 3px rgba(5, 76, 45, 0.1)'; }} onBlur={(e) => { e.target.style.borderColor = '#cbd5e1'; e.target.style.boxShadow = 'none'; }} />
+                               </div>
+                               <div className="form-group" style={{ marginBottom: 0 }}>
+                                 <label style={{ fontWeight: 700, fontSize: '11px', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px', display: 'block' }}>Order Number</label>
+                                 <input type="text" value={formData.reference_order_number} onChange={(e) => setFormData({...formData, reference_order_number: e.target.value})} placeholder="e.g. #1024" style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid #cbd5e1', background: '#ffffff', fontSize: '14px', outline: 'none', transition: 'border 0.2s ease, box-shadow 0.2s ease' }} onFocus={(e) => { e.target.style.borderColor = 'var(--primary)'; e.target.style.boxShadow = '0 0 0 3px rgba(5, 76, 45, 0.1)'; }} onBlur={(e) => { e.target.style.borderColor = '#cbd5e1'; e.target.style.boxShadow = 'none'; }} />
+                               </div>
+                               <div className="form-group" style={{ marginBottom: 0 }}>
+                                 <label style={{ fontWeight: 700, fontSize: '11px', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px', display: 'block' }}>Notes / Special Instructions</label>
+                                 <input type="text" value={formData.notes} onChange={(e) => setFormData({...formData, notes: e.target.value})} placeholder="e.g. Leave at door, Ring bell twice" style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1px solid #cbd5e1', background: '#ffffff', fontSize: '14px', outline: 'none', transition: 'border 0.2s ease, box-shadow 0.2s ease' }} onFocus={(e) => { e.target.style.borderColor = 'var(--primary)'; e.target.style.boxShadow = '0 0 0 3px rgba(5, 76, 45, 0.1)'; }} onBlur={(e) => { e.target.style.borderColor = '#cbd5e1'; e.target.style.boxShadow = 'none'; }} />
+                               </div>
+                             </div>
+                           )}
+                        </div>
+
                        <h5 style={{ margin: '1rem 0 0.5rem 0' }}>Cart: {selectedItems.length} Products</h5>
                        <div style={{ maxHeight: '150px', overflowY: 'auto' }}>
-                          {selectedItems.map(item => (<div key={item.menu_item_id} style={{ fontSize: '11px', padding: '4px 0', borderBottom: '1px solid #f1f5f9' }}>{item.name_en} x {item.quantity}</div>))}
+                          {selectedItems.map(item => (
+                            <div key={item.menu_item_id} style={{ fontSize: '12px', padding: '6px 0', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <span style={{ fontWeight: 600, color: '#334155' }}>{item.name_en}</span>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#f8fafc', padding: '4px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                                 <button onClick={() => updateQuantity(item.menu_item_id, -1)} style={{ background: 'white', border: '1px solid #cbd5e1', borderRadius: '4px', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#64748b', fontWeight: 'bold' }}>-</button>
+                                 <span style={{ fontWeight: 700, width: '20px', textAlign: 'center', fontSize: '13px', color: 'var(--primary)' }}>{item.quantity}</span>
+                                 <button onClick={() => updateQuantity(item.menu_item_id, 1)} style={{ background: 'white', border: '1px solid #cbd5e1', borderRadius: '4px', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#64748b', fontWeight: 'bold' }}>+</button>
+                              </div>
+                            </div>
+                          ))}
                        </div>
                     </div>
                     <div style={{ flex: '1 1 300px' }}>
-                       <h5 style={{ fontSize: '13px', color: '#64748b', marginBottom: '1rem' }}>Selection Menu</h5>
-                       <div style={{ maxHeight: '350px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '8px', paddingRight: '5px' }}>
-                         {menuItems.map(item => (
-                           <div key={item.menu_item_id} onClick={() => addItemToOrder(item)} style={{ cursor: 'pointer', padding: '10px 15px', background: 'white', border: '1px solid #eee', borderRadius: '10px', fontSize: '13px', fontWeight: 600 }}>
-                             {item.name_en}
+                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', gap: '1rem' }}>
+                          <div style={{ flex: 1, position: 'relative' }}>
+                             <Search size={16} color="#94a3b8" style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)' }} />
+                             <input 
+                               type="text" 
+                               placeholder="Search menu..." 
+                               value={menuSearchTerm}
+                               onChange={(e) => setMenuSearchTerm(e.target.value)}
+                               style={{ width: '100%', padding: '8px 10px 8px 34px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', outline: 'none' }}
+                             />
+                          </div>
+                          <div style={{ display: 'flex', background: '#f1f5f9', borderRadius: '8px', padding: '2px' }}>
+                             <button onClick={() => setMenuViewMode('grid')} style={{ padding: '6px', borderRadius: '6px', background: menuViewMode === 'grid' ? 'white' : 'transparent', border: 'none', boxShadow: menuViewMode === 'grid' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', color: menuViewMode === 'grid' ? 'var(--primary)' : '#94a3b8', cursor: 'pointer' }}>
+                                <LayoutGrid size={16} />
+                             </button>
+                             <button onClick={() => setMenuViewMode('list')} style={{ padding: '6px', borderRadius: '6px', background: menuViewMode === 'list' ? 'white' : 'transparent', border: 'none', boxShadow: menuViewMode === 'list' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none', color: menuViewMode === 'list' ? 'var(--primary)' : '#94a3b8', cursor: 'pointer' }}>
+                                <List size={16} />
+                             </button>
+                          </div>
+                       </div>
+                       
+                       <div style={{ maxHeight: '350px', overflowY: 'auto', display: menuViewMode === 'grid' ? 'grid' : 'flex', gridTemplateColumns: menuViewMode === 'grid' ? '1fr 1fr' : 'none', flexDirection: menuViewMode === 'grid' ? 'row' : 'column', gap: '10px', paddingRight: '5px' }}>
+                         {menuItems.filter(item => (item.name_en || '').toLowerCase().includes(menuSearchTerm.toLowerCase())).map(item => (
+                           <div 
+                             key={item.menu_item_id} 
+                             onClick={() => addItemToOrder(item)} 
+                             style={{ 
+                               cursor: 'pointer', 
+                               background: 'white', 
+                               border: '1px solid #e2e8f0', 
+                               borderRadius: '12px', 
+                               overflow: 'hidden',
+                               display: 'flex',
+                               flexDirection: menuViewMode === 'grid' ? 'column' : 'row',
+                               alignItems: menuViewMode === 'grid' ? 'stretch' : 'center',
+                               padding: menuViewMode === 'grid' ? '0' : '10px 15px',
+                               transition: 'all 0.2s ease',
+                               boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
+                             }}
+                             onMouseOver={(e) => e.currentTarget.style.borderColor = 'var(--primary)'}
+                             onMouseOut={(e) => e.currentTarget.style.borderColor = '#e2e8f0'}
+                           >
+                             {menuViewMode === 'grid' && (
+                               <div style={{ height: '100px', width: '100%', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                 {item.image_url ? (
+                                   <img 
+                                     src={`${(import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace('/api', '')}/${item.image_url.startsWith('/') ? item.image_url.slice(1) : item.image_url}`} 
+                                     alt={item.name_en} 
+                                     style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                                   />
+                                 ) : (
+                                   <Package size={24} color="#cbd5e1" />
+                                 )}
+                               </div>
+                             )}
+                             <div style={{ padding: menuViewMode === 'grid' ? '12px' : '0', display: 'flex', flexDirection: 'column', flex: 1 }}>
+                               <span style={{ fontSize: '13px', fontWeight: 700, color: '#334155', lineHeight: '1.2' }}>{item.name_en}</span>
+                               {menuViewMode === 'grid' && <span style={{ fontSize: '12px', color: 'var(--primary)', fontWeight: 800, marginTop: '4px' }}>{Number(item.price).toFixed(3)} KD</span>}
+                             </div>
+                             {menuViewMode === 'list' && (
+                               <span style={{ fontSize: '12px', color: 'var(--primary)', fontWeight: 800, marginLeft: 'auto' }}>{Number(item.price).toFixed(3)} KD</span>
+                             )}
                            </div>
                          ))}
                        </div>
