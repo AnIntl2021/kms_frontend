@@ -53,11 +53,8 @@ const MenuPage = () => {
   const getImageUrl = (url: string) => {
     if (!url) return '';
     const cleanUrl = url.startsWith('/') ? url.slice(1) : url;
-    if (import.meta.env.VITE_ENV === 'production') {
-      return `https://freshnfastkw.com/${cleanUrl}`;
-    }
-    const localBase = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace('/api', '');
-    return `${localBase}/${cleanUrl}`;
+    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+    return `${baseUrl}/${cleanUrl}`;
   };
 
   const [isModalOpen, setIsModalOpen] = useState(false);
