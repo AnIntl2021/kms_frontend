@@ -84,6 +84,16 @@ const SalesPage = () => {
   const [menuViewMode, setMenuViewMode] = useState<'grid' | 'list'>('grid');
   const [menuSearchTerm, setMenuSearchTerm] = useState('');
 
+  const getImageUrl = (url: string) => {
+    if (!url) return '';
+    const cleanUrl = url.startsWith('/') ? url.slice(1) : url;
+    if (import.meta.env.VITE_ENV === 'production') {
+      return `https://freshnfastkw.com/${cleanUrl}`;
+    }
+    const localBase = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace('/api', '');
+    return `${localBase}/${cleanUrl}`;
+  };
+
   // Print State
   const printRef = useRef<HTMLDivElement>(null);
   const dotMatrixPrintRef = useRef<HTMLDivElement>(null);
@@ -835,7 +845,7 @@ const SalesPage = () => {
                                <div style={{ height: '100px', width: '100%', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                  {item.image_url ? (
                                    <img 
-                                     src={`${(import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace('/api', '')}/${item.image_url.startsWith('/') ? item.image_url.slice(1) : item.image_url}`} 
+                                     src={getImageUrl(item.image_url)} 
                                      alt={item.name_en} 
                                      style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
                                    />

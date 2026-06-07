@@ -47,6 +47,19 @@ const MenuPage = () => {
   const { t, language } = useLanguage();
   const [items, setItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isRecipeModalOpen, setIsRecipeModalOpen] = useState(false);
+  const [selectedRecipeItem, setSelectedRecipeItem] = useState<any>(null);
+
+  const getImageUrl = (url: string) => {
+    if (!url) return '';
+    const cleanUrl = url.startsWith('/') ? url.slice(1) : url;
+    if (import.meta.env.VITE_ENV === 'production') {
+      return `https://freshnfastkw.com/${cleanUrl}`;
+    }
+    const localBase = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace('/api', '');
+    return `${localBase}/${cleanUrl}`;
+  };
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
   const [activeTab, setActiveTab] = useState<'menu' | 'premix'>('menu');
@@ -360,7 +373,7 @@ const MenuPage = () => {
                          <div style={{width: 50, height: 50, borderRadius: 12, overflow: 'hidden', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
                             {item.image_url ? (
                                <img 
-                                 src={`${(import.meta.env.VITE_API_URL || 'http://localhost:5001/api').replace('/api', '')}/${item.image_url.startsWith('/') ? item.image_url.slice(1) : item.image_url}`} 
+                                 src={getImageUrl(item.image_url)} 
                                  style={{width: '100%', height: '100%', objectFit: 'cover'}} 
                                />
                             ) : (
