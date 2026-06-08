@@ -44,12 +44,12 @@ const PrePrintedInvoice = React.forwardRef<HTMLDivElement, InvoiceProps>(({ orde
         backgroundColor: '#fff',
         boxSizing: 'border-box',
         position: 'relative',
-        transform: `translateX(${0.2 * CM}px)`,
+        transform: `translateX(${0.3 * CM}px)`,
       }}
     >
       {/* ── HEADER SPACER (space above pre-printed header area) ── */}
-      {/* Shifted to 5.7cm down to move header and middle table exactly 0.3cm down */}
-      <div style={{ height: `${5.7 * CM}px` }} />
+      {/* Shifted to 7.7cm down to move header and middle table exactly 2cm down */}
+      <div style={{ height: `${7.7 * CM}px` }} />
 
       {/* ── HEADER ROW: Customer Name (left) + Metadata block (right) ── */}
       {/*
