@@ -44,7 +44,7 @@ const PrePrintedInvoice = React.forwardRef<HTMLDivElement, InvoiceProps>(({ orde
         backgroundColor: '#fff',
         boxSizing: 'border-box',
         position: 'relative',
-        transform: `translateX(${0.2 * CM}px)`,
+        transform: `translate(${0.2 * CM}px, ${0.2 * CM}px)`,
       }}
     >
       {/* ── HEADER SPACER (space above pre-printed header area) ── */}
