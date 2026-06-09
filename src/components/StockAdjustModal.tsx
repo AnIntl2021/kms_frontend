@@ -1,3 +1,4 @@
+import FoodLoader from './FoodLoader';
 import React, { useState } from 'react';
 import { X, Save, Loader2, PlusCircle, MinusCircle } from 'lucide-react';
 import { toast } from 'react-toastify';
@@ -111,7 +112,7 @@ const StockAdjustModal = ({ item, onClose, onSuccess }: StockAdjustModalProps) =
           <div className="modal-footer" style={{paddingLeft: 0, paddingRight: 0, paddingBottom: 0}}>
             <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
             <button type="submit" className={`btn-primary ${type}`} disabled={submitting}>
-              {submitting ? <Loader2 className="animate-spin" size={18} /> : (
+              {submitting ? <FoodLoader size="icon" /> : (
                 <>
                   <Save size={18} />
                   Confirm {type === 'add' ? 'Addition' : 'Subtraction'}

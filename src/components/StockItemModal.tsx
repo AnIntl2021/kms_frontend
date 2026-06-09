@@ -1,3 +1,4 @@
+import FoodLoader from './FoodLoader';
 import React, { useState, useEffect } from 'react';
 import { X, Loader2, Plus, Trash2, Package as PackageIcon } from 'lucide-react';
 import { toast } from 'react-toastify';
@@ -473,7 +474,7 @@ const StockItemModal = ({ isOpen, item, onClose, onSuccess }: StockItemModalProp
               Cancel
             </button>
             <button type="submit" disabled={submitting} className="btn-large-save">
-              {submitting ? <Loader2 className="animate-spin" size={18} /> : (
+              {submitting ? <FoodLoader size="icon" /> : (
                 <>Save Item</>
               )}
             </button>

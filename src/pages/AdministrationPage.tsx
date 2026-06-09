@@ -1,3 +1,4 @@
+import FoodLoader from '../components/FoodLoader';
 import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import api from '../api/axios';
@@ -196,7 +197,7 @@ const AdministrationPage = () => {
                   </thead>
                   <tbody>
                     {loading ? (
-                      <tr><td colSpan={7} className="text-center py-5">{t('fetching_staff_records')}</td></tr>
+                      <tr><td colSpan={7} className="text-center py-5"><FoodLoader size="small" /></td></tr>
                     ) : users.length === 0 ? (
                       <tr><td colSpan={7} className="text-center py-5">{t('no_staff_found')}</td></tr>
                     ) : users.map(user => (
@@ -246,7 +247,7 @@ const AdministrationPage = () => {
                   </thead>
                   <tbody>
                     {loading ? (
-                      <tr><td colSpan={5} className="text-center py-5">{t('syncing_network')}</td></tr>
+                      <tr><td colSpan={5} className="text-center py-5"><FoodLoader size="small" /></td></tr>
                     ) : branches.length === 0 ? (
                       <tr><td colSpan={5} className="text-center py-5">{t('no_branches_recorded')}</td></tr>
                     ) : branches.map(b => (
@@ -281,7 +282,7 @@ const AdministrationPage = () => {
                   </thead>
                   <tbody>
                     {loading ? (
-                       <tr><td colSpan={6} className="text-center py-5">{t('pulling_audit_trail')}</td></tr>
+                       <tr><td colSpan={6} className="text-center py-5"><FoodLoader size="small" /></td></tr>
                     ) : logs.length === 0 ? (
                        <tr><td colSpan={6} className="text-center py-5">{t('no_logs_found')}</td></tr>
                     ) : logs.map(l => (

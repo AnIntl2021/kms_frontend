@@ -1,3 +1,4 @@
+import FoodLoader from '../components/FoodLoader';
 import React, { useState, useEffect } from 'react';
 import { useAuthStore } from '../store/useAuthStore';
 import { 
@@ -201,7 +202,7 @@ const LoginPage = () => {
               </div>
 
               <button type="submit" className="btn-login" disabled={loading}>
-                {loading ? <Loader2 className="animate-spin" size={20} /> : 'Sign in to Hub'}
+                {loading ? <FoodLoader size="icon" /> : 'Sign in to Hub'}
               </button>
             </form>
           </div>

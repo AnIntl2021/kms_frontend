@@ -1,3 +1,4 @@
+import FoodLoader from '../components/FoodLoader';
 import React, { useState, useEffect, useRef } from 'react';
 import Layout from '../components/Layout';
 import api from '../api/axios';
@@ -848,7 +849,7 @@ const ClientStatementsPage: React.FC = () => {
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={10} className="text-center py-5">{t('loading_data')}</td></tr>
+                  <tr><td colSpan={10} className="text-center py-5"><FoodLoader size="small" /></td></tr>
                 ) : filteredOrders.length === 0 ? (
                   <tr><td colSpan={10} className="text-center py-5" style={{ color: '#94a3b8' }}>{t('no_statements')}</td></tr>
                 ) : paginatedOrders.map(order => {

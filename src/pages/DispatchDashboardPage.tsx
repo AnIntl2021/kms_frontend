@@ -1,3 +1,4 @@
+import FoodLoader from '../components/FoodLoader';
 import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import api from '../api/axios';
@@ -511,11 +512,7 @@ const DispatchDashboardPage = () => {
           </div>
 
           {partnerLoading ? (
-            <div className="portal-loading">
-              <Clock className="spin-icon text-green" size={32} />
-              <p>Analyzing partner telemetry and aggregating ledger items...</p>
-            </div>
-          ) : (
+            <FoodLoader size="large" />) : (
             <div className="portal-content">
               {/* KPIs Bento Grid */}
               <div className="bento-grid partner-bento">

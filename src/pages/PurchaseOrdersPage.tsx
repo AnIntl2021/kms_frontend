@@ -1,3 +1,4 @@
+import FoodLoader from '../components/FoodLoader';
 import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import SearchableSelect from '../components/SearchableSelect';
@@ -260,7 +261,7 @@ const PurchaseOrdersPage = () => {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {loading ? (
-                  <tr><td colSpan={7} className="text-center py-20 text-slate-400">{t('loading_data')}</td></tr>
+                  <tr><td colSpan={7} className="text-center py-20 text-slate-400"><FoodLoader size="small" /></td></tr>
                 ) : orders.length === 0 ? (
                   <tr><td colSpan={7} className="text-center py-20 text-slate-400 font-medium font-italic">{t('no_new_alerts')}</td></tr>
                 ) : (

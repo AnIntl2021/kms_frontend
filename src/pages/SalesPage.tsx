@@ -1,3 +1,4 @@
+import FoodLoader from '../components/FoodLoader';
 /* 
    SALES & DISPATCH DASHBOARD - HARD RECOVERY VERSION 
    SYNC TIMESTAMP: 2026-04-01-1805 
@@ -485,7 +486,7 @@ const SalesPage = () => {
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={7} className="text-center py-5">Loading orders...</td></tr>
+                  <tr><td colSpan={7} className="text-center py-5"><FoodLoader size="small" /></td></tr>
                 ) : (Array.isArray(filteredSales) ? filteredSales : []).map(sale => (
                   <tr key={sale.sale_id || Math.random()}>
                     <td>

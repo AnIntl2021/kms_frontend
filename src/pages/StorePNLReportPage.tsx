@@ -1,6 +1,6 @@
+import FoodLoader from '../components/FoodLoader';
 import React, { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
-import FoodLoader from '../components/FoodLoader';
 import api from '../api/axios';
 import { useLanguage } from '../hooks/useLanguage';
 import { TrendingUp, DollarSign, Calculator, Wallet, Percent, Calendar, CheckCircle2, AlertOctagon, TrendingDown } from 'lucide-react';

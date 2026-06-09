@@ -1,3 +1,4 @@
+import FoodLoader from '../components/FoodLoader';
 import React, { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import api from '../api/axios';
@@ -130,7 +131,7 @@ const CategoriesPage = () => {
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={4} className="text-center py-5">{t('loading_categories')}</td></tr>
+                  <tr><td colSpan={4} className="text-center py-5"><FoodLoader size="small" /></td></tr>
                 ) : parentCategories.map(parent => (
                   <React.Fragment key={parent.category_id}>
                     <tr className="parent-row">

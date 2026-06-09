@@ -1,3 +1,4 @@
+import FoodLoader from '../components/FoodLoader';
 import React, { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import { Settings, Save, Building2, Calculator, Factory } from 'lucide-react';
@@ -45,7 +46,7 @@ const SettingsPage = () => {
   };
 
   const renderTabContent = () => {
-    if (loading) return <div className="loading-container">{t('gathering_configs')}</div>;
+    if (loading) return <FoodLoader size="large" />;
 
     switch (activeTab) {
       case 'general':

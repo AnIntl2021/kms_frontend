@@ -1,3 +1,4 @@
+import FoodLoader from '../components/FoodLoader';
 import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import api from '../api/axios';
@@ -357,7 +358,7 @@ const MenuPage = () => {
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={5} className="text-center py-5">{t('loading_data')}</td></tr>
+                  <tr><td colSpan={5} className="text-center py-5"><FoodLoader size="small" /></td></tr>
                 ) : (filteredItems || [])
                     .filter(i => {
                       if (!i) return false;

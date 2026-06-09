@@ -1,3 +1,4 @@
+import FoodLoader from '../components/FoodLoader';
 import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import api from '../api/axios';
@@ -131,7 +132,7 @@ const AccountsPage = () => {
               </thead>
               <tbody>
                 {loading ? (
-                   <tr><td colSpan={7} className="text-center py-5">{t('syncing_financial_records')}</td></tr>
+                   <tr><td colSpan={7} className="text-center py-5"><FoodLoader size="small" /></td></tr>
                 ) : transactions.length === 0 ? (
                    <tr><td colSpan={7} className="text-center py-5">{t('no_financial_records')}</td></tr>
                 ) : transactions.map(tr => (

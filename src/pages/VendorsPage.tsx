@@ -1,3 +1,4 @@
+import FoodLoader from '../components/FoodLoader';
 import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import api from '../api/axios';
@@ -151,7 +152,7 @@ const VendorsPage = () => {
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={6} className="text-center py-5">{t('loading_data')}</td></tr>
+                  <tr><td colSpan={6} className="text-center py-5"><FoodLoader size="small" /></td></tr>
                 ) : filtered.map(v => (
                   <tr key={v.vendor_id}>
                     <td>

@@ -2,19 +2,38 @@ import React, { useState, useEffect } from 'react';
 
 interface FoodLoaderProps {
   text?: string;
+  size?: 'large' | 'small' | 'icon';
+  color?: string;
 }
 
 const foods = ['🍔', '🍕', '🥪', '🍟', '🥤', '🍩'];
 
-const FoodLoader: React.FC<FoodLoaderProps> = ({ text = 'Loading...' }) => {
+const FoodLoader: React.FC<FoodLoaderProps> = ({ text, size = 'large', color = '#64748b' }) => {
   const [foodIndex, setFoodIndex] = useState(0);
 
   useEffect(() => {
     const interval = setInterval(() => {
       setFoodIndex((prev) => (prev + 1) % foods.length);
-    }, 600); // Change food every 600ms
+    }, 600);
     return () => clearInterval(interval);
   }, []);
+
+  if (size === 'icon') {
+    return (
+      <span style={{ display: 'inline-block', animation: 'bounce 0.6s infinite alternate', margin: '0 4px' }}>
+        {foods[foodIndex]}
+      </span>
+    );
+  }
+
+  if (size === 'small') {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '1rem', color }}>
+        <div style={{ fontSize: '1.5rem', animation: 'bounce 0.6s infinite alternate' }}>{foods[foodIndex]}</div>
+        {text && <div style={{ fontSize: '0.9rem', fontWeight: 600, animation: 'pulse 1.5s infinite' }}>{text}</div>}
+      </div>
+    );
+  }
 
   return (
     <div style={{
@@ -25,7 +44,7 @@ const FoodLoader: React.FC<FoodLoaderProps> = ({ text = 'Loading...' }) => {
       height: '50vh',
       width: '100%',
       gap: '1rem',
-      color: '#64748b',
+      color,
       fontFamily: 'Inter, system-ui, sans-serif'
     }}>
       <div style={{
@@ -41,7 +60,7 @@ const FoodLoader: React.FC<FoodLoaderProps> = ({ text = 'Loading...' }) => {
         letterSpacing: '0.5px',
         animation: 'pulse 1.5s infinite'
       }}>
-        {text}
+        {text || 'Loading...'}
       </div>
 
       <style>
