@@ -21,6 +21,9 @@ import ClientStatementsPage from './pages/ClientStatementsPage';
 import DispatchDashboardPage from './pages/DispatchDashboardPage';
 import SalesmenPage from './pages/SalesmenPage';
 import PNLReportPage from './pages/PNLReportPage';
+import SalesDetailedReportPage from './pages/SalesDetailedReportPage';
+import StorePNLReportPage from './pages/StorePNLReportPage';
+import ExpensesPage from './pages/ExpensesPage';
 import AssetsManagementPage from './pages/AssetsManagementPage';
 import BalanceSheetPage from './pages/BalanceSheetPage';
 import RoleManagementPage from './pages/RoleManagementPage';
@@ -67,6 +70,7 @@ function AppContent() {
         <Route path="/wastage" element={<ProtectedRoute requiredPermission="inventory"><WastagePage /></ProtectedRoute>} />
         
         <Route path="/sales" element={<ProtectedRoute requiredPermission="sales"><SalesPage /></ProtectedRoute>} />
+        <Route path="/sales-report" element={<ProtectedRoute requiredPermission="sales"><SalesDetailedReportPage /></ProtectedRoute>} />
         <Route path="/salesmen" element={<ProtectedRoute requiredPermission="sales"><SalesmenPage /></ProtectedRoute>} />
         
         <Route path="/accounts" element={<ProtectedRoute requiredPermission="accounts"><AccountsPage /></ProtectedRoute>} />
@@ -75,6 +79,9 @@ function AppContent() {
         <Route path="/pnl-report" element={<ProtectedRoute requiredPermission="accounts"><PNLReportPage /></ProtectedRoute>} />
         <Route path="/client-statements" element={<ProtectedRoute requiredPermission="accounts"><ClientStatementsPage /></ProtectedRoute>} />
         
+        <Route path="/store-pnl" element={<ProtectedRoute requiredPermission="accounts"><StorePNLReportPage /></ProtectedRoute>} />
+        <Route path="/expenses" element={<ProtectedRoute requiredPermission="accounts"><ExpensesPage /></ProtectedRoute>} />
+
         <Route path="/administration" element={<ProtectedRoute requiredPermission="users"><AdministrationPage /></ProtectedRoute>} />
         <Route path="/roles-management" element={<ProtectedRoute requiredPermission="roles"><RoleManagementPage /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />

@@ -48,7 +48,7 @@ const AssetsManagementPage: React.FC = () => {
   const handleSaveEmployee = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    const payload = Object.fromEntries(formData);
+    const payload: any = Object.fromEntries(formData);
     
     if (payload.role === 'new_role') {
       payload.role = payload.custom_role;
@@ -102,7 +102,7 @@ const AssetsManagementPage: React.FC = () => {
   const handleSaveLiability = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    const payload = Object.fromEntries(formData);
+    const payload: any = Object.fromEntries(formData);
     
     if (payload.type === 'new_type') {
       payload.type = payload.custom_type;

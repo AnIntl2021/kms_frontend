@@ -381,7 +381,7 @@ const SalesPage = () => {
     return 'status-badge';
   };
 
-  const filteredSales = (sales || []).filter(s => {
+  const filteredSales = (Array.isArray(sales) ? sales : []).filter(s => {
     const nameMatch = (s.customer_name || '').toLowerCase().includes(searchTerm.toLowerCase());
     const orderNum = 100000 + (s.sale_id || 0);
     const idMatch = String(s.sale_id || '').includes(searchTerm) || 
@@ -392,12 +392,12 @@ const SalesPage = () => {
   });
 
   const stats = {
-    totalRevenue: (Array.isArray(sales) ? sales : [])
+    totalRevenue: filteredSales
       .filter(s => ['delivered', 'dispatched', 'in_transit', 'paid'].includes((s.dispatch_status || '').toLowerCase()))
-      .reduce((acc, curr) => acc + (Number(curr.final_amount || 0) - Number(curr.returns_amount || 0)), 0),
-    pendingDispatch: (Array.isArray(sales) ? sales : []).filter(s => (s.dispatch_status || '').toLowerCase() === 'pending').length,
-    todayOrders: (Array.isArray(sales) ? sales : []).length,
-    completed: (Array.isArray(sales) ? sales : []).filter(s => (s.dispatch_status || '').toLowerCase() === 'delivered').length
+      .reduce((acc, curr) => acc + (Number(curr.final_amount || curr.total_amount || 0) - Number(curr.returns_amount || 0)), 0),
+    pendingDispatch: filteredSales.filter(s => (s.dispatch_status || '').toLowerCase() === 'pending').length,
+    todayOrders: filteredSales.length,
+    completed: filteredSales.filter(s => (s.dispatch_status || '').toLowerCase() === 'delivered').length
   };
 
   return (
@@ -406,35 +406,35 @@ const SalesPage = () => {
         {/* Sales Performance Metrics */}
         <div className="inventory-metrics">
           <div className="metric-card">
-            <div className="metric-icon bg-green"><BadgeCent size={24} /></div>
+            <div className="metric-icon bg-green"><TrendingUp size={24} /></div>
             <div className="metric-details">
                <span>{t("todays_revenue")}</span>
                <h3>{stats.totalRevenue.toFixed(3)} {t("kd_currency")}</h3>
-              <p className="trend positive"><TrendingUp size={12} /> +12.5% vs yesterday</p>
+               <p className="trend positive"><TrendingUp size={12}/> +12.5% vs yesterday</p>
             </div>
           </div>
           <div className="metric-card">
             <div className="metric-icon bg-orange"><Clock size={24} /></div>
             <div className="metric-details">
-              <span>{t("pending_dispatch")}</span>
-              <h3>{stats.pendingDispatch}</h3>
-              <p className="trend warning">Needs attention</p>
+               <span>{t("pending_dispatch")}</span>
+               <h3>{stats.pendingDispatch}</h3>
+               <p className="trend warning">Needs attention</p>
             </div>
           </div>
           <div className="metric-card">
-            <div className="metric-icon bg-blue"><Package size={24} /></div>
+            <div className="metric-icon bg-blue"><Truck size={24} /></div>
             <div className="metric-details">
-              <span>{t("total_orders")}</span>
-              <h3>{stats.todayOrders}</h3>
-              <p className="trend neutral">Live tracking</p>
+               <span>{t("total_orders")}</span>
+               <h3>{stats.todayOrders}</h3>
+               <p className="trend neutral">Live tracking</p>
             </div>
           </div>
           <div className="metric-card">
             <div className="metric-icon bg-purple"><CheckCircle2 size={24} /></div>
             <div className="metric-details">
-              <span>{t("completed_transfers")}</span>
-              <h3>{stats.completed}</h3>
-              <p className="trend positive">High efficiency</p>
+               <span>{t("completed_transfers")}</span>
+               <h3>{stats.completed}</h3>
+               <p className="trend positive">High efficiency</p>
             </div>
           </div>
         </div>

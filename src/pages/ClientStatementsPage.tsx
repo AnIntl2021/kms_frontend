@@ -31,6 +31,7 @@ interface StatementItem {
   price: number;
   name_en: string;
   name_ar: string;
+  returns_qty?: number;
 }
 
 interface StatementOrder {
@@ -147,7 +148,7 @@ const ClientStatementsPage: React.FC = () => {
       @media print {
         @page {
           size: A4 portrait;
-          margin: 12mm 10mm 12mm 10mm;
+          margin: 8mm 8mm 8mm 8mm;
           @bottom-left {
             content: "Fresh & Fast Statement";
             font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
@@ -171,6 +172,7 @@ const ClientStatementsPage: React.FC = () => {
           width: 100% !important;
           margin: 0 !important;
           padding: 0 !important;
+          zoom: 0.9;
         }
       }
     `
@@ -251,6 +253,17 @@ const ClientStatementsPage: React.FC = () => {
   };
 
   const clientInfo = selectedClientInfo();
+
+  const productBreakdown = Object.values(filteredOrders.reduce((acc, order) => {
+    order.items?.forEach(item => {
+      if (!acc[item.menu_item_id]) {
+        acc[item.menu_item_id] = { name_en: item.name_en, name_ar: item.name_ar, quantity: 0, returnsQty: 0 };
+      }
+      acc[item.menu_item_id].quantity += Number(item.quantity || 0);
+      acc[item.menu_item_id].returnsQty += Number(item.returns_qty || 0);
+    });
+    return acc;
+  }, {} as Record<number, { name_en: string, name_ar: string, quantity: number, returnsQty: number }>)).sort((a, b) => b.quantity - a.quantity);
 
   const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
   const paginatedOrders = filteredOrders.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
@@ -1160,18 +1173,69 @@ const ClientStatementsPage: React.FC = () => {
             )}
           </table>
 
-          {/* Totals Summary Card */}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: isSummaryPrint ? '1rem' : '2rem', pageBreakInside: 'avoid' }}>
+          {/* Totals Summary Card & Product Breakdown */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '2rem', marginTop: isSummaryPrint ? '0.5rem' : '1rem', pageBreakInside: 'avoid', alignItems: 'stretch' }}>
+            
+            {/* Product Breakdown Table (Left) */}
+            <div style={{
+              flex: 1,
+              background: '#ffffff',
+              borderRadius: '12px',
+              border: '1px solid #cbd5e1',
+              overflow: 'hidden'
+            }}>
+              <div style={{ background: '#f8fafc', padding: '10px 14px', borderBottom: '1px solid #cbd5e1' }}>
+                <h4 style={{ margin: 0, fontSize: '11px', color: '#0f172a', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  {language === 'ar' ? 'ملخص المنتجات' : 'Products Breakdown'}
+                </h4>
+              </div>
+              <div style={{ padding: '0' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+                  <thead>
+                    <tr style={{ background: '#f1f5f9', color: '#475569', fontSize: '10px', textTransform: 'uppercase' }}>
+                      <th style={{ padding: '8px 14px', textAlign: isRTL ? 'right' : 'left', borderBottom: '1px solid #cbd5e1' }}>{language === 'ar' ? 'المنتج' : 'Product'}</th>
+                      <th style={{ padding: '8px 14px', textAlign: 'center', borderBottom: '1px solid #cbd5e1' }}>{language === 'ar' ? 'الكمية المباعة' : 'Qty Sold'}</th>
+                      <th style={{ padding: '8px 14px', textAlign: 'center', borderBottom: '1px solid #cbd5e1' }}>{language === 'ar' ? 'مرتجع' : 'Qty Ret'}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {productBreakdown.map((prod, idx) => (
+                      <tr key={idx} style={{ borderBottom: '1px solid #e2e8f0' }}>
+                        <td style={{ padding: '8px 14px', fontWeight: 600, color: '#334155' }}>{language === 'ar' ? (prod.name_ar || prod.name_en) : prod.name_en}</td>
+                        <td style={{ padding: '8px 14px', textAlign: 'center', fontWeight: 700, color: 'var(--primary)' }}>{prod.quantity}</td>
+                        <td style={{ padding: '8px 14px', textAlign: 'center', fontWeight: 700, color: '#ef4444' }}>{prod.returnsQty > 0 ? prod.returnsQty : '0'}</td>
+                      </tr>
+                    ))}
+                    {productBreakdown.length === 0 && (
+                      <tr>
+                        <td colSpan={3} style={{ padding: '12px', textAlign: 'center', color: '#94a3b8' }}>{language === 'ar' ? 'لا توجد بيانات' : 'No Data'}</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Totals Summary Card (Right) */}
             <div style={{ 
               width: '340px', 
-              padding: '1.25rem', 
               background: '#f8fafc', 
               borderRadius: '12px', 
               border: '1px solid #01562c',
-              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
+              boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
+              flexShrink: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden'
             }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #e2e8f0', fontSize: '13px' }}>
-                <span style={{ fontWeight: 600, color: '#475569' }}>{language === 'ar' ? 'الإجمالي قبل الخصم' : 'Gross Amount'}:</span>
+              <div style={{ background: '#e6f4ea', padding: '10px 14px', borderBottom: '1px solid #01562c' }}>
+                <h4 style={{ margin: 0, fontSize: '11px', color: '#01562c', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  {language === 'ar' ? 'ملخص الحساب' : 'Account Summary'}
+                </h4>
+              </div>
+              <div style={{ padding: '1.25rem', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #e2e8f0', fontSize: '13px' }}>
+                  <span style={{ fontWeight: 600, color: '#475569' }}>{language === 'ar' ? 'الإجمالي قبل الخصم' : 'Gross Amount'}:</span>
                 <span style={{ fontWeight: 700, color: '#0f172a' }}>{totalGross.toFixed(3)} {t('kd_currency')}</span>
               </div>
               {totalDiscount > 0 && (
@@ -1202,9 +1266,10 @@ const ClientStatementsPage: React.FC = () => {
               </div>
             </div>
           </div>
+        </div>
 
           {/* Signature / Stamp Area */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: isSummaryPrint ? '1cm' : '3cm', fontSize: '12px', color: '#475569', pageBreakInside: 'avoid' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: isSummaryPrint ? '1cm' : '1.5cm', fontSize: '12px', color: '#475569', pageBreakInside: 'avoid' }}>
             <div style={{ textAlign: 'center', width: '220px' }}>
               <div style={{ borderBottom: '1.5px dashed #cbd5e1', height: '120px', marginBottom: '10px' }} />
               <p style={{ margin: 0, fontWeight: 700 }}>{language === 'ar' ? 'توقيع العميل المستلم' : 'Recipient Customer Sign'}</p>

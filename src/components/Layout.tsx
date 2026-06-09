@@ -99,12 +99,15 @@ const Layout: React.FC<LayoutProps> = ({ children, title }) => {
     { name: t('purchase_orders'), path: '/purchases', icon: <ShoppingCart size={20} />, section: 'Operations', permission: 'inventory' },
     { name: t('production_distribution'), path: '/factory-dispatch', icon: <Zap size={20} />, section: 'Operations', permission: 'inventory' },
     { name: t('direct_sales'), path: '/sales', icon: <Truck size={20} />, section: 'Operations', permission: 'sales' },
+    { name: 'Sales Detailed Report', path: '/sales-report', icon: <FileText size={20} />, section: 'Operations', permission: 'sales' },
     { name: t('analytics_forecasts'), path: '/analytics', icon: <BarChart2 size={20} />, section: 'Operations' },
     { name: t('reports_bi'), path: '/reports', icon: <FileText size={20} />, section: 'Operations' },
     { name: t('food_cost'), path: '/food-cost', icon: <Calculator size={20} />, section: 'Operations' },
     { name: t('client_statements'), path: '/client-statements', icon: <FileText size={20} />, section: 'Operations', permission: 'accounts' },
     { name: t('dispatch_dashboard'), path: '/dispatch-dashboard', icon: <Navigation size={20} />, section: 'Operations', permission: 'inventory' },
     { name: t('profit_loss_report'), path: '/pnl-report', icon: <BadgeCent size={20} />, section: 'Operations', permission: 'accounts' },
+    { name: 'Store PNL Report', path: '/store-pnl', icon: <Calculator size={20} />, section: 'Operations', permission: 'accounts' },
+    { name: 'Expenses', path: '/expenses', icon: <FileText size={20} />, section: 'Operations', permission: 'accounts' },
     { name: t('accounts'), path: '/accounts', icon: <Wallet size={20} />, section: 'Operations', permission: 'accounts' },
     { name: t('sales_team'), path: '/salesmen', icon: <Users size={20} />, section: 'Operations', permission: 'sales' },
     { name: t('administration'), path: '/administration', icon: <ShieldCheck size={20} />, section: 'Admin', permission: 'users' },
@@ -148,7 +151,7 @@ const Layout: React.FC<LayoutProps> = ({ children, title }) => {
                 <Link 
                   key={item.name} 
                   to={item.path}
-                  className={`nav-item ${location.pathname.startsWith(item.path) ? 'active' : ''}`}
+                  className={`nav-item ${(location.pathname === item.path || location.pathname.startsWith(item.path + '/')) ? 'active' : ''}`}
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   <span className="nav-icon">{item.icon}</span>
