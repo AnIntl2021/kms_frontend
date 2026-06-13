@@ -134,7 +134,7 @@ const RoleManagementPage: React.FC = () => {
   };
 
   return (
-    <Layout title="Role & Access Management">
+    <Layout title={t('role_access_management')}>
       <div className="roles-management-container fade-in">
         
         <div className="tabs-container">
@@ -142,22 +142,22 @@ const RoleManagementPage: React.FC = () => {
             className={`tab-btn ${activeTab === 'roles' ? 'active' : ''}`}
             onClick={() => setActiveTab('roles')}
           >
-            <Shield size={18} /> Roles & Permissions
+            <Shield size={18} /> {t('roles_permissions')}
           </button>
           <button 
             className={`tab-btn ${activeTab === 'users' ? 'active' : ''}`}
             onClick={() => setActiveTab('users')}
           >
-            <Users size={18} /> System Login Users
+            <Users size={18} /> {t('system_login_users')}
           </button>
         </div>
 
         {activeTab === 'roles' && (
           <div className="data-table-wrapper fade-in">
             <div className="table-header">
-              <h2>Custom Access Roles</h2>
+              <h2>{t('custom_access_roles')}</h2>
               <button className="primary-btn" onClick={() => { setEditingRole(null); setIsRoleModalOpen(true); }}>
-                <Plus size={16} style={{marginRight: '6px', verticalAlign: 'middle'}}/> Create Role
+                <Plus size={16} style={{marginRight: '6px', verticalAlign: 'middle'}}/> {t('create_role')}
               </button>
             </div>
             
@@ -172,13 +172,13 @@ const RoleManagementPage: React.FC = () => {
                       </div>
                       <div className="role-info">
                         <h3>{role.display_name_en}</h3>
-                        <p>Internal ID: {role.role_name}</p>
+                        <p>{t('internal_id')}: {role.role_name}</p>
                       </div>
                       <div style={{marginLeft: 'auto', display: 'flex', gap: '8px'}}>
                         <button 
                           className="btn-close" 
                           onClick={() => { setEditingRole(role); setIsRoleModalOpen(true); }}
-                          title="Edit Role"
+                          title={t('edit_role')}
                         >
                           <Edit size={14} />
                         </button>
@@ -186,14 +186,14 @@ const RoleManagementPage: React.FC = () => {
                           className="btn-close" 
                           style={{ color: '#ef4444' }}
                           onClick={() => handleDeleteRole(role.role_id)}
-                          title="Delete Role"
+                          title={t('delete_role')}
                         >
                           <Trash2 size={14} />
                         </button>
                       </div>
                     </div>
                     <div className="permissions-list">
-                      {perms.length === 0 ? <span className="permission-badge">No Permissions</span> : null}
+                      {perms.length === 0 ? <span className="permission-badge">{t('no_permissions')}</span> : null}
                       {perms.map((p: string) => (
                         <span key={p} className="permission-badge">{p}</span>
                       ))}
@@ -208,20 +208,20 @@ const RoleManagementPage: React.FC = () => {
         {activeTab === 'users' && (
           <div className="data-table-wrapper fade-in">
             <div className="table-header">
-              <h2>System Users</h2>
+              <h2>{t('system_users')}</h2>
               <button className="primary-btn" onClick={() => { setEditingUser(null); setIsUserModalOpen(true); }}>
-                <Plus size={16} style={{marginRight: '6px', verticalAlign: 'middle'}}/> Create User
+                <Plus size={16} style={{marginRight: '6px', verticalAlign: 'middle'}}/> {t('create_user')}
               </button>
             </div>
             <table className="modern-table">
               <thead>
                 <tr>
-                  <th>Name</th>
-                  <th>Username</th>
-                  <th>Email</th>
-                  <th>Role</th>
-                  <th>Status</th>
-                  <th>Actions</th>
+                  <th>{t('name')}</th>
+                  <th>{t('username')}</th>
+                  <th>{t('email')}</th>
+                  <th>{t('role')}</th>
+                  <th>{t('status')}</th>
+                  <th>{t('actions')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -239,18 +239,18 @@ const RoleManagementPage: React.FC = () => {
                     <td>
                       {user.admin_id !== 1 && (
                         <div className="action-buttons" style={{ display: 'flex', gap: '8px' }}>
-                          <button className="btn-icon edit" onClick={() => { setEditingUser(user); setIsUserModalOpen(true); }} title="Edit User">
+                          <button className="btn-icon edit" onClick={() => { setEditingUser(user); setIsUserModalOpen(true); }} title={t('edit_user')}>
                             <Edit size={16} />
                           </button>
                           <button 
                             className="btn-icon" 
                             style={{ color: user.status === 'active' ? '#f59e0b' : '#10b981', background: 'transparent', border: 'none', cursor: 'pointer' }} 
                             onClick={() => handleToggleStatus(user)} 
-                            title={user.status === 'active' ? 'Disable User' : 'Enable User'}
+                            title={user.status === 'active' ? t('disable_user') : t('enable_user')}
                           >
                             <Shield size={16} />
                           </button>
-                          <button className="btn-icon delete" onClick={() => handleDeleteUser(user.admin_id)} title="Delete User">
+                          <button className="btn-icon delete" onClick={() => handleDeleteUser(user.admin_id)} title={t('delete_user')}>
                             <Trash2 size={16} />
                           </button>
                         </div>
@@ -268,21 +268,21 @@ const RoleManagementPage: React.FC = () => {
           <div className="modal-overlay">
             <div className="modal-content">
               <div className="modal-header">
-                <h3>{editingRole ? 'Edit Role' : 'Create New Role'}</h3>
+                <h3>{editingRole ? t('edit_role') : t('create_role')}</h3>
                 <button className="btn-close" onClick={() => setIsRoleModalOpen(false)}><X size={20} /></button>
               </div>
               <form onSubmit={handleSaveRole}>
                 <div className="modal-body">
                   <div className="form-group">
-                    <label>Role Name (No Spaces)</label>
+                    <label>{t('role_name')}</label>
                     <input type="text" name="role_name" defaultValue={editingRole?.role_name} placeholder="e.g. kitchen_staff" required readOnly={!!editingRole} />
                   </div>
                   <div className="form-group">
-                    <label>Display Name</label>
+                    <label>{t('display_name')}</label>
                     <input type="text" name="display_name_en" defaultValue={editingRole?.display_name_en} placeholder="e.g. Kitchen Staff" required />
                   </div>
                   <div className="form-group">
-                    <label>Module Access Permissions</label>
+                    <label>{t('module_access_permissions')}</label>
                     <div className="permissions-grid">
                       {ALL_PERMISSIONS.map(perm => {
                         const currentPerms = editingRole && typeof editingRole.permissions === 'string' 
@@ -304,8 +304,8 @@ const RoleManagementPage: React.FC = () => {
                   </div>
                 </div>
                 <div className="modal-footer">
-                  <button type="button" className="btn-secondary" onClick={() => setIsRoleModalOpen(false)}>Cancel</button>
-                  <button type="submit" className="primary-btn">{editingRole ? 'Update Role' : 'Save Role'}</button>
+                  <button type="button" className="btn-secondary" onClick={() => setIsRoleModalOpen(false)}>{t('cancel')}</button>
+                  <button type="submit" className="primary-btn">{editingRole ? t('update_role') : t('save_role')}</button>
                 </div>
               </form>
             </div>
@@ -317,38 +317,38 @@ const RoleManagementPage: React.FC = () => {
           <div className="modal-overlay">
             <div className="modal-content">
               <div className="modal-header">
-                <h3>{editingUser ? 'Edit System User' : 'Create System Login User'}</h3>
+                <h3>{editingUser ? t('edit_user') : t('create_user')}</h3>
                 <button className="btn-close" onClick={() => { setIsUserModalOpen(false); setEditingUser(null); }}><X size={20} /></button>
               </div>
               <form onSubmit={handleSaveUser}>
                 <div className="modal-body">
                   <div style={{display: 'flex', gap: '12px'}}>
                     <div className="form-group" style={{flex: 1}}>
-                      <label>First Name</label>
+                      <label>{t('first_name')}</label>
                       <input type="text" name="first_name" defaultValue={editingUser?.first_name} required />
                     </div>
                     <div className="form-group" style={{flex: 1}}>
-                      <label>Last Name</label>
+                      <label>{t('last_name')}</label>
                       <input type="text" name="last_name" defaultValue={editingUser?.last_name} />
                     </div>
                   </div>
                   <div className="form-group">
-                    <label>Email</label>
+                    <label>{t('email')}</label>
                     <input type="email" name="email" defaultValue={editingUser?.email} required />
                   </div>
                   <div className="form-group">
-                    <label>Username (Login ID)</label>
+                    <label>{t('username')}</label>
                     <input type="text" name="username" defaultValue={editingUser?.username} required />
                   </div>
                   <div className="form-group">
-                    <label>Password {editingUser && <span style={{fontSize: '12px', color: '#64748b'}}>(Leave blank to keep current)</span>}</label>
+                    <label>{t('password')} {editingUser && <span style={{fontSize: '12px', color: '#64748b'}}>{t('leave_blank_keep_current')}</span>}</label>
                     <input type="password" name="password" required={!editingUser} />
                   </div>
                   <div style={{display: 'flex', gap: '12px'}}>
                     <div className="form-group" style={{flex: 1}}>
-                      <label>Assigned Role</label>
+                      <label>{t('assigned_role')}</label>
                       <select key={editingUser ? editingUser.admin_id : 'new'} name="role_id" required defaultValue={editingUser?.role_id ? editingUser.role_id.toString() : ""}>
-                        <option value="" disabled>Select a Role...</option>
+                        <option value="" disabled>{t('select_role')}</option>
                         {roles.map(r => (
                           <option key={r.role_id} value={r.role_id.toString()}>{r.display_name_en}</option>
                         ))}
@@ -356,18 +356,18 @@ const RoleManagementPage: React.FC = () => {
                     </div>
                     {editingUser && (
                       <div className="form-group" style={{flex: 1}}>
-                        <label>Status</label>
+                        <label>{t('status')}</label>
                         <select name="status" defaultValue={editingUser.status} required>
-                          <option value="active">Active</option>
-                          <option value="inactive">Inactive</option>
+                          <option value="active">{t('active')}</option>
+                          <option value="inactive">{t('inactive')}</option>
                         </select>
                       </div>
                     )}
                   </div>
                 </div>
                 <div className="modal-footer">
-                  <button type="button" className="btn-secondary" onClick={() => { setIsUserModalOpen(false); setEditingUser(null); }}>Cancel</button>
-                  <button type="submit" className="primary-btn">{editingUser ? 'Update User' : 'Create User'}</button>
+                  <button type="button" className="btn-secondary" onClick={() => { setIsUserModalOpen(false); setEditingUser(null); }}>{t('cancel')}</button>
+                  <button type="submit" className="primary-btn">{editingUser ? t('update_user') : t('create_user')}</button>
                 </div>
               </form>
             </div>
