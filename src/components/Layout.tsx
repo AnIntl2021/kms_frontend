@@ -23,21 +23,24 @@ import {
   FileText,
   Users,
   Navigation,
+  Server,
+  Printer,
   Calculator,
   BadgeCent,
   Briefcase,
   Scale,
-  Key
+  Key,
+  Layers
 } from 'lucide-react';
 import './Layout.css';
-import logo from '../assets/logo.jpeg';
+import logo from '../assets/Ansoftt_new.jpeg';
 import api from '../api/axios';
 import { useLanguage } from '../hooks/useLanguage';
 import AIAssistant from './AIAssistant';
 
 interface LayoutProps {
   children: React.ReactNode;
-  title: string;
+  title?: string;
 }
 
 const Layout: React.FC<LayoutProps> = ({ children, title }) => {
@@ -45,15 +48,50 @@ const Layout: React.FC<LayoutProps> = ({ children, title }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
+  const getInitialSettings = () => {
+    const cached = localStorage.getItem('tenantSettings');
+    return cached ? JSON.parse(cached) : {
+      company_name: 'Ansoftt',
+      company_arabic_name: 'أنسوفت',
+      order_prefix: 'ORD-',
+      currency_code: 'KWD',
+      currency_symbol: 'د.ك',
+      currency_decimals: '3',
+      country_phone_code: '+965',
+      business_type: 'restaurant_pos'
+    };
+  };
+  const [tenantSettings, setTenantSettings] = useState<any>(getInitialSettings);
   const { admin, logout } = useAuthStore();
   const { language, setLanguage, t, isRTL } = useLanguage();
   const location = useLocation();
 
   useEffect(() => {
     fetchNotifications();
+    fetchThemeSettings();
     const interval = setInterval(fetchNotifications, 30000); // 30s refresh
     return () => clearInterval(interval);
   }, []);
+
+  const fetchThemeSettings = async () => {
+    try {
+      const res = await api.get('/settings');
+      if (res.data.success) {
+        const s = res.data.data;
+        localStorage.setItem('tenantSettings', JSON.stringify(s));
+        setTenantSettings(s);
+        // Inject CSS Variables
+        const primaryColor = s.primary_color || '#1b4645';
+        document.documentElement.style.setProperty('--primary', primaryColor);
+        document.documentElement.style.setProperty('--primary-dark', primaryColor);
+        if (s.text_color) {
+          document.documentElement.style.setProperty('--btn-text', s.text_color);
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to fetch theme settings.");
+    }
+  };
 
   const fetchNotifications = async () => {
     try {
@@ -98,8 +136,8 @@ const Layout: React.FC<LayoutProps> = ({ children, title }) => {
     { name: t('vendors_clients'), path: '/vendors', icon: <Store size={20} />, section: 'Operations', permission: 'inventory' },
     { name: t('purchase_orders'), path: '/purchases', icon: <ShoppingCart size={20} />, section: 'Operations', permission: 'inventory' },
     { name: t('production_distribution'), path: '/factory-dispatch', icon: <Zap size={20} />, section: 'Operations', permission: 'inventory' },
-    { name: t('direct_sales'), path: '/sales', icon: <Truck size={20} />, section: 'Operations', permission: 'sales' },
-    { name: 'Sales Detailed Report', path: '/sales-report', icon: <FileText size={20} />, section: 'Operations', permission: 'sales' },
+    { name: 'Point of Sale (POS)', path: '/pos', icon: <ShoppingCart size={20} />, section: 'Operations', permission: 'sales' },
+    { name: 'Sales History', path: '/sales', icon: <FileText size={20} />, section: 'Operations', permission: 'sales' },
     { name: t('analytics_forecasts'), path: '/analytics', icon: <BarChart2 size={20} />, section: 'Operations' },
     { name: t('reports_bi'), path: '/reports', icon: <FileText size={20} />, section: 'Operations' },
     { name: t('food_cost'), path: '/food-cost', icon: <Calculator size={20} />, section: 'Operations' },
@@ -112,14 +150,39 @@ const Layout: React.FC<LayoutProps> = ({ children, title }) => {
     { name: t('sales_team'), path: '/salesmen', icon: <Users size={20} />, section: 'Operations', permission: 'sales' },
     { name: t('administration'), path: '/administration', icon: <ShieldCheck size={20} />, section: 'Admin', permission: 'users' },
     { name: 'Role Management', path: '/roles-management', icon: <Key size={20} />, section: 'Admin', permission: 'roles' },
+    { name: 'Branch Management', path: '/branch-management', icon: <Store size={20} />, section: 'Admin' },
+    { name: 'Brand Management', path: '/brand-management', icon: <FolderTree size={20} />, section: 'Admin' },
+    { name: 'POS Counters', path: '/pos-counters', icon: <Layers size={20} />, section: 'Admin' },
+    { name: 'Billing & Plans', path: '/billing', icon: <Wallet size={20} />, section: 'Admin' },
+    { name: 'Stock Transfer', path: '/stock-transfer', icon: <Truck size={20} />, section: 'Operations', permission: 'inventory' },
     { name: t('settings'), path: '/settings', icon: <Settings size={20} />, section: 'Admin' },
     { name: 'Assets Mgt', path: '/assets-management', icon: <Briefcase size={20} />, section: 'Admin', permission: 'assets' },
     { name: 'Balance Sheet', path: '/balance-sheet', icon: <Scale size={20} />, section: 'Operations', permission: 'balance-sheet' },
+    { name: 'SaaS Dashboard', path: '/superadmin/dashboard', icon: <Server size={20} />, section: 'SaaS Admin' },
+    { name: 'Tenant Management', path: '/superadmin/tenants', icon: <Users size={20} />, section: 'SaaS Admin' },
   ];
 
   const navItems = allNavItems.filter(item => {
+    // If user is a master admin, ONLY show SaaS Admin items
+    if (admin?.isMaster) {
+      return item.section === 'SaaS Admin';
+    }
+
+    // For tenant users, hide SaaS Admin items
+    if (item.section === 'SaaS Admin') return false;
+
+    // Check business type for B2B/Dispatch pages
+    const isB2BPage = ['/factory-dispatch', '/client-statements', '/dispatch-dashboard'].includes(item.path);
+    const businessType = tenantSettings.business_type || 'restaurant_pos';
+    if (isB2BPage && businessType === 'restaurant_pos') {
+      return false;
+    }
+    
+    // For tenant super_admin, show all regular items
     if (admin?.role === 'super_admin') return true;
-    if (!item.permission) return true; // Items without a specific permission requirement
+    
+    // For other tenant users, check permissions
+    if (!item.permission) return true; 
     return admin?.permissions?.includes(item.permission);
   });
 
@@ -131,23 +194,22 @@ const Layout: React.FC<LayoutProps> = ({ children, title }) => {
     <div className={`app-container ${collapsed ? 'sidebar-collapsed' : ''} ${mobileMenuOpen ? 'mobile-open' : ''}`}>
       <aside className="sidebar">
         <div className="sidebar-header">
-          <div className="brand-logo-small">
-            <img src={logo} alt="L" />
-          </div>
-          <div className="brand-info">
-            <span className="brand-name" style={{ fontFamily: "'Oleo Script', cursive" }}>Fresh & Fast</span>
-            <span className="brand-sub">Restaurant Company</span>
-          </div>
+          <Link to="/dashboard" className="logo-link flex flex-col items-center justify-center w-full text-center">
+            <img src={logo} alt="Logo" className="layout-logo object-contain" />
+          </Link>
           <button className="mobile-close" onClick={() => setMobileMenuOpen(false)}>
             <X size={20} />
           </button>
         </div>
 
         <nav className="sidebar-nav">
-          {['Main', 'Operations', 'Admin'].map((section) => (
+          {['SaaS Admin', 'Main', 'Operations', 'Admin'].map((section) => {
+            const sectionItems = navItems.filter(item => item.section === section);
+            if (sectionItems.length === 0) return null;
+            return (
             <div key={section} className="nav-section">
-              <div className="section-label">{t(section.toLowerCase())}</div>
-              {navItems.filter(item => item.section === section).map((item) => (
+              <div className="section-label">{t(section.toLowerCase()) || section}</div>
+              {sectionItems.map((item) => (
                 <Link 
                   key={item.name} 
                   to={item.path}
@@ -159,7 +221,7 @@ const Layout: React.FC<LayoutProps> = ({ children, title }) => {
                 </Link>
               ))}
             </div>
-          ))}
+          )})}
         </nav>
 
         <div className="sidebar-footer">
@@ -174,7 +236,7 @@ const Layout: React.FC<LayoutProps> = ({ children, title }) => {
             </button>
           </div>
           <div className="powered-by">
-            {t('powered_by')} <b>An International</b>
+            {t('powered_by')} <b>AN International</b>
           </div>
         </div>
       </aside>

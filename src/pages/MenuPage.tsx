@@ -66,6 +66,7 @@ const MenuPage = () => {
   const [categories, setCategories] = useState<any[]>([]);
   const [inventoryItems, setInventoryItems] = useState<any[]>([]);
   const [allPackages, setAllPackages] = useState<any[]>([]);
+  const [branches, setBranches] = useState<any[]>([]);
   
   const [formData, setFormData] = useState({
     name_en: '',
@@ -79,7 +80,8 @@ const MenuPage = () => {
     description_en: '',
     description_ar: '',
     yield_quantity: 1.000,
-    ingredients: [] as { inventory_item_id: string, package_id: string, quantity: string }[]
+    ingredients: [] as { inventory_item_id: string, package_id: string, quantity: string }[],
+    branch_customizations: [] as { branch_id: number, custom_price: string, status: 'available' | 'unavailable' }[]
   });
 
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -141,17 +143,40 @@ const MenuPage = () => {
 
   const fetchSupportData = async () => {
     try {
-      let catRes;
+      let catData = [];
       try {
-        catRes = await api.get('/categories');
+        const catRes = await api.get('/categories');
+        catData = catRes.data.data || [];
       } catch (e) {
-        catRes = await api.get('/business/categories');
+        try {
+          const catResAlt = await api.get('/business/categories');
+          catData = catResAlt.data.data || [];
+        } catch(err) {
+          console.error('Failed to fetch categories:', err);
+        }
       }
-      const invRes = await api.get('/inventory');
-      const pkgRes = await api.get('/inventory/packages');
-      setCategories(catRes.data.data || []);
-      setInventoryItems(invRes.data.data || []);
-      setAllPackages(pkgRes.data.data || []);
+      setCategories(catData);
+
+      try {
+        const invRes = await api.get('/inventory');
+        setInventoryItems(invRes.data.data || []);
+      } catch (e) {
+        console.error('Failed to fetch inventory:', e);
+      }
+
+      try {
+        const pkgRes = await api.get('/inventory/packages');
+        setAllPackages(pkgRes.data.data || []);
+      } catch (e) {
+        console.error('Failed to fetch packages:', e);
+      }
+
+      try {
+        const branchesRes = await api.get('/branches');
+        setBranches(branchesRes.data.data || []);
+      } catch (e) {
+        console.error('Failed to fetch branches:', e);
+      }
     } catch (error) {
       console.error('Failed to fetch support data:', error);
     }
@@ -196,6 +221,11 @@ const MenuPage = () => {
             inventory_item_id: ing.sub_menu_item_id ? `pre-${ing.sub_menu_item_id}` : `inv-${ing.inventory_item_id}`,
             package_id: String(ing.package_id || ''),
             quantity: String(ing.quantity || '')
+          })),
+          branch_customizations: (details.branch_customizations || []).map((bc: any) => ({
+            branch_id: bc.branch_id,
+            custom_price: bc.custom_price !== null ? String(bc.custom_price) : '',
+            status: bc.status
           }))
         });
         if (details.image_url) {
@@ -248,6 +278,7 @@ const MenuPage = () => {
       form.append('yield_quantity', formData.yield_quantity.toString());
       form.append('type', activeTab === 'menu' ? 'selling' : 'premix');
       form.append('ingredients', JSON.stringify(formData.ingredients));
+      form.append('branch_customizations', JSON.stringify(formData.branch_customizations));
       
       if (imageFile) {
         form.append('image', imageFile);
@@ -294,7 +325,8 @@ const MenuPage = () => {
       description_en: '',
       description_ar: '',
       yield_quantity: 1.000,
-      ingredients: []
+      ingredients: [],
+      branch_customizations: []
     });
     setImageFile(null);
     setImagePreview(null);
@@ -589,6 +621,75 @@ const MenuPage = () => {
                       <label style={{ fontWeight: 600, fontSize: '13px', color: '#64748b' }}>{t('description_ar')}</label>
                       <textarea dir="rtl" rows={2} style={{ padding: '0.85rem', borderRadius: '12px', border: '1px solid #e2e8f0', resize: 'none' }} value={formData.description_ar} onChange={(e) => setFormData({...formData, description_ar: e.target.value})} placeholder="..." />
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {!isPremix && branches.length > 0 && (
+                <div className="form-section-premium" style={{ marginBottom: '2rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem', color: 'var(--primary)' }}>
+                    <div style={{ background: 'rgba(5, 76, 45, 0.1)', padding: '8px', borderRadius: '10px' }}><BadgeCent size={20} /></div>
+                    <h4 style={{ margin: 0 }}>{t('branch_pricing_visibility') || 'Branch Pricing & Visibility'}</h4>
+                  </div>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    {branches.map((br) => {
+                      const custom = formData.branch_customizations.find(c => c.branch_id === br.branch_id) || {
+                        branch_id: br.branch_id,
+                        custom_price: '',
+                        status: 'available'
+                      };
+
+                      const setCustomField = (field: 'custom_price' | 'status', value: any) => {
+                        const exists = formData.branch_customizations.some(c => c.branch_id === br.branch_id);
+                        let updated: { branch_id: number; custom_price: string; status: 'available' | 'unavailable' }[] = [];
+                        if (exists) {
+                          updated = formData.branch_customizations.map(c => 
+                            c.branch_id === br.branch_id ? { ...c, [field]: value } : c
+                          ) as any;
+                        } else {
+                          updated = [...formData.branch_customizations, { 
+                            branch_id: br.branch_id, 
+                            custom_price: '', 
+                            status: 'available', 
+                            [field]: value 
+                          }] as any;
+                        }
+                        setFormData(prev => ({ ...prev, branch_customizations: updated }));
+                      };
+
+                      return (
+                        <div key={br.branch_id} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '1rem', alignItems: 'center', background: '#f8fafc', padding: '1rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                          <div>
+                            <strong style={{ fontSize: '14px', color: '#1e293b' }}>{language === 'ar' ? (br.name_ar || br.name_en) : br.name_en}</strong>
+                          </div>
+                          
+                          <div className="form-group" style={{ margin: 0 }}>
+                            <select 
+                              value={custom.status}
+                              onChange={(e) => setCustomField('status', e.target.value)}
+                              style={{ padding: '0.5rem', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', width: '100%' }}
+                            >
+                              <option value="available">{t('available') || 'Available'}</option>
+                              <option value="unavailable">{t('unavailable') || 'Unavailable'}</option>
+                            </select>
+                          </div>
+
+                          <div className="form-group" style={{ margin: 0, position: 'relative' }}>
+                            <input 
+                              type="number" 
+                              step="0.001" 
+                              placeholder={`${formData.price} KD`}
+                              value={custom.custom_price}
+                              onChange={(e) => setCustomField('custom_price', e.target.value)}
+                              disabled={custom.status === 'unavailable'}
+                              style={{ padding: '0.5rem 0.5rem 0.5rem 1.8rem', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', width: '100%' }}
+                            />
+                            <BadgeCent size={12} style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}

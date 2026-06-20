@@ -12,6 +12,8 @@ const SettingsPage = () => {
   const [settings, setSettings] = useState<any>({});
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [signaturePreview, setSignaturePreview] = useState<string | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
 
   useEffect(() => {
     fetchSettings();
@@ -30,6 +32,15 @@ const SettingsPage = () => {
 
   const handleChange = (key: string, value: string) => {
     setSettings({ ...settings, [key]: value });
+    
+    // Live preview
+    if (key === 'primary_color') {
+      document.documentElement.style.setProperty('--primary', value);
+      document.documentElement.style.setProperty('--primary-dark', value);
+    }
+    if (key === 'text_color') {
+      document.documentElement.style.setProperty('--btn-text', value);
+    }
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -38,6 +49,7 @@ const SettingsPage = () => {
     try {
       await api.post('/settings/update', settings);
       toast.success(t('settings_updated_success'));
+      setTimeout(() => window.location.reload(), 1000);
     } catch (error) {
       toast.error(t('failed_update_configs'));
     } finally {
@@ -46,7 +58,7 @@ const SettingsPage = () => {
   };
 
   const renderTabContent = () => {
-    if (loading) return <FoodLoader size="large" />;
+    if (loading || !settings || Object.keys(settings).length === 0) return <FoodLoader size="large" />;
 
     switch (activeTab) {
       case 'general':
@@ -83,6 +95,129 @@ const SettingsPage = () => {
                     onChange={(e) => handleChange('contact_number', e.target.value)}
                     placeholder="e.g. +965 12345678"
                   />
+                </div>
+                
+                <div className="form-group">
+                  <label>Company Logo</label>
+                  <input 
+                    type="file" 
+                    accept="image/*"
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        const reader = new FileReader();
+                        reader.onload = (ev) => {
+                          if (ev.target?.result) {
+                            setLogoPreview(ev.target.result.toString());
+                            handleChange('company_logo', ev.target.result.toString());
+                          }
+                        };
+                        reader.readAsDataURL(e.target.files[0]);
+                      }
+                    }}
+                  />
+                  {(logoPreview || settings.company_logo) && (
+                    <div className="mt-2 border rounded p-2 bg-gray-50 flex justify-center">
+                      <img src={logoPreview || settings.company_logo} alt="Company Logo" className="max-h-16" />
+                    </div>
+                  )}
+                </div>
+
+                <div className="grid-2-col" style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem'}}>
+                  <div className="form-group">
+                    <label>Primary Theme Color</label>
+                    <div style={{display: 'flex', gap: '10px', alignItems: 'center'}}>
+                      <input 
+                        type="color" 
+                        value={settings.primary_color || '#1b4645'} 
+                        onChange={(e) => handleChange('primary_color', e.target.value)}
+                        style={{width: '50px', height: '40px', padding: '0', border: 'none', borderRadius: '4px', cursor: 'pointer'}}
+                      />
+                        <input 
+                          type="text" 
+                          value={settings.primary_color || '#1b4645'} 
+                          onChange={(e) => handleChange('primary_color', e.target.value)}
+                          className="font-mono text-sm"
+                          style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px', width: '100px' }}
+                        />
+                    </div>
+                  </div>
+                  <div className="form-group">
+                    <label>Text Color</label>
+                    <div style={{display: 'flex', gap: '10px', alignItems: 'center'}}>
+                      <input 
+                        type="color" 
+                        value={settings.text_color || '#ffffff'} 
+                        onChange={(e) => handleChange('text_color', e.target.value)}
+                        style={{width: '50px', height: '40px', padding: '0', border: 'none', borderRadius: '4px', cursor: 'pointer'}}
+                      />
+                        <input 
+                          type="text" 
+                          value={settings.text_color || '#ffffff'} 
+                          onChange={(e) => handleChange('text_color', e.target.value)}
+                          className="font-mono text-sm"
+                          style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px', width: '100px' }}
+                        />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label>Default Print Size</label>
+                  <select 
+                    className="form-select w-full p-2 border rounded" 
+                    value={settings.print_size || 'thermal'} 
+                    onChange={(e) => handleChange('print_size', e.target.value)}
+                  >
+                    <option value="thermal">Thermal Receipt Printer (80mm)</option>
+                    <option value="a4">Standard A4 Printer</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label>Receipt Header Text</label>
+                  <textarea 
+                    value={settings.receipt_header || ''} 
+                    onChange={(e) => handleChange('receipt_header', e.target.value)}
+                    placeholder="Enter receipt header text"
+                    rows={3}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Use \n for new lines. This appears at the top of every receipt.</p>
+                </div>
+
+                <div className="form-group">
+                  <label>Receipt Footer Text</label>
+                  <textarea 
+                    value={settings.receipt_footer || ''} 
+                    onChange={(e) => handleChange('receipt_footer', e.target.value)}
+                    placeholder="Enter receipt footer text"
+                    rows={2}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Use \n for new lines. This appears at the bottom of every receipt.</p>
+                </div>
+
+                <div className="form-group">
+                  <label>Digital Signature (For Invoices)</label>
+                  <input 
+                    type="file" 
+                    accept="image/*"
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        const reader = new FileReader();
+                        reader.onload = (ev) => {
+                          if (ev.target?.result) {
+                            setSignaturePreview(ev.target.result.toString());
+                            handleChange('digital_signature', ev.target.result.toString());
+                          }
+                        };
+                        reader.readAsDataURL(e.target.files[0]);
+                      }
+                    }}
+                  />
+                  {(signaturePreview || settings.digital_signature) && (
+                    <div className="mt-2 border rounded p-2 bg-gray-50 flex justify-center">
+                      <img src={signaturePreview || settings.digital_signature} alt="Signature" className="max-h-16" />
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

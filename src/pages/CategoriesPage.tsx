@@ -57,19 +57,26 @@ const CategoriesPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const payload = {
+      name_en: formData.name_en,
+      name_ar: formData.name_ar,
+      parent_id: formData.parent_id ? Number(formData.parent_id) : null,
+      sort_order: 0
+    };
+
     try {
       if (editingCategory) {
-        await api.put(`/business/categories/${editingCategory.category_id}`, formData);
+        await api.put(`/business/categories/${editingCategory.category_id}`, payload);
       } else {
-        await api.post('/business/categories', formData);
+        await api.post('/business/categories', payload);
       }
       setIsModalOpen(false);
       setEditingCategory(null);
       setFormData({ name_en: '', name_ar: '', parent_id: '', sort_order: '0' });
       fetchCategories();
       toast.success(t('category_updated_success'));
-    } catch (error) {
-      toast.error('Failed to save category.');
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to save category.');
     }
   };
 
@@ -125,13 +132,12 @@ const CategoriesPage = () => {
                 <tr>
                   <th>{t('category_name')}</th>
                   <th>{t('level')}</th>
-                  <th>{t('order')}</th>
-                  <th className="text-right">{t('actions')}</th>
+                  <th className="text-end">{t('actions')}</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
-                  <tr><td colSpan={4} className="text-center py-5"><FoodLoader size="small" /></td></tr>
+                  <tr><td colSpan={3} className="text-center py-5"><FoodLoader size="small" /></td></tr>
                 ) : parentCategories.map(parent => (
                   <React.Fragment key={parent.category_id}>
                     <tr className="parent-row">
@@ -145,11 +151,10 @@ const CategoriesPage = () => {
                         </div>
                       </td>
                       <td><span className="status-badge healthy">{t('primary')}</span></td>
-                      <td>{parent.sort_order}</td>
-                      <td className="text-right">
+                      <td className="text-end">
                         <div className="row-actions">
-                          <button className="btn-icon-sm" onClick={() => handleEdit(parent)}><Edit3 size={16} /></button>
-                          <button className="btn-icon-sm" onClick={() => handleDelete(parent.category_id)}><Trash2 size={16} /></button>
+                          <button className="btn-icon-sm" onClick={() => handleEdit(parent)}><Edit3 size={16}/></button>
+                          <button className="btn-icon-sm" onClick={() => handleDelete(parent.category_id)}><Trash2 size={16}/></button>
                         </div>
                       </td>
                     </tr>
@@ -165,11 +170,10 @@ const CategoriesPage = () => {
                           </div>
                         </td>
                         <td><span className="status-badge" style={{background: '#f1f5f9', color: '#64748b'}}>{t('sub_category')}</span></td>
-                        <td>{sub.sort_order}</td>
-                        <td className="text-right">
+                        <td className="text-end">
                           <div className="row-actions">
-                            <button className="btn-icon-sm" onClick={() => handleEdit(sub)}><Edit3 size={16} /></button>
-                            <button className="btn-icon-sm" onClick={() => handleDelete(sub.category_id)}><Trash2 size={16} /></button>
+                            <button className="btn-icon-sm" onClick={() => handleEdit(sub)}><Edit3 size={16}/></button>
+                            <button className="btn-icon-sm" onClick={() => handleDelete(sub.category_id)}><Trash2 size={16}/></button>
                           </div>
                         </td>
                       </tr>
@@ -211,10 +215,6 @@ const CategoriesPage = () => {
                   <label>{t('category_name_ar_star')}</label>
                   <input type="text" required dir="rtl" value={formData.name_ar} onChange={(e) => setFormData({...formData, name_ar: e.target.value})} />
                 </div>
-              </div>
-              <div className="form-group">
-                <label>{t('sort_order')}</label>
-                <input type="number" value={formData.sort_order} onChange={(e) => setFormData({...formData, sort_order: e.target.value})} />
               </div>
               <div className="modal-footer" style={{padding: '1.5rem 0 0'}}>
                 <button type="button" className="btn-secondary" onClick={() => setIsModalOpen(false)}>{t('cancel')}</button>

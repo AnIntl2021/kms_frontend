@@ -53,7 +53,10 @@ interface AuditLog {
 interface Role {
   role_id: number;
   role_name: string;
-  display_name_en: string;
+  display_name_en?: string;
+  branch_id?: number;
+  branch_name?: string;
+  created_at: string;
 }
 
 const AdministrationPage = () => {
@@ -69,6 +72,7 @@ const AdministrationPage = () => {
   // Modals
   const [showUserModal, setShowUserModal] = useState(false);
   const [showBranchModal, setShowBranchModal] = useState(false);
+  const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
   
   // Forms
   const [userForm, setUserForm] = useState({
@@ -78,6 +82,7 @@ const AdministrationPage = () => {
     first_name: '',
     last_name: '',
     role_id: '',
+    branch_id: '',
     status: 'active'
   });
 
@@ -97,12 +102,14 @@ const AdministrationPage = () => {
     setLoading(true);
     try {
       if (activeTab === 'users') {
-        const [userRes, roleRes] = await Promise.all([
+        const [userRes, roleRes, branchRes] = await Promise.all([
           api.get('/auth/users'),
-          api.get('/auth/roles')
+          api.get('/auth/roles'),
+          api.get('/branches')
         ]);
         setUsers(userRes.data.data || []);
         setRoles(roleRes.data.data || []);
+        setBranches(branchRes.data.data || []);
       } else if (activeTab === 'branches') {
         const res = await api.get('/branches');
         setBranches(res.data.data || []);
@@ -117,16 +124,79 @@ const AdministrationPage = () => {
     }
   };
 
-  const handleAddUser = async (e: React.FormEvent) => {
+  const openAddUserModal = () => {
+    setEditingUser(null);
+    setUserForm({ username: '', email: '', password: '', first_name: '', last_name: '', role_id: '', branch_id: '', status: 'active' });
+    setShowUserModal(true);
+  };
+
+  const openEditUserModal = (user: any) => {
+    setEditingUser(user);
+    setUserForm({
+      username: user.username,
+      email: user.email,
+      password: '', // blank password doesn't update it
+      first_name: user.first_name,
+      last_name: user.last_name || '',
+      role_id: user.role_id ? String(user.role_id) : '',
+      branch_id: user.branch_id ? String(user.branch_id) : '',
+      status: user.status
+    });
+    setShowUserModal(true);
+  };
+
+  const handleSaveUser = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await api.post('/auth/users', userForm);
+      if (editingUser) {
+        // Prepare payload, only send password if entered
+        const payload: any = { ...userForm };
+        if (!payload.password) delete payload.password;
+        await api.put(`/auth/users/${editingUser.admin_id}`, payload);
+        toast.success('Staff account updated successfully');
+      } else {
+        await api.post('/auth/users', userForm);
+        toast.success(t('staff_account_success'));
+      }
       setShowUserModal(false);
-      setUserForm({ username: '', email: '', password: '', first_name: '', last_name: '', role_id: '', status: 'active' });
+      setEditingUser(null);
+      setUserForm({ username: '', email: '', password: '', first_name: '', last_name: '', role_id: '', branch_id: '', status: 'active' });
       fetchData();
-      toast.success(t('staff_account_success'));
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to create staff account.');
+      toast.error(error.response?.data?.message || 'Failed to save staff account.');
+    }
+  };
+
+  const handleDeleteUser = async (id: number) => {
+    if (window.confirm('Are you sure you want to deactivate/delete this user?')) {
+      try {
+        await api.delete(`/auth/users/${id}`);
+        toast.success('Staff account deleted successfully');
+        fetchData();
+      } catch (error: any) {
+        toast.error('Failed to delete user.');
+      }
+    }
+  };
+
+  const handleResetPassword = async (user: any) => {
+    const newPassword = window.prompt(`Enter new password for ${user.username}:`);
+    if (newPassword) {
+      try {
+        await api.put(`/auth/users/${user.admin_id}`, {
+          first_name: user.first_name,
+          last_name: user.last_name,
+          email: user.email,
+          username: user.username,
+          role_id: user.role_id,
+          branch_id: user.branch_id,
+          status: user.status,
+          password: newPassword
+        });
+        toast.success('Password updated successfully');
+      } catch (err: any) {
+        toast.error('Failed to reset password');
+      }
     }
   };
 
@@ -173,14 +243,14 @@ const AdministrationPage = () => {
             <input type="text" placeholder={t('search_tab_hint').replace('{tab}', t(activeTab))} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}/>
            </div>
            <div className="action-buttons">
-              {activeTab === 'users' && <button className="btn-add" style={{ background: 'var(--primary)' }} onClick={() => setShowUserModal(true)}><Plus size={18} /> {t('add_user')}</button>}
+              {activeTab === 'users' && <button className="btn-add" style={{ background: 'var(--primary)' }} onClick={openAddUserModal}><Plus size={18} /> {t('add_user')}</button>}
               {activeTab === 'branches' && <button className="btn-add" style={{ background: 'var(--primary)' }} onClick={() => setShowBranchModal(true)}><Plus size={18} /> {t('new_branch')}</button>}
            </div>
         </div>
 
         {/* Dynamic Table Card */}
         <div className="stock-table-card">
-          <div className="table-wrapper">
+           <div className="table-wrapper">
             <table>
               {activeTab === 'users' && (
                 <>
@@ -190,7 +260,7 @@ const AdministrationPage = () => {
                       <th>{t('username')}</th>
                       <th>{t('email_contact')}</th>
                       <th>{t('role')}</th>
-                      <th>{t('created')}</th>
+                      <th>Branch</th>
                       <th>{t('status')}</th>
                       <th className="text-end">{t('actions')}</th>
                     </tr>
@@ -219,13 +289,13 @@ const AdministrationPage = () => {
                               {user.role_name?.toUpperCase().replace(/_/g, ' ')}
                            </span>
                         </td>
-                        <td>{new Date(user.created_at).toLocaleDateString()}</td>
+                        <td>{(user as any).branch_name || 'Master'}</td>
                         <td><span className={getStatusBadge(user.status)}>{user.status}</span></td>
                         <td className="text-end">
                            <div className="row-actions">
-                              <button className="btn-icon-sm" style={{color: '#6366f1'}} title="Reset Password"><Lock size={16}/></button>
-                              <button className="btn-icon-sm" style={{color: 'var(--primary)'}}><Edit3 size={16}/></button>
-                              <button className="btn-icon-sm" style={{color: '#ef4444'}}><Trash2 size={16}/></button>
+                              <button className="btn-icon-sm" style={{color: '#6366f1'}} title="Reset Password" onClick={() => handleResetPassword(user)}><Lock size={16}/></button>
+                              <button className="btn-icon-sm" style={{color: 'var(--primary)'}} title="Edit User" onClick={() => openEditUserModal(user)}><Edit3 size={16}/></button>
+                              <button className="btn-icon-sm" style={{color: '#ef4444'}} title="Delete User" onClick={() => handleDeleteUser(user.admin_id)}><Trash2 size={16}/></button>
                            </div>
                         </td>
                       </tr>
@@ -308,10 +378,10 @@ const AdministrationPage = () => {
         <div className="modal-overlay">
           <div className="modal-content" style={{ maxWidth: '700px' }}>
             <div className="modal-header">
-              <h3><User size={24} style={{ marginRight: '10px', color: 'var(--primary)' }} /> {t('register_staff_account')}</h3>
+              <h3><User size={24} style={{ marginRight: '10px', color: 'var(--primary)' }} /> {editingUser ? 'Edit Staff Account' : t('register_staff_account')}</h3>
               <button className="btn-close" onClick={() => setShowUserModal(false)}><X /></button>
             </div>
-            <form onSubmit={handleAddUser}>
+            <form onSubmit={handleSaveUser}>
               <div className="modal-body">
                 <div className="form-grid">
                   <div className="form-group">
@@ -335,8 +405,8 @@ const AdministrationPage = () => {
                 </div>
                 <div className="form-grid">
                   <div className="form-group">
-                    <label><Lock size={14} /> {t('secret_password')}</label>
-                    <input type="password" required value={userForm.password} onChange={e => setUserForm({...userForm, password: e.target.value})} placeholder="••••••••" />
+                    <label><Lock size={14} /> {editingUser ? 'New Password (Leave blank to keep current)' : t('secret_password')}</label>
+                    <input type="password" required={!editingUser} value={userForm.password} onChange={e => setUserForm({...userForm, password: e.target.value})} placeholder={editingUser ? "Leave blank to keep unchanged" : "••••••••"} />
                   </div>
                   <div className="form-group">
                     <label><LayoutGrid size={14} /> {t('system_role')}</label>
@@ -346,11 +416,20 @@ const AdministrationPage = () => {
                     </select>
                   </div>
                 </div>
+                <div className="form-grid">
+                  <div className="form-group" style={{ width: '100%' }}>
+                    <label><Building2 size={14} /> Assigned Branch</label>
+                    <select value={userForm.branch_id} onChange={e => setUserForm({...userForm, branch_id: e.target.value})}>
+                      <option value="">Master / All Branches</option>
+                      {branches.map(b => <option key={b.branch_id} value={b.branch_id}>{b.name_en}</option>)}
+                    </select>
+                  </div>
+                </div>
               </div>
               <div className="modal-footer">
                 <button type="button" className="btn-secondary" onClick={() => setShowUserModal(false)}>{t('cancel')}</button>
                 <button type="submit" className="btn-primary">
-                  <Plus size={18} /> {t('create_account')}
+                  {editingUser ? 'Save Changes' : <><Plus size={18} /> {t('create_account')}</>}
                 </button>
               </div>
             </form>

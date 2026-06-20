@@ -21,12 +21,20 @@ import ClientStatementsPage from './pages/ClientStatementsPage';
 import DispatchDashboardPage from './pages/DispatchDashboardPage';
 import SalesmenPage from './pages/SalesmenPage';
 import PNLReportPage from './pages/PNLReportPage';
-import SalesDetailedReportPage from './pages/SalesDetailedReportPage';
 import StorePNLReportPage from './pages/StorePNLReportPage';
 import ExpensesPage from './pages/ExpensesPage';
 import AssetsManagementPage from './pages/AssetsManagementPage';
 import BalanceSheetPage from './pages/BalanceSheetPage';
 import RoleManagementPage from './pages/RoleManagementPage';
+import SuperAdminDashboard from './pages/SuperAdminDashboard';
+import TenantManagement from './pages/TenantManagement';
+import POSPage from './pages/POSPage';
+import POSCountersPage from './pages/POSCountersPage';
+import BillingPage from './pages/BillingPage';
+import BranchManagement from './pages/BranchManagement';
+import BrandManagement from './pages/BrandManagement';
+import StockTransfer from './pages/StockTransfer';
+import PrintSettingsPage from './pages/PrintSettingsPage';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { LanguageProvider, useLanguage } from './hooks/useLanguage';
@@ -62,6 +70,8 @@ function AppContent() {
           } 
         />
 
+        <Route path="/pos" element={<ProtectedRoute><POSPage /></ProtectedRoute>} />
+
         <Route path="/inventory" element={<ProtectedRoute requiredPermission="inventory"><InventoryPage /></ProtectedRoute>} />
         <Route path="/categories" element={<ProtectedRoute requiredPermission="inventory"><CategoriesPage /></ProtectedRoute>} />
         <Route path="/vendors" element={<ProtectedRoute requiredPermission="inventory"><VendorsPage /></ProtectedRoute>} />
@@ -70,8 +80,9 @@ function AppContent() {
         <Route path="/wastage" element={<ProtectedRoute requiredPermission="inventory"><WastagePage /></ProtectedRoute>} />
         
         <Route path="/sales" element={<ProtectedRoute requiredPermission="sales"><SalesPage /></ProtectedRoute>} />
-        <Route path="/sales-report" element={<ProtectedRoute requiredPermission="sales"><SalesDetailedReportPage /></ProtectedRoute>} />
         <Route path="/salesmen" element={<ProtectedRoute requiredPermission="sales"><SalesmenPage /></ProtectedRoute>} />
+        <Route path="/pos-counters" element={<ProtectedRoute><POSCountersPage /></ProtectedRoute>} />
+        <Route path="/billing" element={<ProtectedRoute><BillingPage /></ProtectedRoute>} />
         
         <Route path="/accounts" element={<ProtectedRoute requiredPermission="accounts"><AccountsPage /></ProtectedRoute>} />
         <Route path="/assets-management" element={<ProtectedRoute requiredPermission="assets"><AssetsManagementPage /></ProtectedRoute>} />
@@ -92,6 +103,14 @@ function AppContent() {
         <Route path="/analytics" element={<ProtectedRoute><AnalyticsPage /></ProtectedRoute>} />
         <Route path="/reports" element={<ProtectedRoute><ReportsPage /></ProtectedRoute>} />
         <Route path="/food-cost" element={<ProtectedRoute><FoodCostPage /></ProtectedRoute>} />
+        <Route path="/branch-management" element={<ProtectedRoute><BranchManagement /></ProtectedRoute>} />
+        <Route path="/brand-management" element={<ProtectedRoute><BrandManagement /></ProtectedRoute>} />
+        <Route path="/stock-transfer" element={<ProtectedRoute><StockTransfer /></ProtectedRoute>} />
+        <Route path="/print-settings" element={<ProtectedRoute><PrintSettingsPage /></ProtectedRoute>} />
+
+        {/* Super Admin Routes */}
+        <Route path="/superadmin/dashboard" element={<ProtectedRoute><SuperAdminDashboard /></ProtectedRoute>} />
+        <Route path="/superadmin/tenants" element={<ProtectedRoute><TenantManagement /></ProtectedRoute>} />
 
         <Route path="/" element={<Navigate to="/dashboard" />} />
       </Routes>

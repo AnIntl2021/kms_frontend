@@ -6,6 +6,7 @@ import FoodLoader from '../components/FoodLoader';
 import { useState, useEffect, useRef } from 'react';
 import Layout from '../components/Layout';
 import api from '../api/axios';
+import { useSettings } from '../hooks/useSettings';
 import { 
   TrendingUp, 
   Truck, 
@@ -33,6 +34,7 @@ import {
 import { useReactToPrint } from 'react-to-print';
 import FullInvoicePrint from '../components/FullInvoicePrint';
 import PrePrintedInvoice from '../components/PrePrintedInvoice';
+import { printReceipt } from '../utils/printUtils';
 import './InventoryPage.css';
 import { toast } from 'react-toastify';
 import SearchableSelect from '../components/SearchableSelect';
@@ -55,6 +57,7 @@ interface SaleOrder {
 
 const SalesPage = () => {
   const { t, language } = useLanguage();
+  const { businessType, getOrderNumber, formatCurrencyValue, currencySymbol } = useSettings();
   const [sales, setSales] = useState<SaleOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -327,12 +330,12 @@ const SalesPage = () => {
 
   const handlePrint = useReactToPrint({
     contentRef: printRef,
-    documentTitle: `Invoice-FNFI-${100000 + (printOrder?.sale_id || 0)}`
+    documentTitle: `Invoice-${getOrderNumber(printOrder?.sale_id || 0)}`
   });
 
   const handleDotMatrixPrint = useReactToPrint({
     contentRef: dotMatrixPrintRef,
-    documentTitle: `LQ350-Invoice-FNFI-${100000 + (printOrder?.sale_id || 0)}`
+    documentTitle: `LQ350-Invoice-${getOrderNumber(printOrder?.sale_id || 0)}`
   });
 
   const preparePrint = async (sale: any, isPrePrinted: boolean = false) => {
@@ -350,6 +353,29 @@ const SalesPage = () => {
         }
      } catch (e) {
         toast.error('Failed to fetch invoice details.');
+     }
+  };
+
+  const handleThermalPrint = async (sale: any) => {
+     try {
+        const res = await api.get(`/sales/${sale.sale_id}`);
+        if (res.data.success) {
+           const order = res.data.data;
+           const itemsToPrint = (order.items || []).map((item: any) => ({
+             name: (item.name_en && item.name_ar) ? `${item.name_en} / ${item.name_ar}` : (item.name_en || item.name_ar),
+             price: Number(item.price || 0),
+             quantity: Number(item.quantity || 0)
+           }));
+           printReceipt(
+             itemsToPrint,
+             Number(order.total_amount),
+             'DIRECT SALE',
+             (order.payment_method || 'CASH').toUpperCase(),
+             getOrderNumber(order.sale_id)
+           );
+        }
+     } catch (e) {
+        toast.error('Failed to print thermal receipt.');
      }
   };
 
@@ -384,21 +410,24 @@ const SalesPage = () => {
 
   const filteredSales = (Array.isArray(sales) ? sales : []).filter(s => {
     const nameMatch = (s.customer_name || '').toLowerCase().includes(searchTerm.toLowerCase());
-    const orderNum = 100000 + (s.sale_id || 0);
+    const orderNo = getOrderNumber(s.sale_id || 0);
     const idMatch = String(s.sale_id || '').includes(searchTerm) || 
-                    String(orderNum).includes(searchTerm) ||
-                    `FNFI-${orderNum}`.toLowerCase().includes(searchTerm.toLowerCase());
+                    orderNo.toLowerCase().includes(searchTerm.toLowerCase());
     const statusMatch = (statusFilter === 'all' || s.dispatch_status === statusFilter);
     return (nameMatch || idMatch) && statusMatch;
   });
 
   const stats = {
     totalRevenue: filteredSales
-      .filter(s => ['delivered', 'dispatched', 'in_transit', 'paid'].includes((s.dispatch_status || '').toLowerCase()))
+      .filter(s => 
+        ['delivered', 'dispatched', 'in_transit'].includes((s.dispatch_status || '').toLowerCase()) ||
+        (s.payment_status || '').toLowerCase() === 'paid' ||
+        ((s as any).status || '').toLowerCase() === 'completed'
+      )
       .reduce((acc, curr) => acc + (Number(curr.final_amount || curr.total_amount || 0) - Number(curr.returns_amount || 0)), 0),
     pendingDispatch: filteredSales.filter(s => (s.dispatch_status || '').toLowerCase() === 'pending').length,
     todayOrders: filteredSales.length,
-    completed: filteredSales.filter(s => (s.dispatch_status || '').toLowerCase() === 'delivered').length
+    completed: filteredSales.filter(s => (s.dispatch_status || '').toLowerCase() === 'delivered' || ((s as any).status || '').toLowerCase() === 'completed').length
   };
 
   return (
@@ -410,7 +439,7 @@ const SalesPage = () => {
             <div className="metric-icon bg-green"><TrendingUp size={24} /></div>
             <div className="metric-details">
                <span>{t("todays_revenue")}</span>
-               <h3>{stats.totalRevenue.toFixed(3)} {t("kd_currency")}</h3>
+               <h3>{stats.totalRevenue.toFixed(3)} {currencySymbol}</h3>
                <p className="trend positive"><TrendingUp size={12}/> +12.5% vs yesterday</p>
             </div>
           </div>
@@ -480,7 +509,7 @@ const SalesPage = () => {
                   <th>{t("discount_percent")}</th>
                   <th>{t("total_amount")}</th>
                   <th>{t("payment")}</th>
-                  <th>{t("dispatch_status")}</th>
+                  {businessType !== 'restaurant_pos' && <th>{t("dispatch_status")}</th>}
                   <th className="text-end">{t("actions")}</th>
                 </tr>
               </thead>
@@ -491,7 +520,7 @@ const SalesPage = () => {
                   <tr key={sale.sale_id || Math.random()}>
                     <td>
                       <div className="item-info">
-                        <strong>FNFI-{100000 + (sale.sale_id || 0)}</strong>
+                        <strong>{getOrderNumber(sale.sale_id || 0)}</strong>
                         <span>{sale.items_count || 0} {t("items_included")}</span>
                       </div>
                     </td>
@@ -531,7 +560,7 @@ const SalesPage = () => {
                     </td>
                     <td>
                        <span style={{ fontSize: '14px', color: '#1e293b', fontWeight: 800 }}>
-                          {Number(sale.total_amount).toFixed(3)} د.ك
+                          {formatCurrencyValue(sale.total_amount)} {currencySymbol}
                        </span>
                     </td>
                     <td>
@@ -539,7 +568,7 @@ const SalesPage = () => {
                           {Number(sale.discount_percentage || 0) > 0 ? `${Number(sale.discount_percentage).toFixed(2)}%` : '-'}
                        </span>
                     </td>
-                    <td><strong style={{ fontSize: '15px', color: 'var(--primary)' }}>{Number(sale.final_amount || sale.total_amount).toFixed(3)} {t("kd_currency")}</strong></td>
+                    <td><strong style={{ fontSize: '15px', color: 'var(--primary)' }}>{formatCurrencyValue(sale.final_amount || sale.total_amount)} {currencySymbol}</strong></td>
                     <td>
                       <select 
                         className={getStatusBadge(sale.payment_status)} 
@@ -552,22 +581,24 @@ const SalesPage = () => {
                         <option value="failed">failed</option>
                       </select>
                     </td>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <span className={getStatusBadge(sale.dispatch_status)}>{sale.dispatch_status}</span>
-                        {sale.dispatch_status === 'dispatched' && <Truck size={14} color="#f59e0b" />}
-                        {sale.dispatch_status === 'delivered' && <CheckCircle2 size={14} color="#10b981" />}
-                      </div>
-                    </td>
+                    {businessType !== 'restaurant_pos' && (
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span className={getStatusBadge(sale.dispatch_status)}>{sale.dispatch_status}</span>
+                          {sale.dispatch_status === 'dispatched' && <Truck size={14} color="#f59e0b" />}
+                          {sale.dispatch_status === 'delivered' && <CheckCircle2 size={14} color="#10b981" />}
+                        </div>
+                      </td>
+                    )}
                     <td className="text-end">
                       <div className="row-actions" style={{ position: 'relative', display: 'flex', gap: '8px', justifyContent: 'flex-end', alignItems: 'center' }}>
                          {/* Core Quick Actions (Visible) */}
                          <button className="btn-icon-sm" style={{color: '#64748b'}} title="View Details" onClick={(e) => { e.stopPropagation(); handleViewOrder(sale); }}><Eye size={16} /></button>
                          
-                         {sale.dispatch_status === 'pending' && (
+                         {businessType !== 'restaurant_pos' && sale.dispatch_status === 'pending' && (
                             <button className="btn-icon-sm" style={{color: '#f59e0b'}} title="Dispatch Order" onClick={(e) => { e.stopPropagation(); handleUpdateStatus(sale.sale_id, 'dispatched'); }}><Truck size={16} /></button>
                          )}
-                         {sale.dispatch_status === 'dispatched' && (
+                         {businessType !== 'restaurant_pos' && sale.dispatch_status === 'dispatched' && (
                             <button className="btn-icon-sm" style={{color: '#10b981'}} title="Confirm Delivery" onClick={(e) => { e.stopPropagation(); handleUpdateStatus(sale.sale_id, 'delivered'); }}><CheckCircle2 size={16} /></button>
                          )}
 
@@ -595,6 +626,9 @@ const SalesPage = () => {
                                 overflow: 'hidden',
                                 marginTop: '5px'
                               }}>
+                                <button className="dropdown-item" onClick={() => handleThermalPrint(sale)} style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '10px 15px', border: 'none', background: 'none', textAlign: 'left', fontSize: '13px', cursor: 'pointer' }}>
+                                  <Receipt size={14} color="#f59e0b" /> Thermal Print
+                                </button>
                                 <button className="dropdown-item" onClick={() => preparePrint(sale, false)} style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%', padding: '10px 15px', border: 'none', background: 'none', textAlign: 'left', fontSize: '13px', cursor: 'pointer' }}>
                                   <Printer size={14} color="#054c2d" /> {t("standard_pdf_print")}
                                 </button>
@@ -630,7 +664,7 @@ const SalesPage = () => {
               <div className="modal-header">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                   <Eye size={24} color="var(--primary)" />
-                  <h3 style={{ margin: 0 }}>{t("order_details")} FNFI-{100000 + (detailOrder.sale_id || 0)}</h3>
+                  <h3 style={{ margin: 0 }}>{t("order_details")} {getOrderNumber(detailOrder.sale_id || 0)}</h3>
                 </div>
                 <button className="btn-close" onClick={() => setIsDetailModalOpen(false)}><X size={20} /></button>
               </div>
@@ -648,22 +682,22 @@ const SalesPage = () => {
                     {detailOrder.items?.map((item: any) => (
                        <div key={item.sale_item_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'white', padding: '1rem', borderRadius: '12px', border: '1px solid #f1f5f9' }}>
                            <div><p style={{ margin: 0, fontWeight: 700 }}>{language === 'ar' ? (item.name_ar || item.name_en) : item.name_en}</p><p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>{t("quantity")}: {item.quantity}</p></div>
-                           <p style={{ margin: 0, fontWeight: 800, color: 'var(--primary)' }}>{Number(item.price * item.quantity).toFixed(3)} {t("kd_currency")}</p>
+                           <p style={{ margin: 0, fontWeight: 800, color: 'var(--primary)' }}>{formatCurrencyValue(item.price * item.quantity)} {currencySymbol}</p>
                        </div>
                     ))}
                  </div>
                  <div style={{ marginTop: '2rem', borderTop: '2px dashed #e2e8f0', paddingTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                        <span style={{ fontSize: '14px', color: '#64748b' }}>{t("subtotal")}</span>
-                       <span style={{ fontWeight: 700 }}>{Number(detailOrder.items?.reduce((s: any, i: any) => s + (i.price * i.quantity), 0) || 0).toFixed(3)} {t("kd_currency")}</span>
+                       <span style={{ fontWeight: 700 }}>{formatCurrencyValue(detailOrder.items?.reduce((s: any, i: any) => s + (i.price * i.quantity), 0) || 0)} {currencySymbol}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#ef4444' }}>
                        <span style={{ fontSize: '14px' }}>{t("discount")} {Number(detailOrder.discount_percentage) > 0 && `(${detailOrder.discount_percentage}%)`}</span>
-                       <span style={{ fontWeight: 700 }}>-{Number(detailOrder.discount_amount || 0).toFixed(3)} {t("kd_currency")}</span>
+                       <span style={{ fontWeight: 700 }}>-{formatCurrencyValue(detailOrder.discount_amount || 0)} {currencySymbol}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px solid #f1f5f9' }}>
                        <h3 style={{ margin: 0 }}>{t("net_total")}</h3>
-                       <h2 style={{ margin: 0, color: 'var(--primary)', fontWeight: 900 }}>{Number(detailOrder.total_amount).toFixed(3)} {t("kd_currency")}</h2>
+                       <h2 style={{ margin: 0, color: 'var(--primary)', fontWeight: 900 }}>{formatCurrencyValue(detailOrder.total_amount)} {currencySymbol}</h2>
                     </div>
                  </div>
               </div>
@@ -854,10 +888,10 @@ const SalesPage = () => {
                              )}
                              <div style={{ padding: menuViewMode === 'grid' ? '12px' : '0', display: 'flex', flexDirection: 'column', flex: 1 }}>
                                <span style={{ fontSize: '13px', fontWeight: 700, color: '#334155', lineHeight: '1.2' }}>{item.name_en}</span>
-                               {menuViewMode === 'grid' && <span style={{ fontSize: '12px', color: 'var(--primary)', fontWeight: 800, marginTop: '4px' }}>{Number(item.price).toFixed(3)} KD</span>}
+                               {menuViewMode === 'grid' && <span style={{ fontSize: '12px', color: 'var(--primary)', fontWeight: 800, marginTop: '4px' }}>{formatCurrencyValue(item.price)} {currencySymbol}</span>}
                              </div>
                              {menuViewMode === 'list' && (
-                               <span style={{ fontSize: '12px', color: 'var(--primary)', fontWeight: 800, marginLeft: 'auto' }}>{Number(item.price).toFixed(3)} KD</span>
+                               <span style={{ fontSize: '12px', color: 'var(--primary)', fontWeight: 800, marginLeft: 'auto' }}>{formatCurrencyValue(item.price)} {currencySymbol}</span>
                              )}
                            </div>
                          ))}
@@ -877,7 +911,7 @@ const SalesPage = () => {
             <div className="modal-header">
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 <Edit size={24} color="var(--primary)" />
-                <h3 style={{ margin: 0 }}>Modify Order FNFI-{100000 + (editingOrder.sale_id || 0)}</h3>
+                <h3 style={{ margin: 0 }}>Modify Order {getOrderNumber(editingOrder.sale_id || 0)}</h3>
               </div>
               <button className="btn-close" onClick={() => setIsEditModalOpen(false)}><X size={20} /></button>
             </div>

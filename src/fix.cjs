@@ -1,6 +1,6 @@
 const fs = require('fs');
 
-let content = fs.readFileSync('c:/xampp/htdocs/fresh_n_fast_frontend/src/pages/StorePNLReportPage.tsx', 'utf-8');
+let content = fs.readFileSync('c:/xampp/htdocs/kitchen_management_frontend/src/pages/StorePNLReportPage.tsx', 'utf-8');
 
 // The CSS starts with <style>{` and ends with `}</style> right inside the first </Layout>
 const styleStart = content.indexOf('<style>{`');
@@ -23,7 +23,7 @@ if (styleStart !== -1 && styleEnd !== -1) {
     const lastLayoutIndex = content.lastIndexOf('</Layout>');
     content = content.substring(0, lastLayoutIndex) + cssBlock + '\n    ' + content.substring(lastLayoutIndex);
     
-    fs.writeFileSync('c:/xampp/htdocs/fresh_n_fast_frontend/src/pages/StorePNLReportPage.tsx', content);
+    fs.writeFileSync('c:/xampp/htdocs/kitchen_management_frontend/src/pages/StorePNLReportPage.tsx', content);
     console.log('Fixed CSS injection!');
 } else {
     console.log('Could not find CSS block!');

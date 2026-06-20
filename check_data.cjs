@@ -7,7 +7,7 @@ async function dump() {
       host: 'localhost',
       user: 'root',
       password: '',
-      database: 'fresh_n_fast'
+      database: 'kms'
     });
 
     const [rows] = await connection.execute('SELECT sale_id, order_number, vendor_id, branch_id, customer_name FROM sales_orders ORDER BY sale_id DESC LIMIT 20');

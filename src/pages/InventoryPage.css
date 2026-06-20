@@ -90,7 +90,7 @@
 }
 
 .form-group input:focus, .form-group select:focus {
-  border-color: var(--primary);
+  border-color: var(--gray-800);
   box-shadow: 0 0 0 4px rgba(1, 86, 44, 0.05);
 }
 
@@ -222,7 +222,7 @@
 }
 
 .search-group input:focus {
-  border-color: var(--primary);
+  border-color: var(--gray-800);
   outline: none;
   box-shadow: 0 0 0 4px rgba(1, 86, 44, 0.05);
 }
@@ -382,7 +382,7 @@ tbody td {
 
 .item-preview-box span { font-size: 0.8rem; color: var(--gray-500); }
 .item-preview-box strong { font-size: 1.15rem; color: #1a1a1a; margin-top: 0.25rem; }
-.item-preview-box small { font-size: 0.8rem; color: var(--primary); font-weight: 700; margin-top: 0.25rem; }
+.item-preview-box small { font-size: 0.8rem; color: var(--gray-800); font-weight: 700; margin-top: 0.25rem; }
 
 .adjust-type-toggle {
   display: flex;
@@ -408,9 +408,9 @@ tbody td {
 }
 
 .type-btn.add.active {
-  border-color: var(--primary);
+  border-color: var(--gray-800);
   background: rgba(1, 86, 44, 0.05);
-  color: var(--primary);
+  color: var(--gray-800);
 }
 
 .type-btn.subtract.active {
@@ -444,8 +444,8 @@ tbody td {
 
 .btn-icon-sm:hover {
   background: white;
-  color: var(--primary);
-  border-color: var(--primary);
+  color: var(--gray-800);
+  border-color: var(--gray-800);
 }
 /* Package Management Enhancements */
 .form-section {
@@ -484,7 +484,7 @@ tbody td {
   gap: 6px;
   font-size: 0.75rem;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--gray-800);
   background: none;
   border: none;
   cursor: pointer;
@@ -537,7 +537,7 @@ tbody td {
 
 .pkg-table input:focus, .pkg-table select:focus {
   background: white;
-  border-color: var(--primary);
+  border-color: var(--gray-800);
 }
 
 .pkg-table input:disabled {
@@ -734,7 +734,7 @@ tbody td {
 .qty-unit { font-size: 0.7rem; color: #94a3b8; font-weight: 700; text-transform: uppercase; }
 
 .revenue-stack { display: flex; flex-direction: column; gap: 4px; }
-.rev-main { font-size: 1rem; font-weight: 800; color: var(--primary); }
+.rev-main { font-size: 1rem; font-weight: 800; color: var(--gray-800); }
 .contribution-bar { display: flex; align-items: center; gap: 8px; }
 .contribution-bar .fill { height: 6px; border-radius: 3px; background: #e2e8f0; position: relative; width: 60px; overflow: hidden; }
 .contribution-bar .fill::after { content: ''; position: absolute; left: 0; top: 0; height: 100%; background: var(--primary); width: 100%; transform-origin: left; }

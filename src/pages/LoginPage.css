@@ -70,8 +70,9 @@
 }
 
 .brand-mini img {
-  height: 80px; 
+  height: 55px; 
   width: auto;
+  max-width: 100%;
 }
 
 
@@ -124,7 +125,7 @@
 }
 
 .form-group input:focus {
-  border-color: var(--primary);
+  border-color: var(--gray-800);
   background: var(--white);
   box-shadow: 0 0 0 4px rgba(1, 86, 44, 0.05);
   outline: none;
@@ -145,8 +146,10 @@
 }
 
 .btn-login:hover:not(:disabled) {
-  background: #004221;
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  opacity: 0.9;
+  filter: brightness(1.1);
 }
 
 .error-msg { 
@@ -327,7 +330,7 @@
 }
 
 .password-toggle:hover {
-  color: var(--primary);
+  color: var(--gray-800);
 }
 
 .password-wrapper input {
@@ -375,12 +378,12 @@
 }
 
 .remember-me:hover input ~ .checkbox-custom {
-  border-color: var(--primary);
+  border-color: var(--gray-800);
 }
 
 .remember-me input:checked ~ .checkbox-custom {
-  background-color: var(--primary);
-  border-color: var(--primary);
+  background-color: var(--gray-800);
+  border-color: var(--gray-800);
 }
 
 .checkbox-custom:after {

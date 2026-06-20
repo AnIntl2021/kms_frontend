@@ -1,5 +1,6 @@
 import React from 'react';
-import logo from '../assets/logo.jpeg';
+import logo from '../assets/ANSOFTT_LOGO.png';
+import { useSettings } from '../hooks/useSettings';
 
 interface InvoiceProps {
   order: any;
@@ -9,6 +10,7 @@ interface InvoiceProps {
 
 const FullInvoicePrint = React.forwardRef<HTMLDivElement, InvoiceProps>(({ order, items, isReturn }, ref) => {
   const today = new Date().toLocaleDateString('en-GB');
+  const { settings, formatCurrencyValue, getOrderNumber } = useSettings();
 
   // ELITE CALCULATION ORACLE
   const subTotal = (items || []).reduce((acc, curr) => acc + (Number(curr.price || 0) * Number(curr.quantity || 0)), 0);
@@ -48,15 +50,16 @@ const FullInvoicePrint = React.forwardRef<HTMLDivElement, InvoiceProps>(({ order
         {/* Header Section */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-             <img src={logo} alt="logo" style={{ width: '100px', marginBottom: '8px', borderRadius: '8px' }} />
-             <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 900 }}>Fresh & Fast</h2>
+             <img src={settings.company_logo || logo} alt="logo" style={{ width: '100px', marginBottom: '8px', borderRadius: '8px', maxHeight: '60px', objectFit: 'contain' }} />
+             <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 900 }}>{settings.company_name || 'KMS'}</h2>
           </div>
           
           <div style={{ textAlign: 'right' }}>
-            <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 900, direction: 'rtl' }}>شركة مطعم فريش اند فاست</h2>
-            <p style={{ margin: '4px 0', fontSize: '14px', fontWeight: 700 }}>Fresh & Fast Restaurant Company</p>
-            <p style={{ margin: '1px 0', fontSize: '13px' }}>+965 90002939 <span role="img" aria-label="phone">📞</span></p>
-            <p style={{ margin: '1px 0', fontSize: '13px' }}>sales@freshnfastkw.com <span role="img" aria-label="email">✉️</span></p>
+            <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 900, direction: 'rtl' }}>{settings.company_arabic_name || 'شركة مطعم KMS'}</h2>
+            <p style={{ margin: '4px 0', fontSize: '14px', fontWeight: 700 }}>{settings.company_name || 'KMS Company'}</p>
+            {settings.company_phone && <p style={{ margin: '1px 0', fontSize: '13px' }}>{settings.company_phone} <span role="img" aria-label="phone">📞</span></p>}
+            {settings.company_email && <p style={{ margin: '1px 0', fontSize: '13px' }}>{settings.company_email} <span role="img" aria-label="email">✉️</span></p>}
+            {settings.company_address && <p style={{ margin: '1px 0', fontSize: '12px', color: '#666' }}>{settings.company_address}</p>}
           </div>
         </div>
 
@@ -91,7 +94,7 @@ const FullInvoicePrint = React.forwardRef<HTMLDivElement, InvoiceProps>(({ order
               <tbody>
                 <tr>
                   <td style={{ border: '1px solid #000', padding: '6px', fontSize: '12px', fontWeight: 700, backgroundColor: '#f9fafb' }}>Invoice No:</td>
-                  <td style={{ border: '1px solid #000', padding: '6px', fontSize: '12px' }}>FNFI-{100000 + (order?.sale_id || 0)}</td>
+                  <td style={{ border: '1px solid #000', padding: '6px', fontSize: '12px' }}>{getOrderNumber(order?.sale_id || 0)}</td>
                 </tr>
                 <tr>
                   <td style={{ border: '1px solid #000', padding: '6px', fontSize: '12px', fontWeight: 700, backgroundColor: '#f9fafb' }}>Date</td>
@@ -169,8 +172,8 @@ const FullInvoicePrint = React.forwardRef<HTMLDivElement, InvoiceProps>(({ order
                   <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center', fontSize: '13px' }}>PCS</td>
                   <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center', fontSize: '13px' }}>1</td>
                   <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center', fontSize: '13px' }}>{Number(item.quantity).toFixed(0)}</td>
-                  <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'right', fontSize: '13px' }}>{Number(item.price).toFixed(3)}</td>
-                  <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'right', fontWeight: 800, fontSize: '13px' }}>{(item.price * item.quantity).toFixed(3)}</td>
+                  <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'right', fontSize: '13px' }}>{formatCurrencyValue(item.price)}</td>
+                  <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'right', fontWeight: 800, fontSize: '13px' }}>{formatCurrencyValue(item.price * item.quantity)}</td>
                 </tr>
               ))}
             </tbody>
@@ -183,18 +186,18 @@ const FullInvoicePrint = React.forwardRef<HTMLDivElement, InvoiceProps>(({ order
             <tfoot>
               <tr>
                 <td style={{ border: '1px solid #000', padding: '10px 15px', fontWeight: 700, fontSize: '13px', textAlign: 'left' }}>Total Amount <span style={{ float: 'right' }}>الاجمالي</span></td>
-                <td style={{ border: '1px solid #000', padding: '10px 8px', textAlign: 'right', fontWeight: 900, fontSize: '16px', width: '150px' }}>{subTotal.toFixed(3)}</td>
+                <td style={{ border: '1px solid #000', padding: '10px 8px', textAlign: 'right', fontWeight: 900, fontSize: '16px', width: '150px' }}>{formatCurrencyValue(subTotal)}</td>
               </tr>
               <tr>
                 <td style={{ border: '1px solid #000', padding: '10px 15px', fontWeight: 700, fontSize: '13px', textAlign: 'left' }}>
                   Discount {Number(order?.discount_percentage) > 0 && <span style={{ marginLeft: '1cm' }}>({Number(order.discount_percentage)}%)</span>} 
                   <span style={{ float: 'right' }}>الخصم</span>
                 </td>
-                <td style={{ border: '1px solid #000', padding: '10px 8px', textAlign: 'right', fontWeight: 900, fontSize: '16px' }}>{discount.toFixed(3)}</td>
+                <td style={{ border: '1px solid #000', padding: '10px 8px', textAlign: 'right', fontWeight: 900, fontSize: '16px' }}>{formatCurrencyValue(discount)}</td>
               </tr>
               <tr>
                 <td style={{ border: '1px solid #000', padding: '10px 15px', fontWeight: 900, fontSize: '13px', textAlign: 'left', backgroundColor: '#f1f5f9' }}>Net Amount <span style={{ float: 'right' }}>الصافي</span></td>
-                <td style={{ border: '1px solid #000', padding: '10px 8px', textAlign: 'right', fontWeight: 900, fontSize: '18px', backgroundColor: '#f1f5f9' }}>{netAmount.toFixed(3)}</td>
+                <td style={{ border: '1px solid #000', padding: '10px 8px', textAlign: 'right', fontWeight: 900, fontSize: '18px', backgroundColor: '#f1f5f9' }}>{formatCurrencyValue(netAmount)}</td>
               </tr>
             </tfoot>
           </table>

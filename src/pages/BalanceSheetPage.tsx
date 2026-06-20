@@ -86,7 +86,7 @@ const BalanceSheetPage: React.FC = () => {
         ) : (
           <div className="sheet-paper printable-area">
             <div className="sheet-title-area">
-              <h1>Fresh & Fast Restaurant Company</h1>
+              <h1>KMS Restaurant Company</h1>
               <h2>Balance Sheet</h2>
               <p>As of {currentDate}</p>
             </div>

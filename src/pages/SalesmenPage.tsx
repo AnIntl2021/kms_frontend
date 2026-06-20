@@ -302,7 +302,7 @@ const SalesmenPage = () => {
                         type="email" 
                         value={formData.email} 
                         onChange={e => setFormData({...formData, email: e.target.value})}
-                        placeholder="john@freshnfast.com"
+                        placeholder="john@kms.com"
                      />
                   </div>
                   <div className="form-group">

@@ -58,7 +58,8 @@ interface Dispatch {
   branch_name_ar?: string;
   salesman_name?: string;
   salesman_name_ar?: string;
-  dispatch_status: 'pending' | 'in_transit' | 'dispatched' | 'delivered' | 'returned';
+  dispatch_status: 'pending' | 'processing' | 'completed' | 'cancelled' | 'dispatched' | 'in_transit' | 'delivered' | 'returned';
+  order_type?: string;
   dispatch_date: string;
   total_amount: number;
   final_amount?: number;
@@ -138,11 +139,11 @@ const DispatchDashboardPage = () => {
 
   // Calculate dispatches and returns values dynamically based on filtered data
   const totalDeliveredValue = dispatches
-    .filter(d => d.dispatch_status === 'delivered')
+    .filter(d => d.dispatch_status === 'completed')
     .reduce((acc, d) => acc + Number(d.total_amount || 0), 0);
 
   const totalInTransitValue = dispatches
-    .filter(d => d.dispatch_status === 'in_transit' || d.dispatch_status === 'dispatched')
+    .filter(d => d.dispatch_status === 'processing' )
     .reduce((acc, d) => acc + Number(d.total_amount || 0), 0);
 
   const totalPreparedValue = dispatches
@@ -339,9 +340,9 @@ const DispatchDashboardPage = () => {
 
   // Helper stats
   const totalDispatchedCount = dispatches.length;
-  const inTransitCount = dispatches.filter(d => d.dispatch_status === 'in_transit' || d.dispatch_status === 'dispatched').length;
+  const inTransitCount = dispatches.filter(d => d.dispatch_status === 'processing' ).length;
   const pendingCount = dispatches.filter(d => d.dispatch_status === 'pending').length;
-  const deliveredCount = dispatches.filter(d => d.dispatch_status === 'delivered').length;
+  const deliveredCount = dispatches.filter(d => d.dispatch_status === 'completed').length;
   const returnedCount = returns.length;
 
   const totalValueDispatched = dispatches.reduce((acc, d) => acc + Number(d.total_amount || 0), 0);
@@ -389,18 +390,17 @@ const DispatchDashboardPage = () => {
   // Filter dispatches
   const filteredDispatches = dispatches.filter(d => {
     const term = searchTerm.toLowerCase();
-    const orderNo = d.order_number.toLowerCase();
-    const formattedOrderNo = `FNFI-${100000 + d.sale_id}`.toLowerCase();
+    const orderNo = (d.order_number || String(d.sale_id)).toLowerCase();
     const client = (d.client_name || '').toLowerCase();
     const salesman = (d.salesman_name || '').toLowerCase();
     const batch = (d.batch_number || '').toLowerCase();
 
-    const matchesSearch = formattedOrderNo.includes(term) || orderNo.includes(term) || client.includes(term) || salesman.includes(term) || batch.includes(term);
+    const matchesSearch = orderNo.includes(term) || client.includes(term) || salesman.includes(term) || batch.includes(term);
 
     if (statusFilter === 'all') return matchesSearch;
-    if (statusFilter === 'in_transit') return matchesSearch && (d.dispatch_status === 'in_transit' || d.dispatch_status === 'dispatched');
+    if (statusFilter === 'processing') return matchesSearch && (d.dispatch_status === 'processing' );
     if (statusFilter === 'pending') return matchesSearch && d.dispatch_status === 'pending';
-    if (statusFilter === 'delivered') return matchesSearch && d.dispatch_status === 'delivered';
+    if (statusFilter === 'completed') return matchesSearch && d.dispatch_status === 'completed';
     
     return matchesSearch;
   });
@@ -416,12 +416,12 @@ const DispatchDashboardPage = () => {
     const partnerReturns = returns.filter(r => r.client_name === selectedPartner);
     const partnerSales = sales.filter(s => (s.client_name || s.vendor_name) === selectedPartner);
 
-    const pActiveCount = partnerDispatches.filter(d => d.dispatch_status === 'in_transit' || d.dispatch_status === 'dispatched' || d.dispatch_status === 'pending').length;
-    const pDeliveredCount = partnerDispatches.filter(d => d.dispatch_status === 'delivered').length;
+    const pActiveCount = partnerDispatches.filter(d => d.dispatch_status === 'processing'  || d.dispatch_status === 'pending').length;
+    const pDeliveredCount = partnerDispatches.filter(d => d.dispatch_status === 'completed').length;
 
     const pGrossValue = partnerDispatches.reduce((sum, d) => sum + Number(d.total_amount || 0), 0);
-    const pDeliveredGrossValue = partnerDispatches.filter(d => d.dispatch_status === 'delivered').reduce((sum, d) => sum + Number(d.total_amount || 0), 0);
-    const pSoldValue = partnerDispatches.filter(d => d.dispatch_status === 'delivered').reduce((sum, d) => sum + Number(d.final_amount || d.total_amount || 0), 0);
+    const pDeliveredGrossValue = partnerDispatches.filter(d => d.dispatch_status === 'completed').reduce((sum, d) => sum + Number(d.total_amount || 0), 0);
+    const pSoldValue = partnerDispatches.filter(d => d.dispatch_status === 'completed').reduce((sum, d) => sum + Number(d.final_amount || d.total_amount || 0), 0);
     const pDiscountPercent = pDeliveredGrossValue > 0 ? Math.round(((pDeliveredGrossValue - pSoldValue) / pDeliveredGrossValue) * 100) : 0;
     const pReturnedValue = partnerSales.reduce((sum, s) => sum + Number(s.returns_amount || 0), 0);
     const pReturnedValueGross = pDiscountPercent > 0 ? (pReturnedValue / (1 - (pDiscountPercent / 100))) : pReturnedValue;
@@ -450,8 +450,8 @@ const DispatchDashboardPage = () => {
       const bReturns = partnerReturns.filter(r => (r.branch_name || 'Main Office') === branchName);
       const bSales = partnerSales.filter(s => (s.branch_name || 'Main Office') === branchName);
 
-      const bActiveCount = bDispatches.filter(d => d.dispatch_status === 'in_transit' || d.dispatch_status === 'dispatched' || d.dispatch_status === 'pending').length;
-      const bSoldValue = bDispatches.filter(d => d.dispatch_status === 'delivered').reduce((sum, d) => sum + Number(d.final_amount || d.total_amount || 0), 0);
+      const bActiveCount = bDispatches.filter(d => d.dispatch_status === 'processing'  || d.dispatch_status === 'pending').length;
+      const bSoldValue = bDispatches.filter(d => d.dispatch_status === 'completed').reduce((sum, d) => sum + Number(d.final_amount || d.total_amount || 0), 0);
       const bReturnedValue = bSales.reduce((sum, s) => sum + Number(s.returns_amount || 0), 0);
       const bNetRevenue = bSoldValue - bReturnedValue;
 
@@ -684,7 +684,7 @@ const DispatchDashboardPage = () => {
                               <td><strong>{branch.name}</strong></td>
                               <td className="text-center">
                                 <span 
-                                  className={`status-badge-premium ${branch.activeCount > 0 ? 'in_transit' : 'delivered'}`}
+                                  className={`status-badge-premium ${branch.activeCount > 0 ? 'processing' : 'completed'}`}
                                   onClick={() => branch.activeCount > 0 && setActiveOrdersModalBranch(branch.name)}
                                   style={branch.activeCount > 0 ? { cursor: 'pointer' } : undefined}
                                   title={branch.activeCount > 0 ? "Click to view active dispatches" : undefined}
@@ -833,7 +833,7 @@ const DispatchDashboardPage = () => {
                       {partnerDispatches.slice(0, 10).map((d, idx) => (
                         <div key={idx} className="dispatch-item-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '0.25rem' }}>
                           <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span className="item-name" style={{ fontWeight: 800 }}>FNFI-{100000 + d.sale_id}</span>
+                            <span className="item-name" style={{ fontWeight: 800 }}>{d.order_number || d.sale_id}</span>
                             <span className={`status-badge-premium ${d.dispatch_status}`}>{d.dispatch_status.toUpperCase()}</span>
                           </div>
                           <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', fontSize: '0.68rem', color: '#64748b' }}>
@@ -871,7 +871,7 @@ const DispatchDashboardPage = () => {
                 {(() => {
                   const activeDispatches = partnerDispatches.filter(
                     d => (d.branch_name || 'Main Office') === activeOrdersModalBranch &&
-                    (d.dispatch_status === 'in_transit' || d.dispatch_status === 'dispatched' || d.dispatch_status === 'pending')
+                    (d.dispatch_status === 'processing'  || d.dispatch_status === 'pending')
                   );
                   
                   if (activeDispatches.length === 0) {
@@ -888,7 +888,7 @@ const DispatchDashboardPage = () => {
                       {activeDispatches.map((d, index) => (
                         <div key={index} className="modal-order-row">
                           <div className="order-main-info">
-                            <span className="order-id" style={{ fontWeight: 900 }}>FNFI-{100000 + d.sale_id}</span>
+                            <span className="order-id" style={{ fontWeight: 900 }}>{d.order_number || d.sale_id}</span>
                             <span className={`status-badge-premium ${d.dispatch_status}`}>
                               {d.dispatch_status.toUpperCase()}
                             </span>
@@ -1242,8 +1242,8 @@ const DispatchDashboardPage = () => {
                   </div>
                   <div className="status-toggles">
                     <button className={`toggle-btn ${statusFilter === 'all' ? 'active' : ''}`} onClick={() => setStatusFilter('all')}>All</button>
-                    <button className={`toggle-btn ${statusFilter === 'in_transit' ? 'active' : ''}`} onClick={() => setStatusFilter('in_transit')}>In Transit</button>
-                    <button className={`toggle-btn ${statusFilter === 'delivered' ? 'active' : ''}`} onClick={() => setStatusFilter('delivered')}>Delivered</button>
+                    <button className={`toggle-btn ${statusFilter === 'processing' ? 'active' : ''}`} onClick={() => setStatusFilter('processing')}>In Transit</button>
+                    <button className={`toggle-btn ${statusFilter === 'completed' ? 'active' : ''}`} onClick={() => setStatusFilter('completed')}>Delivered</button>
                     <button className={`toggle-btn ${statusFilter === 'pending' ? 'active' : ''}`} onClick={() => setStatusFilter('pending')}>Prepared</button>
                   </div>
                 </div>
@@ -1282,19 +1282,25 @@ const DispatchDashboardPage = () => {
                             onClick={() => handleSelectDispatch(d)}
                           >
                             <td>
-                              <div className="order-no">FNFI-{100000 + d.sale_id}</div>
+                              <div className="order-no">{d.order_number || d.sale_id}</div>
                               <span className="batch-tag">{t('batch')}: {d.batch_number || 'N/A'}</span>
                             </td>
                             <td>
-                              <div 
-                                className="client-name link-style" 
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleSelectPartner(d.client_name);
-                                }}
-                                title="Click to view Partner Analytics Portal"
-                              >
+                              <div className="client-info">
+                                <div style={{display: 'flex', gap: '8px', alignItems: 'center'}}>
+                                <div 
+                                  className="client-name link-style" 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleSelectPartner(d.client_name);
+                                  }}
+                                  title="Click to view Partner Analytics Portal"
+                                >
                                 {language === 'ar' ? (d.client_name_ar || d.client_name) : d.client_name}
+                                </div>
+                                {d.order_type === 'delivery' && <span style={{padding: '2px 8px', background: '#3b82f6', color: 'white', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold'}}>DELIVERY</span>}
+                                {d.order_type === 'b2b' && <span style={{padding: '2px 8px', background: '#8b5cf6', color: 'white', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold'}}>B2B WHOLESALE</span>}
+                                </div>
                               </div>
                               {d.branch_name && (
                                 <div className="branch-tag">{language === 'ar' ? (d.branch_name_ar || d.branch_name) : d.branch_name} {t('branch')}</div>
@@ -1403,10 +1409,10 @@ const DispatchDashboardPage = () => {
                         <span className="node-label">In Transit</span>
                       </div>
 
-                      <div className={`chain-line ${(selectedDispatch.dispatch_status === 'delivered' || selectedDispatch.dispatch_status === 'returned') ? 'bg-green' : 'bg-slate'}`}></div>
+                      <div className={`chain-line ${(selectedDispatch.dispatch_status === 'completed' || selectedDispatch.dispatch_status === 'returned') ? 'bg-green' : 'bg-slate'}`}></div>
 
-                      <div className={`chain-node ${(selectedDispatch.dispatch_status === 'delivered' || selectedDispatch.dispatch_status === 'returned') ? 'active' : ''}`}>
-                        <div className={`node-icon ${(selectedDispatch.dispatch_status === 'delivered' || selectedDispatch.dispatch_status === 'returned') ? 'bg-green' : 'bg-slate'}`}>
+                      <div className={`chain-node ${(selectedDispatch.dispatch_status === 'completed' || selectedDispatch.dispatch_status === 'returned') ? 'active' : ''}`}>
+                        <div className={`node-icon ${(selectedDispatch.dispatch_status === 'completed' || selectedDispatch.dispatch_status === 'returned') ? 'bg-green' : 'bg-slate'}`}>
                           <MapPin size={12} />
                         </div>
                         <span className="node-label">Delivered</span>
@@ -1427,7 +1433,7 @@ const DispatchDashboardPage = () => {
                     
                     <div className="spec-item">
                       <span className="spec-label">Order Number</span>
-                      <strong className="spec-val text-green">FNFI-{100000 + selectedDispatch.sale_id}</strong>
+                      <strong className="spec-val text-green">{selectedDispatch.order_number || selectedDispatch.sale_id}</strong>
                     </div>
 
                     <div className="spec-item">
@@ -1458,20 +1464,20 @@ const DispatchDashboardPage = () => {
                         {(selectedDispatch.dispatch_status === 'pending') && (
                           <button 
                             className="btn-action dispatch-btn"
-                            onClick={() => updateDispatchStatus(selectedDispatch.sale_id, 'in_transit')}
+                            onClick={() => updateDispatchStatus(selectedDispatch.sale_id, 'processing')}
                           >
                             <Truck size={12} /> Mark In Transit
                           </button>
                         )}
-                        {(selectedDispatch.dispatch_status === 'in_transit' || selectedDispatch.dispatch_status === 'dispatched') && (
+                        {(selectedDispatch.dispatch_status === 'processing' ) && (
                           <button 
                             className="btn-action deliver-btn"
-                            onClick={() => updateDispatchStatus(selectedDispatch.sale_id, 'delivered')}
+                            onClick={() => updateDispatchStatus(selectedDispatch.sale_id, 'completed')}
                           >
                             <CheckCircle2 size={12} /> Confirm Delivered
                           </button>
                         )}
-                        {selectedDispatch.dispatch_status === 'delivered' && (
+                        {selectedDispatch.dispatch_status === 'completed' && (
                           <span className="completed-log-tag">✅ Delivery Confirmed</span>
                         )}
                       </div>

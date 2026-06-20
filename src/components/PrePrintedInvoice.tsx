@@ -1,4 +1,5 @@
 import React from 'react';
+import { useSettings } from '../hooks/useSettings';
 
 interface InvoiceProps {
   order: any;
@@ -10,6 +11,7 @@ const CM = 37.795;
 
 const PrePrintedInvoice = React.forwardRef<HTMLDivElement, InvoiceProps>(({ order, items }, ref) => {
   const today = new Date().toLocaleDateString('en-GB');
+  const { countryPhoneCode, getOrderNumber, formatCurrencyValue } = useSettings();
 
   const subTotal = (items || []).reduce(
     (acc, curr) => acc + Number(curr.price || 0) * Number(curr.quantity || 0),
@@ -111,13 +113,13 @@ const PrePrintedInvoice = React.forwardRef<HTMLDivElement, InvoiceProps>(({ orde
           justifyContent: 'space-around',
           paddingLeft: `${1.2 * CM}px`, // Adjusted to center value in box
         }}>
-          <div>FNFI-{100000 + (order?.sale_id || 0)}</div>
+          <div>{getOrderNumber(order?.sale_id || 0)}</div>
           <div>{(order?.dispatch_date || today).split(' ')[0]}</div>
           <div style={{ fontSize: '12px', whiteSpace: 'nowrap', overflow: 'hidden', marginLeft: `-${0.8 * CM}px`, fontWeight: 900 }}>
             {order?.salesman_name || 'Admin'} 
             {order?.salesman_phone && (
               <span style={{ fontSize: '11px', fontWeight: 600, marginLeft: '4px' }}>
-                / +965 {order.salesman_phone.replace(/^\+965\s*/, '')}
+                / {countryPhoneCode} {order.salesman_phone.replace(/^\+?[0-9]{1,4}\s*/, '')}
               </span>
             )}
           </div>
@@ -169,8 +171,8 @@ const PrePrintedInvoice = React.forwardRef<HTMLDivElement, InvoiceProps>(({ orde
                 <td style={{ textAlign: 'center', fontSize: '12px', padding: 0, paddingLeft: `${0.5 * CM}px`, lineHeight: 1 }}>PCS</td>
                 <td style={{ textAlign: 'center', fontSize: '12px', padding: 0, paddingLeft: `${0.5 * CM}px`, lineHeight: 1 }}>1</td>
                 <td style={{ textAlign: 'center', fontSize: '12px', padding: 0, paddingLeft: `${0.5 * CM}px`, lineHeight: 1 }}>{Number(item.quantity).toFixed(0)}</td>
-                <td style={{ textAlign: 'right', fontSize: '12px', padding: 0, paddingLeft: `${0.5 * CM}px`, lineHeight: 1 }}>{Number(item.price).toFixed(3)}</td>
-                <td style={{ textAlign: 'right', fontWeight: 900, fontSize: '13px', padding: 0, paddingRight: `${0.5 * CM}px`, lineHeight: 1 }}>{(item.price * item.quantity).toFixed(3)}</td>
+                <td style={{ textAlign: 'right', fontSize: '12px', padding: 0, paddingLeft: `${0.5 * CM}px`, lineHeight: 1 }}>{formatCurrencyValue(item.price)}</td>
+                <td style={{ textAlign: 'right', fontWeight: 900, fontSize: '13px', padding: 0, paddingRight: `${0.5 * CM}px`, lineHeight: 1 }}>{formatCurrencyValue(item.price * item.quantity)}</td>
               </tr>
             ))}
           </tbody>
@@ -183,9 +185,9 @@ const PrePrintedInvoice = React.forwardRef<HTMLDivElement, InvoiceProps>(({ orde
           Each footer row is 1 cm tall.
       */}
       {[
-        { label: 'Total Amount', value: subTotal.toFixed(3) },
-        { label: 'Discount', value: discount.toFixed(3) },
-        { label: 'Net Amount', value: netAmount.toFixed(3) },
+        { label: 'Total Amount', value: formatCurrencyValue(subTotal) },
+        { label: 'Discount', value: formatCurrencyValue(discount) },
+        { label: 'Net Amount', value: formatCurrencyValue(netAmount) },
       ].map(({ label, value }, i) => (
         <div
           key={i}

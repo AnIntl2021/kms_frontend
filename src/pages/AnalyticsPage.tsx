@@ -15,18 +15,31 @@ import {
   Flame,
   Clock,
   X,
-  MapPin
+  MapPin,
+  Layers,
+  Truck
 } from 'lucide-react';
 import api from '../api/axios';
 import { useLanguage } from '../hooks/useLanguage';
+import { useSettings } from '../hooks/useSettings';
+import { useAuthStore } from '../store/useAuthStore';
 
 const AnalyticsPage = () => {
   const { t, language } = useLanguage();
+  const { businessType, settings } = useSettings();
+  const { admin } = useAuthStore();
+  const isPOS = businessType === 'restaurant_pos';
+
   const [forecasting, setForecasting] = useState<any[]>([]);
   const [health, setHealth] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const entriesPerPage = 5;
+
+  const [brands, setBrands] = useState<any[]>([]);
+  const [branches, setBranches] = useState<any[]>([]);
+  const [selectedBrand, setSelectedBrand] = useState(admin?.brand_id ? String(admin.brand_id) : '');
+  const [selectedBranch, setSelectedBranch] = useState(admin?.branch_id ? String(admin.branch_id) : '');
 
   // Opportunity Details Modal States
   const [selectedOpp, setSelectedOpp] = useState<any | null>(null);
@@ -35,30 +48,59 @@ const AnalyticsPage = () => {
   const [oppReturnedItems, setOppReturnedItems] = useState<any[]>([]);
   const [oppProductBreakdown, setOppProductBreakdown] = useState<any[]>([]);
 
+  const isSuperOrTenant = admin?.role === 'SUPER_ADMIN' || admin?.role === 'TENANT_ADMIN' || (!admin?.brand_id && !admin?.branch_id);
+  const isBrandManager = admin?.role === 'BRAND_MANAGER' || (admin?.brand_id && !admin?.branch_id);
+
   useEffect(() => {
-    fetchAnalytics();
+    fetchBrandsAndBranches();
   }, []);
 
+  useEffect(() => {
+    fetchAnalytics();
+  }, [businessType, selectedBrand, selectedBranch]);
 
+  const fetchBrandsAndBranches = async () => {
+    try {
+      if (isSuperOrTenant) {
+        const [brandsRes, branchesRes] = await Promise.all([
+          api.get('/brands'),
+          api.get('/branches')
+        ]);
+        setBrands(brandsRes.data.data || []);
+        setBranches(branchesRes.data.data || []);
+      } else if (isBrandManager) {
+        const branchesRes = await api.get('/branches');
+        const allBranches = branchesRes.data.data || [];
+        setBranches(allBranches.filter((b: any) => String(b.brand_id) === String(admin?.brand_id)));
+      }
+    } catch (err) {
+      console.error('Failed to load brands/branches for reports filter', err);
+    }
+  };
   
   const fetchAnalytics = async () => {
     try {
       setLoading(true);
+      const params = {
+        brand_id: selectedBrand || undefined,
+        branch_id: selectedBranch || undefined
+      };
       const [foreRow, healthRow, vendorsRow] = await Promise.all([
-        api.get('/analytics/forecasting'),
-        api.get('/analytics/health'),
+        api.get('/analytics/forecasting', { params }),
+        api.get('/analytics/health', { params }),
         api.get('/vendors').catch(() => ({ data: { data: [] } }))
       ]);
       
-      const clientVendors = (vendorsRow.data.data || []).filter((v: any) => v.type === 'client');
-      const clientIds = new Set(clientVendors.map((v: any) => String(v.vendor_id)));
+      let finalForecasts = foreRow.data.data.forecasting || [];
+      if (!isPOS) {
+        const clientVendors = (vendorsRow.data.data || []).filter((v: any) => v.type === 'client');
+        const clientIds = new Set(clientVendors.map((v: any) => String(v.vendor_id)));
+        finalForecasts = finalForecasts.filter((f: any) => 
+          clientIds.has(String(f.vendor_id))
+        );
+      }
       
-      // Filter out non-client vendors (such as suppliers)
-      const filteredForecasting = (foreRow.data.data.forecasting || []).filter((f: any) => 
-        clientIds.has(String(f.vendor_id))
-      );
-      
-      setForecasting(filteredForecasting);
+      setForecasting(finalForecasts);
       setHealth(healthRow.data.data);
     } catch (error) {
       console.error('Failed to fetch analytics:', error);
@@ -206,25 +248,32 @@ const AnalyticsPage = () => {
 
   // Helper to render bars for SVG Chart with modern gradient and tooltips
   const renderProfitBars = () => {
-      // Get top 6 stores by sales
-      const sorted = [...forecasting].sort((a, b) => parseFloat(b.recent_sales || '0') - parseFloat(a.recent_sales || '0')).slice(0, 6);
+      // Get top 6 stores by sales or weekly demand
+      const sorted = [...forecasting].sort((a, b) => {
+        if (isPOS) {
+          return parseFloat(b.sales_velocity || '0') - parseFloat(a.sales_velocity || '0');
+        }
+        return parseFloat(b.recent_sales || '0') - parseFloat(a.recent_sales || '0');
+      }).slice(0, 6);
+
       if (sorted.length === 0) return null;
 
-      const maxSales = Math.max(...sorted.map(s => parseFloat(s.recent_sales || '0')), 1);
+      const maxVal = Math.max(...sorted.map(s => parseFloat(isPOS ? s.sales_velocity : s.recent_sales || '0')), 1);
       
       return sorted.map((s, idx) => {
-          const height = (parseFloat(s.recent_sales || '0') / maxSales) * 100;
-          const salesVal = parseFloat(s.recent_sales || '0').toFixed(3);
-          let name = language === 'ar' ? (s.vendor_name_ar || s.vendor_name) : (s.vendor_name || 'Unknown Vendor');
-          if (s.branch_name) name = `${name} (${s.branch_name})`;
+          const val = parseFloat(isPOS ? s.sales_velocity : s.recent_sales || '0');
+          const height = (val / maxVal) * 100;
+          const displayVal = val.toFixed(1);
+          let name = language === 'ar' ? (s.vendor_name_ar || s.vendor_name) : (s.vendor_name || 'Unknown Item');
+          if (!isPOS && s.branch_name) name = `${name} (${s.branch_name})`;
           const displayName = name.length > 12 ? name.substring(0, 10) + '..' : name;
           return (
-              <div key={idx} className="chart-bar-v group" onClick={() => handleOpenOpportunityDetails(s)}>
+              <div key={idx} className="chart-bar-v group" onClick={isPOS ? undefined : () => handleOpenOpportunityDetails(s)}>
                   <div className="bar-tooltip">
                     <span className="tooltip-store">{name}</span>
-                    <span className="tooltip-val">{salesVal} KD</span>
+                    <span className="tooltip-val">{displayVal} {isPOS ? 'units/week' : 'KD'}</span>
                   </div>
-                  <div className="bar-label">{parseFloat(s.recent_sales || '0').toFixed(1)}</div>
+                  <div className="bar-label">{displayVal}</div>
                   <div className="bar-fill-container">
                     <div className="bar-fill" style={{ height: `${height}%` }}></div>
                   </div>
@@ -245,6 +294,106 @@ const AnalyticsPage = () => {
   return (
     <Layout title={t('analytics_bi')}>
       <div className="dispatch-dashboard-hud animated fadeIn">
+        {/* Scoped Brand and Branch Filters strip */}
+        <div style={{
+          display: 'flex',
+          gap: '16px',
+          background: 'rgba(255, 255, 255, 0.08)',
+          backdropFilter: 'blur(16px)',
+          borderRadius: '16px',
+          padding: '16px',
+          marginBottom: '24px',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          alignItems: 'center',
+          flexWrap: 'wrap'
+        }} className="no-print">
+          {isSuperOrTenant && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: '200px' }}>
+              <label style={{ fontSize: '12px', fontWeight: 600, color: 'rgba(255,255,255,0.6)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Layers size={13} /> {t('filter_by_brand') || 'Brand'}
+              </label>
+              <select
+                style={{
+                  background: 'rgba(15, 23, 42, 0.6)',
+                  border: '1px solid rgba(255,255,255,0.15)',
+                  borderRadius: '10px',
+                  padding: '8px 12px',
+                  color: '#fff',
+                  fontSize: '14px',
+                  outline: 'none',
+                  cursor: 'pointer'
+                }}
+                value={selectedBrand}
+                onChange={(e) => {
+                  setSelectedBrand(e.target.value);
+                  setSelectedBranch('');
+                }}
+              >
+                <option value="" style={{ background: '#0f172a', color: '#fff' }}>{t('all_brands') || 'All Brands'}</option>
+                {brands.map((b) => (
+                  <option key={b.brand_id} value={b.brand_id} style={{ background: '#0f172a', color: '#fff' }}>
+                    {language === 'ar' ? (b.name_ar || b.name_en) : b.name_en}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {(isSuperOrTenant || isBrandManager) && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', minWidth: '200px' }}>
+              <label style={{ fontSize: '12px', fontWeight: 600, color: 'rgba(255,255,255,0.6)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Truck size={13} /> {t('filter_by_branch') || 'Branch'}
+              </label>
+              <select
+                style={{
+                  background: 'rgba(15, 23, 42, 0.6)',
+                  border: '1px solid rgba(255,255,255,0.15)',
+                  borderRadius: '10px',
+                  padding: '8px 12px',
+                  color: '#fff',
+                  fontSize: '14px',
+                  outline: 'none',
+                  cursor: 'pointer'
+                }}
+                value={selectedBranch}
+                onChange={(e) => setSelectedBranch(e.target.value)}
+              >
+                <option value="" style={{ background: '#0f172a', color: '#fff' }}>{t('all_branches') || 'All Branches'}</option>
+                {branches
+                  .filter((b) => !selectedBrand || String(b.brand_id) === String(selectedBrand))
+                  .map((b) => (
+                    <option key={b.brand_id} value={b.brand_id} style={{ background: '#0f172a', color: '#fff' }}>
+                      {language === 'ar' ? (b.name_ar || b.name_en) : b.name_en}
+                    </option>
+                  ))}
+              </select>
+            </div>
+          )}
+
+          {(selectedBrand || selectedBranch) && (
+            <button
+              onClick={() => {
+                setSelectedBrand(admin?.brand_id ? String(admin.brand_id) : '');
+                setSelectedBranch(admin?.branch_id ? String(admin.branch_id) : '');
+              }}
+              style={{
+                marginTop: '22px',
+                background: 'rgba(239, 68, 68, 0.2)',
+                border: '1px solid rgba(239, 68, 68, 0.3)',
+                color: '#ef4444',
+                padding: '8px 16px',
+                borderRadius: '10px',
+                fontSize: '13px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+            >
+              {t('clear_all')}
+            </button>
+          )}
+        </div>
+
         {loading ? (
             <div className="analytics-loading">
                <Activity className="spin" size={48} />
@@ -400,7 +549,7 @@ const AnalyticsPage = () => {
                   <div className="stream-header-horizontal">
                     <div className="header-left">
                       <Sparkles className="pulse-text" size={16} />
-                      <h3>{t('leak_growth_forecast')}</h3>
+                      <h3>{isPOS ? 'Ingredient & Stock Forecast' : t('leak_growth_forecast')}</h3>
                     </div>
                     <button className="btn-export-premium" onClick={handleExport}>
                       <Download size={12} />
@@ -412,12 +561,12 @@ const AnalyticsPage = () => {
                     <table className="analytics-table-premium">
                       <thead>
                         <tr>
-                          <th>{t('store_name')}</th>
-                          <th>{t('sales_velocity')}</th>
-                          <th>{t('forecasted_return_rate')}</th>
-                          <th>{t('optimal_next_dispatch')}</th>
-                          <th>{t('expected_savings')}</th>
-                          <th>{t('adjustment_recommendation')}</th>
+                          <th>{isPOS ? 'Ingredient Item' : t('store_name')}</th>
+                          <th>{isPOS ? 'Weekly Demand' : t('sales_velocity')}</th>
+                          <th>{isPOS ? 'Stock Coverage' : t('forecasted_return_rate')}</th>
+                          <th>{isPOS ? 'Required Stock Qty' : t('optimal_next_dispatch')}</th>
+                          <th>{isPOS ? 'Restock Cost' : t('expected_savings')}</th>
+                          <th>{isPOS ? 'Status' : t('adjustment_recommendation')}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -426,11 +575,16 @@ const AnalyticsPage = () => {
                           
                           // Set colors based on return rate safety margins
                           let returnRateColor = 'rate-healthy';
-                          if (store.return_rate > 15) returnRateColor = 'rate-critical';
-                          else if (store.return_rate > 5) returnRateColor = 'rate-medium';
+                          if (isPOS) {
+                            if (store.return_rate < 25) returnRateColor = 'rate-critical';
+                            else if (store.return_rate < 75) returnRateColor = 'rate-medium';
+                          } else {
+                            if (store.return_rate > 15) returnRateColor = 'rate-critical';
+                            else if (store.return_rate > 5) returnRateColor = 'rate-medium';
+                          }
 
                           return (
-                            <tr key={`${store.vendor_id}-${store.branch_id || 'main'}`} className="clickable-row" onClick={() => handleOpenOpportunityDetails(store)} title="Click to view detailed Actionable Optimization recommendations">
+                            <tr key={`${store.vendor_id}-${store.branch_id || 'main'}`} className={isPOS ? "static-row" : "clickable-row"} onClick={isPOS ? undefined : () => handleOpenOpportunityDetails(store)} title={isPOS ? "Ingredient inventory prediction" : "Click to view detailed Actionable Optimization recommendations"}>
                               <td className="store-cell">
                                 <div className="store-name-container">
                                   <span className="store-avatar">{name.charAt(0).toUpperCase()}</span>
@@ -439,10 +593,10 @@ const AnalyticsPage = () => {
                                       <strong>{name}</strong>
                                       {store.branch_name ? (
                                         <span style={{ fontSize: '11px', color: '#64748b', display: 'block', marginTop: '2px' }}>
-                                          <MapPin size={10} style={{ display: 'inline', marginRight: '2px' }} /> {store.branch_name}
+                                          {isPOS ? store.branch_name : <><MapPin size={10} style={{ display: 'inline', marginRight: '2px' }} /> {store.branch_name}</>}
                                         </span>
                                       ) : (
-                                        <span className={`status-badge-premium ${store.priority === 'Stable' ? 'delivered' : 'returned'}`}>
+                                        <span className={`status-badge-premium ${store.priority === 'Stable' || store.priority === 'Low' ? 'delivered' : 'returned'}`}>
                                           {store.priority.toUpperCase()}
                                         </span>
                                       )}
@@ -450,7 +604,7 @@ const AnalyticsPage = () => {
                                         <div style={{ marginTop: '4px' }}></div>
                                       )}
                                       {store.branch_name && (
-                                        <span className={`status-badge-premium ${store.priority === 'Stable' ? 'delivered' : 'returned'}`} style={{ marginTop: '4px' }}>
+                                        <span className={`status-badge-premium ${store.priority === 'Stable' || store.priority === 'Low' ? 'delivered' : 'returned'}`} style={{ marginTop: '4px' }}>
                                           {store.priority.toUpperCase()}
                                         </span>
                                       )}
@@ -462,7 +616,7 @@ const AnalyticsPage = () => {
                               {/* Sales Velocity */}
                               <td className="sales-velocity-cell">
                                 <span className="velocity-badge">
-                                  {store.sales_velocity} <small>{t('units')}/{t('today')}</small>
+                                  {store.sales_velocity} <small>{isPOS ? 'units/wk' : `${t('units')}/${t('today')}`}</small>
                                 </span>
                               </td>
 
@@ -482,7 +636,7 @@ const AnalyticsPage = () => {
                               <td className="optimal-dispatch-cell">
                                 <div className="optimal-units">
                                   <span className="units-value">{store.optimal_dispatch}</span>
-                                  <span className="units-label">{t('units')}</span>
+                                  <span className="units-label">{isPOS ? 'units' : t('units')}</span>
                                 </div>
                               </td>
 
@@ -494,7 +648,7 @@ const AnalyticsPage = () => {
                                     {parseFloat(store.expected_savings).toFixed(3)} {t('kd_currency')}
                                   </span>
                                 ) : (
-                                  <span className="no-savings">{t('no_loss')}</span>
+                                  <span className="no-savings">{isPOS ? '0.000 KD' : t('no_loss')}</span>
                                 )}
                               </td>
 
@@ -504,7 +658,7 @@ const AnalyticsPage = () => {
                                    {store.recommendation === 'EXPAND SUPPLY' ? <TrendingUp size={12} /> : 
                                     store.recommendation === 'REDUCE DISPATCH' ? <TrendingDown size={12} /> : 
                                     <Activity size={12} />}
-                                   <span>{t(store.recommendation.toLowerCase().replace(' ', '_'))} ({store.adjustmentScore > 0 ? '+' : ''}{store.adjustmentScore}%)</span>
+                                   <span>{isPOS ? store.recommendation : t(store.recommendation.toLowerCase().replace(' ', '_'))} {!isPOS && `(${store.adjustmentScore > 0 ? '+' : ''}${store.adjustmentScore}%)`}</span>
                                 </div>
                               </td>
                             </tr>
@@ -567,48 +721,68 @@ const AnalyticsPage = () => {
                 {/* Strategy Deck */}
                 <div className="strategy-grid">
                   {/* GROWTH STRATEGY */}
-                  <div className="strategy-card-premium green-gradient" onClick={() => {
+                  <div className="strategy-card-premium green-gradient" onClick={isPOS ? undefined : () => {
                     const topStore = forecasting.find(f => f.adjustmentScore > 0);
                     if (topStore) handleOpenOpportunityDetails(topStore);
                   }}>
                      <div className="strat-header">
                        <div className="icon-badge bg-green-glow"><Flame size={18} /></div>
-                       <h4>{t('earn_everything_back')}</h4>
+                       <h4>{isPOS ? 'Restock Priority Ingredients' : t('earn_everything_back')}</h4>
                      </div>
                      <p>
-                       Increase supply allocation for <b>{(() => {
-                          const topStore = forecasting.find(f => f.adjustmentScore > 0);
-                          if (!topStore) return 'Top Stores';
-                          return language === 'ar' ? (topStore.vendor_name_ar || topStore.vendor_name) : (topStore.vendor_name || 'Unknown Vendor');
-                       })()}</b> by 25% today. 
-                       Their ongoing sales velocity is higher than current delivery volumes.
+                       {isPOS ? (
+                         <>
+                           Prioritize restocking <b>{(() => {
+                              const criticalIng = forecasting.find(f => f.priority === 'Critical');
+                              if (!criticalIng) return 'ingredients';
+                              return language === 'ar' ? (criticalIng.vendor_name_ar || criticalIng.vendor_name) : criticalIng.vendor_name;
+                           })()}</b> this week. Weekly predicted demand exceeds current kitchen inventory levels.
+                         </>
+                       ) : (
+                         <>
+                           Increase supply allocation for <b>{(() => {
+                              const topStore = forecasting.find(f => f.adjustmentScore > 0);
+                              if (!topStore) return 'Top Stores';
+                              return language === 'ar' ? (topStore.vendor_name_ar || topStore.vendor_name) : (topStore.vendor_name || 'Unknown Vendor');
+                           })()}</b> by 25% today. 
+                           Their ongoing sales velocity is higher than current delivery volumes.
+                         </>
+                       )}
                      </p>
-                     <div className="card-arrow-indicator"><ArrowRight size={16} /></div>
+                     {!isPOS && <div className="card-arrow-indicator"><ArrowRight size={16} /></div>}
                   </div>
 
                   {/* LOSS PREVENTION */}
-                  <div className="strategy-card-premium red-gradient" onClick={() => {
+                  <div className="strategy-card-premium red-gradient" onClick={isPOS ? undefined : () => {
                     const topLeak = forecasting.find(f => f.priority.toLowerCase() === 'critical');
                     if (topLeak) handleOpenOpportunityDetails(topLeak);
                   }}>
                      <div className="strat-header">
                        <div className="icon-badge bg-red-glow"><ShieldAlert size={18} /></div>
-                       <h4>{t('stop_the_leak')}</h4>
+                       <h4>{isPOS ? 'Prevent Inventory Wastage' : t('stop_the_leak')}</h4>
                      </div>
                      <p>
-                       {forecasting.some(f => f.priority.toLowerCase() === 'critical') ? (
+                       {isPOS ? (
                          <>
-                           Reduce dispatch orders for <b>{forecasting.filter(f => f.priority.toLowerCase() === 'critical').map(f => {
-                             const n = language === 'ar' ? (f.vendor_name_ar || f.vendor_name) : (f.vendor_name || 'Unknown Vendor');
-                             return f.branch_name ? `${n} (${f.branch_name})` : n;
-                           }).slice(0, 1).join(', ')}</b> immediately.
+                           Review surplus ingredients listed under <b>Excess Stock</b>. Keeping high volumes of perishable ingredients in kitchen stores increases spoilage risks.
                          </>
                        ) : (
-                         <>Reduce delivery for stores with <b>Critical Priority</b> immediately.</>
-                       )}{' '}
-                       You can save approx. <b>{parseFloat(health?.total_returns_7d || '0').toFixed(1)} {t('kd_currency')}</b> this week by adjusting limits.
+                         <>
+                           {forecasting.some(f => f.priority.toLowerCase() === 'critical') ? (
+                             <>
+                               Reduce dispatch orders for <b>{forecasting.filter(f => f.priority.toLowerCase() === 'critical').map(f => {
+                                 const n = language === 'ar' ? (f.vendor_name_ar || f.vendor_name) : (f.vendor_name || 'Unknown Vendor');
+                                 return f.branch_name ? `${n} (${f.branch_name})` : n;
+                               }).slice(0, 1).join(', ')}</b> immediately.
+                             </>
+                           ) : (
+                             <>Reduce delivery for stores with <b>Critical Priority</b> immediately.</>
+                           )}{' '}
+                           You can save approx. <b>{parseFloat(health?.total_returns_7d || '0').toFixed(1)} {t('kd_currency')}</b> this week by adjusting limits.
+                         </>
+                       )}
                      </p>
-                     <div className="card-arrow-indicator"><ArrowRight size={16} /></div>
+                     {!isPOS && <div className="card-arrow-indicator"><ArrowRight size={16} /></div>}
                   </div>
                 </div>
 
@@ -622,7 +796,7 @@ const AnalyticsPage = () => {
                   <div className="stream-header">
                     <div className="header-left">
                       <BarChart2 className="text-blue" size={16} />
-                      <h3>{t('top_revenue_stores_7d')}</h3>
+                      <h3>{isPOS ? 'Top Demanded Items' : t('top_revenue_stores_7d')}</h3>
                     </div>
                   </div>
                   <div className="main-chart-area">
@@ -635,44 +809,64 @@ const AnalyticsPage = () => {
                   <div className="stream-header">
                     <div className="header-left">
                       <Zap className="text-amber animate-pulse" size={16} />
-                      <h3>{t('optimization_opportunities')}</h3>
+                      <h3>{isPOS ? 'Critical Restocks' : t('optimization_opportunities')}</h3>
                     </div>
                   </div>
                   <div className="opportunity-list">
-                      {forecasting
-                        .filter(f => f.return_rate > 10 || f.recommendation === 'EXPAND SUPPLY')
-                        .sort((a, b) => b.return_rate - a.return_rate)
-                        .slice(0, 3)
-                        .map((f, i) => {
-                           const name = language === 'ar' ? (f.vendor_name_ar || f.vendor_name) : (f.vendor_name || 'Unknown Vendor');
-                           return (
-                             <div key={i} className={`opp-item-premium ${f.return_rate > 15 ? 'leak' : 'growth'} clickable-opp`} onClick={() => handleOpenOpportunityDetails(f)} title="Click to view Actionable Optimization details">
-                                 <div className="opp-meta">
-                                     <div className="opp-store">{name}</div>
-                                     <div className="opp-subtitle">
-                                       {f.return_rate > 15 ? (
-                                         <>
-                                           {t('forecasted_return_rate')}: <span className="text-rose font-bold">{f.return_rate}%</span>
-                                         </>
-                                       ) : (
-                                         <>
-                                           {t('daily_sales_velocity')}: <span className="text-emerald font-bold">{f.sales_velocity} {t('units')}</span>
-                                         </>
-                                       )}
-                                     </div>
-                                 </div>
-                                 <div className="opp-action-pill">
-                                   {f.return_rate > 15 ? (
-                                     <span className="pill-loss">Save {parseFloat(f.expected_savings).toFixed(1)} KD</span>
-                                   ) : (
-                                     <span className="pill-gain">Growth Option</span>
-                                   )}
-                                 </div>
-                             </div>
-                           );
-                        })}
-                      {forecasting.length === 0 && (
-                        <div className="no-opportunities">{t('gathering_sales_data')}</div>
+                      {isPOS ? (
+                        forecasting
+                          .filter(f => f.recommendation === 'REORDER')
+                          .sort((a, b) => b.sales_velocity - a.sales_velocity)
+                          .slice(0, 3)
+                          .map((f, i) => {
+                             const name = language === 'ar' ? (f.vendor_name_ar || f.vendor_name) : (f.vendor_name || 'Unknown Item');
+                             return (
+                               <div key={i} className="opp-item-premium leak">
+                                   <div className="opp-meta">
+                                       <div className="opp-store">{name}</div>
+                                       <div className="opp-subtitle">
+                                         Weekly Demand: <span className="text-rose font-bold">{f.sales_velocity} units</span>
+                                       </div>
+                                   </div>
+                                   <div className="opp-action-pill">
+                                     <span className="pill-loss">Cost: {parseFloat(f.expected_savings).toFixed(3)} KD</span>
+                                   </div>
+                               </div>
+                             );
+                          })
+                      ) : (
+                        forecasting
+                          .filter(f => f.return_rate > 10 || f.recommendation === 'EXPAND SUPPLY')
+                          .sort((a, b) => b.return_rate - a.return_rate)
+                          .slice(0, 3)
+                          .map((f, i) => {
+                             const name = language === 'ar' ? (f.vendor_name_ar || f.vendor_name) : (f.vendor_name || 'Unknown Vendor');
+                             return (
+                               <div key={i} className={`opp-item-premium ${f.return_rate > 15 ? 'leak' : 'growth'} clickable-opp`} onClick={() => handleOpenOpportunityDetails(f)} title="Click to view Actionable Optimization details">
+                                   <div className="opp-meta">
+                                       <div className="opp-store">{name}</div>
+                                       <div className="opp-subtitle">
+                                         {f.return_rate > 15 ? (
+                                           <>
+                                             {t('forecasted_return_rate')}: <span className="text-rose font-bold">{f.return_rate}%</span>
+                                           </>
+                                         ) : (
+                                           <>
+                                             {t('daily_sales_velocity')}: <span className="text-emerald font-bold">{f.sales_velocity} {t('units')}</span>
+                                           </>
+                                         )}
+                                       </div>
+                                   </div>
+                                   <div className="opp-action-pill">
+                                     {f.return_rate > 15 ? (
+                                       <span className="pill-loss">Save {parseFloat(f.expected_savings).toFixed(1)} KD</span>
+                                     ) : (
+                                       <span className="pill-gain">Growth Option</span>
+                                     )}
+                                   </div>
+                               </div>
+                             );
+                          })
                       )}
                   </div>
                 </div>

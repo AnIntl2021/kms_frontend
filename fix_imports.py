@@ -1,8 +1,8 @@
 import os
 
 directories = [
-    'c:/xampp/htdocs/fresh_n_fast_frontend/src/pages',
-    'c:/xampp/htdocs/fresh_n_fast_frontend/src/components'
+    'c:/xampp/htdocs/kitchen_management_frontend/src/pages',
+    'c:/xampp/htdocs/kitchen_management_frontend/src/components'
 ]
 
 for d in directories:

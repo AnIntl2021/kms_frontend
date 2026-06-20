@@ -1,6 +1,6 @@
 {
-  "name": "fresh'n'fastkw",
-  "short_name": "FNF",
+  "name": "KMS - Kitchen Management System",
+  "short_name": "KMS",
   "description": "Professional ERP",
   "id": "/",
   "start_url": "./",
@@ -8,15 +8,15 @@
   "display": "standalone",
   "orientation": "any",
   "background_color": "#ffffff",
-  "theme_color": "#16a34a",
+  "theme_color": "#1b4645",
   "icons": [
     {
-      "src": "/logo.jpg",
+      "src": "/ANSOFTT_LOGO.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "/logo.jpg",
+      "src": "/ANSOFTT_LOGO.png",
       "sizes": "512x512",
       "type": "image/png"
     }

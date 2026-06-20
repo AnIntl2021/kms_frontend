@@ -1,4 +1,4 @@
-# <span style={{ fontFamily: "'Oleo Script', cursive" }}>Fresh & Fast Restaurant Company</span> - Enterprise ERP
+# KMS - Kitchen Management System - Enterprise ERP
 
 A premium full-stack ERP system built with modern technologies.
 
@@ -11,15 +11,15 @@ A premium full-stack ERP system built with modern technologies.
 The system is divided into three key stages, each with its own configuration:
 1. **Development (`npm run dev`)**:
    - Environment: `.env.development`
-   - DB: `fresh_n_fast_dev`
+   - DB: `kms_dev`
    - Features: Detailed error logging, CORS open to localhost.
 2. **Staging (`npm run dev:staging` / `npm run build:staging`)**:
    - Environment: `.env.staging`
-   - DB: `fresh_n_fast_staging`
+   - DB: `kms_staging`
    - Purpose: Pre-production testing on a staging server.
 3. **Production (`npm run dev:prod` / `npm run build:prod`)**:
    - Environment: `.env.production`
-   - DB: `fresh_n_fast_prod`
+   - DB: `kms_prod`
    - Features: Secure CORS, combined logging, minified bundles.
 
 ## Getting Started
@@ -27,7 +27,7 @@ The system is divided into three key stages, each with its own configuration:
 ### 1. Database Setup
 1. Open XAMPP Control Panel and start **Apache** and **MySQL**.
 2. Go to [http://localhost/phpmyadmin](http://localhost/phpmyadmin).
-3. Create a new database named `fresh_n_fast_db`.
+3. Create a new database named `kms_db`.
 4. Import the `backend/schema.sql` file or copy-paste its contents into the SQL tab.
 
 ### 2. Backend Setup

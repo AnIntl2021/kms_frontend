@@ -3,10 +3,14 @@ import { create } from 'zustand';
 interface Admin {
   admin_id: number;
   username: string;
-  role: string;
+  role: string; // 'SUPER_ADMIN', 'TENANT_ADMIN', 'BRANCH_MANAGER', 'CASHIER', etc.
   firstName?: string;
   lastName?: string;
   permissions?: string[];
+  tenant_id?: number; // Added for SaaS multi-tenancy
+  branch_id?: number; // Added for Branch-wise access
+  brand_id?: number;
+  isMaster?: boolean; // True if logged into master DB
 }
 
 interface AuthState {

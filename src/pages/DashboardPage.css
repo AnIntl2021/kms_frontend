@@ -14,7 +14,7 @@
 .welcome-msg h2 {
   font-size: 1.75rem;
   font-weight: 800;
-  color: var(--primary);
+  color: var(--gray-800);
   margin-bottom: 0.25rem;
 }
 
@@ -34,7 +34,7 @@
   padding: 0.6rem 1.2rem;
   border-radius: 10px;
   font-weight: 600;
-  color: var(--primary);
+  color: var(--gray-800);
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -122,7 +122,7 @@
 .metric-value {
   font-size: 1.75rem;
   font-weight: 800;
-  color: var(--primary);
+  color: var(--gray-800);
 }
 
 .metric-unit {
@@ -167,7 +167,7 @@
 .panel-header h3 {
   font-size: 1.25rem;
   font-weight: 800;
-  color: var(--primary);
+  color: var(--gray-800);
 }
 
 /* Product Card Grid */
@@ -211,7 +211,7 @@
   align-items: center;
   justify-content: center;
   font-weight: 800;
-  color: var(--primary);
+  color: var(--gray-800);
   font-size: 1.2rem;
 }
 
@@ -227,7 +227,7 @@
 .product-card-body h5 {
   font-size: 1rem;
   font-weight: 800;
-  color: var(--primary);
+  color: var(--gray-800);
   margin-bottom: 0.25rem;
 }
 
@@ -249,7 +249,7 @@
 .stock-pill {
   font-size: 0.95rem;
   font-weight: 800;
-  color: var(--primary);
+  color: var(--gray-800);
 }
 
 .stock-label {
@@ -345,3 +345,6 @@
     gap: 1.5rem;
   }
 }
+
+.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+

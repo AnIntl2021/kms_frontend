@@ -1,13 +1,14 @@
 :root {
-  --primary: #01562c;
-  --primary-dark: #003a1d;
-  --primary-light: #0d7c43;
+  --primary: #1b4645;
+  --primary-dark: #12302f;
+  --primary-light: #286362;
   --secondary: #f5f5dc;
   --secondary-dim: #ede9d0;
   --accent: #f57f17;
   --danger: #c62828;
   --success: #2e7d32;
   --white: #ffffff;
+  --btn-text: #ffffff;
   --gray-50: #fcfcf5;
   --gray-100: #f5f5dc;
   --gray-200: #e8e8c8;
@@ -42,8 +43,8 @@ a { text-decoration: none; color: inherit; transition: var(--transition); }
 .premium-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
 
 .btn-primary {
-  background: var(--primary);
-  color: var(--white);
+  background-color: var(--primary);
+  color: var(--btn-text);
   padding: 0.75rem 1.5rem;
   border-radius: var(--radius-md);
   font-weight: 600;

@@ -10,16 +10,18 @@ import {
 } from 'lucide-react';
 import api from '../api/axios';
 import './LoginPage.css';
-import logo from '../assets/logo.jpeg';
+import logo from '../assets/ANSOFTT_LOGO.png';
 
 const LoginPage = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [tenantId, setTenantId] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [forceUpdate, setForceUpdate] = useState(false);
+  const [settings, setSettings] = useState<any>({});
   
   const login = useAuthStore((state: any) => state.login);
 
@@ -30,18 +32,23 @@ const LoginPage = () => {
       setUsername(savedUser);
       setRememberMe(true);
     }
+  }, []);
 
-    // Check for force update on load
+  useEffect(() => {
     const checkSettings = async () => {
       try {
         const res = await api.get('/business/settings');
-        if (res.data.data.force_update === 'true') {
-          setForceUpdate(true);
+        if (res.data.data) {
+          setSettings(res.data.data);
+          if (res.data.data.force_update === 'true') {
+            setForceUpdate(true);
+          }
         }
       } catch (err) {
         console.error('Settings check failed', err);
       }
     };
+    
     checkSettings();
   }, []);
 
@@ -59,7 +66,7 @@ const LoginPage = () => {
     
     setLoading(true);
     setError('');
-
+    
     try {
       if (rememberMe) {
         localStorage.setItem('remembered_user', username);
@@ -77,7 +84,11 @@ const LoginPage = () => {
         login(admin, token);
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Login failed. Check your credentials.');
+      if (err.response?.data?.message === 'Business settings not initialized') {
+        window.location.href = '/settings';
+      } else {
+        setError(err.response?.data?.message || 'Login failed. Please check your credentials.');
+      }
     } finally {
       setLoading(false);
     }
@@ -132,7 +143,7 @@ const LoginPage = () => {
 
           <div className="promo-text">
             <h3>Smarter way to manage</h3>
-            <p>Welcome to <span style={{ fontFamily: "'Oleo Script', cursive" }}>Fresh & Fast Restaurant Company</span>. Efficiently track stock, manage sales, and optimize your entire ecosystem with ease.</p>
+            <p>Welcome to <span style={{ fontFamily: "'Oleo Script', cursive" }}>KMS</span>. Efficiently track stock, manage sales, and optimize your entire ecosystem with ease.</p>
           </div>
         </div>
 
@@ -140,7 +151,7 @@ const LoginPage = () => {
         <div className="panel-form">
           <div className="top-nav">
             <div className="brand-mini">
-              <img src={logo} alt="L" />
+              <img src={settings.company_logo || logo} alt="Logo" style={{ maxHeight: '80px', objectFit: 'contain' }} />
             </div>
           </div>
 
@@ -162,7 +173,7 @@ const LoginPage = () => {
                   type="text" 
                   value={username} 
                   onChange={(e) => setUsername(e.target.value)} 
-                  placeholder="admin@freshnfast.com"
+                  placeholder="admin@kms.com"
                   disabled={loading}
                 />
               </div>
@@ -208,7 +219,7 @@ const LoginPage = () => {
           </div>
 
           <footer className="login-footer">
-            <span>Powered by <a href="https://www.ansoftt.com/" target="_blank" rel="noopener noreferrer" style={{color: 'inherit', textDecoration: 'none'}}><b>An International</b></a></span>
+             <span>Powered by <a href="https://www.ansoftt.com/" target="_blank" rel="noopener noreferrer" style={{color: 'inherit', textDecoration: 'none'}}><b>AN International</b></a></span>
             <span>v1.0.0</span>
           </footer>
         </div>

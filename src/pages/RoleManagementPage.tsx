@@ -354,6 +354,15 @@ const RoleManagementPage: React.FC = () => {
                         ))}
                       </select>
                     </div>
+                    <div className="form-group" style={{flex: 1}}>
+                      <label>Assigned Branch (Optional)</label>
+                      <select name="branch_id" defaultValue={editingUser?.branch_id || ""}>
+                        <option value="">All Branches / Global</option>
+                        <option value="1">Main Branch (City Center)</option>
+                        <option value="2">Northside Branch</option>
+                        <option value="3">Airport Branch</option>
+                      </select>
+                    </div>
                     {editingUser && (
                       <div className="form-group" style={{flex: 1}}>
                         <label>{t('status')}</label>

@@ -185,7 +185,7 @@ const StorePNLReportPage = () => {
                         outerRadius={80}
                         paddingAngle={5}
                       >
-                        {data.salesByCategory.map((entry, index) => (
+                        {data.salesByCategory.map((entry: any, index: number) => (
                           <Cell key={`cell-${index}`} fill={['#3b82f6', '#0ea5e9', '#06b6d4', '#14b8a6', '#10b981'][index % 5]} />
                         ))}
                       </Pie>
@@ -205,8 +205,8 @@ const StorePNLReportPage = () => {
                       <Pie
                         data={[
                           { name: 'COGS (Recipes)', value: data.totalCogs },
-                          ...data.laborExpenses.map(l => ({ name: l.category + ' (Labor)', value: l.amount })),
-                          ...data.otherExpenses.map(o => ({ name: o.category, value: o.amount }))
+                          ...data.laborExpenses.map((l: any) => ({ name: l.category + ' (Labor)', value: l.amount })),
+                          ...data.otherExpenses.map((o: any) => ({ name: o.category, value: o.amount }))
                         ].filter(item => item.value > 0)}
                         dataKey="value"
                         nameKey="name"
@@ -242,7 +242,7 @@ const StorePNLReportPage = () => {
                       startAngle={180} 
                       endAngle={0}
                     >
-                      <RadialBar minAngle={15} background clockWise={true} dataKey="value" cornerRadius={10} />
+                      <RadialBar {...({ minAngle: 15, background: true, clockWise: true, dataKey: "value", cornerRadius: 10 } as any)} />
                     </RadialBarChart>
                   </ResponsiveContainer>
                   <div style={{ position: 'absolute', bottom: '0', left: '0', width: '100%', textAlign: 'center' }}>

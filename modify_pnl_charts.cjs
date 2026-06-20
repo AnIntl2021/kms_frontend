@@ -1,6 +1,6 @@
 const fs = require('fs');
 
-let content = fs.readFileSync('c:/xampp/htdocs/fresh_n_fast_frontend/src/pages/StorePNLReportPage.tsx', 'utf-8');
+let content = fs.readFileSync('c:/xampp/htdocs/kitchen_management_frontend/src/pages/StorePNLReportPage.tsx', 'utf-8');
 
 if (!content.includes('import { PieChart')) {
   content = content.replace("import { toast } from 'react-toastify';", "import { toast } from 'react-toastify';\nimport { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, RadialBarChart, RadialBar, Legend } from 'recharts';");
@@ -103,5 +103,5 @@ if (!content.includes('NEXT-GEN CHARTS GRID')) {
   content = content.replace("            {/* Grid Layout for details */}", chartsInjection + "\n            {/* Grid Layout for details */}");
 }
 
-fs.writeFileSync('c:/xampp/htdocs/fresh_n_fast_frontend/src/pages/StorePNLReportPage.tsx', content);
+fs.writeFileSync('c:/xampp/htdocs/kitchen_management_frontend/src/pages/StorePNLReportPage.tsx', content);
 console.log("Injected charts into StorePNLReportPage.tsx");

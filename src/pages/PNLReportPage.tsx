@@ -3,6 +3,7 @@ import Layout from '../components/Layout';
 import api from '../api/axios';
 import { useLanguage } from '../hooks/useLanguage';
 import { toast } from 'react-toastify';
+import { useAuthStore } from '../store/useAuthStore';
 import { 
   TrendingUp, 
   AlertTriangle, 
@@ -21,16 +22,24 @@ import {
   ChevronDown,
   ChevronUp,
   Package,
-  FileText
+  FileText,
+  Truck
 } from 'lucide-react';
 
 const PNLReportPage = () => {
   const { t, language } = useLanguage();
+  const { admin } = useAuthStore();
+  
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<any>(null);
   const [vendors, setVendors] = useState<any[]>([]);
+  const [brands, setBrands] = useState<any[]>([]);
+  const [branches, setBranches] = useState<any[]>([]);
+
   const [selectedVendor, setSelectedVendor] = useState('');
-  const [selectedBranch, setSelectedBranch] = useState('');
+  const [selectedBrand, setSelectedBrand] = useState(admin?.brand_id ? String(admin.brand_id) : '');
+  const [selectedBranch, setSelectedBranch] = useState(admin?.branch_id ? String(admin.branch_id) : '');
+
   const [startDate, setStartDate] = useState(
     new Date(new Date().setDate(new Date().getDate() - 30)).toISOString().split('T')[0]
   );
@@ -47,8 +56,12 @@ const PNLReportPage = () => {
   const [purchasesPage, setPurchasesPage] = useState(1);
   const [customerPage, setCustomerPage] = useState(1);
 
+  const isSuperOrTenant = admin?.role === 'SUPER_ADMIN' || admin?.role === 'TENANT_ADMIN' || (!admin?.brand_id && !admin?.branch_id);
+  const isBrandManager = admin?.role === 'BRAND_MANAGER' || (admin?.brand_id && !admin?.branch_id);
+
   useEffect(() => {
     fetchVendors();
+    fetchBrandsAndBranches();
   }, []);
 
   useEffect(() => {
@@ -57,7 +70,7 @@ const PNLReportPage = () => {
     if (!startValid || !endValid) return;
     if (startDate && endDate && startDate > endDate) return;
     fetchPNLData();
-  }, [startDate, endDate, selectedVendor, selectedBranch]);
+  }, [startDate, endDate, selectedVendor, selectedBranch, selectedBrand]);
 
   // Reset pagination pages when filters or tab changes
   useEffect(() => {
@@ -65,7 +78,7 @@ const PNLReportPage = () => {
     setWastagePage(1);
     setPurchasesPage(1);
     setCustomerPage(1);
-  }, [startDate, endDate, selectedVendor, selectedBranch, activeDetailsTab]);
+  }, [startDate, endDate, selectedVendor, selectedBranch, selectedBrand, activeDetailsTab]);
 
   const fetchVendors = async () => {
     try {
@@ -77,14 +90,41 @@ const PNLReportPage = () => {
     }
   };
 
+  const fetchBrandsAndBranches = async () => {
+    try {
+      if (isSuperOrTenant) {
+        const [brandsRes, branchesRes] = await Promise.all([
+          api.get('/brands'),
+          api.get('/branches')
+        ]);
+        setBrands(brandsRes.data.data || []);
+        setBranches(branchesRes.data.data || []);
+      } else if (isBrandManager) {
+        const branchesRes = await api.get('/branches');
+        const allBranches = branchesRes.data.data || [];
+        setBranches(allBranches.filter((b: any) => String(b.brand_id) === String(admin?.brand_id)));
+      }
+    } catch (err) {
+      console.error('Failed to load brands/branches for reports filter', err);
+    }
+  };
+
   const fetchPNLData = async () => {
     try {
       setLoading(true);
+      const params = {
+        startDate,
+        endDate,
+        vendor_id: selectedVendor || undefined,
+        branch_id: selectedBranch || undefined,
+        brand_id: selectedBrand || undefined
+      };
+      
       const [salesRes, returnsRes, purchaseRes, productsRes] = await Promise.all([
-        api.get('/reports/sales', { params: { startDate, endDate, vendor_id: selectedVendor || undefined, branch_id: selectedBranch || undefined } }).catch(() => ({ data: { data: [] } })),
-        api.get('/reports/wastage', { params: { startDate, endDate, vendor_id: selectedVendor || undefined, branch_id: selectedBranch || undefined } }).catch(() => ({ data: { data: [] } })),
-        api.get('/reports/purchase', { params: { startDate, endDate, vendor_id: selectedVendor || undefined, branch_id: selectedBranch || undefined } }).catch(() => ({ data: { data: [] } })),
-        api.get('/reports/products', { params: { startDate, endDate, vendor_id: selectedVendor || undefined, branch_id: selectedBranch || undefined } }).catch(() => ({ data: { data: [] } }))
+        api.get('/reports/sales', { params }).catch(() => ({ data: { data: [] } })),
+        api.get('/reports/wastage', { params }).catch(() => ({ data: { data: [] } })),
+        api.get('/reports/purchase', { params }).catch(() => ({ data: { data: [] } })),
+        api.get('/reports/products', { params }).catch(() => ({ data: { data: [] } }))
       ]);
       
       const rawWastage = returnsRes.data.data || returnsRes.data || [];
@@ -426,6 +466,49 @@ const PNLReportPage = () => {
               </div>
             </div>
 
+            {/* Brand Filter */}
+            {isSuperOrTenant && (
+              <div className="pnl-filter-item">
+                <span className="pnl-filter-label"><Layers size={14} /> {t('filter_by_brand') || 'Brand'}</span>
+                <select
+                  className="pnl-select"
+                  value={selectedBrand}
+                  onChange={(e) => {
+                    setSelectedBrand(e.target.value);
+                    setSelectedBranch('');
+                  }}
+                >
+                  <option value="">{t('all_brands') || 'All Brands'}</option>
+                  {brands.map((b) => (
+                    <option key={b.brand_id} value={b.brand_id}>
+                      {language === 'ar' ? (b.name_ar || b.name_en) : b.name_en}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Branch Filter */}
+            {(isSuperOrTenant || isBrandManager) && (
+              <div className="pnl-filter-item">
+                <span className="pnl-filter-label"><Truck size={14} /> {t('filter_by_branch') || 'Branch'}</span>
+                <select
+                  className="pnl-select"
+                  value={selectedBranch}
+                  onChange={(e) => setSelectedBranch(e.target.value)}
+                >
+                  <option value="">{t('all_branches') || 'All Branches'}</option>
+                  {branches
+                    .filter((b) => !selectedBrand || String(b.brand_id) === String(selectedBrand))
+                    .map((b) => (
+                      <option key={b.branch_id} value={b.branch_id}>
+                        {language === 'ar' ? (b.name_ar || b.name_en) : b.name_en}
+                      </option>
+                    ))}
+                </select>
+              </div>
+            )}
+
             <div className="pnl-filter-item">
               <span className="pnl-filter-label"><Store size={14} /> {t('filter_by_customer')}</span>
               <select 
@@ -433,7 +516,6 @@ const PNLReportPage = () => {
                 value={selectedVendor} 
                 onChange={(e) => {
                   setSelectedVendor(e.target.value);
-                  setSelectedBranch('');
                 }}
               >
                 <option value="">{t('all_customers')}</option>
@@ -445,29 +527,13 @@ const PNLReportPage = () => {
               </select>
             </div>
 
-            <div className="pnl-filter-item">
-              <span className="pnl-filter-label"><MapPin size={14} /> {t('filter_by_branch')}</span>
-              <select 
-                className="pnl-select" 
-                value={selectedBranch} 
-                disabled={!selectedVendor}
-                onChange={(e) => setSelectedBranch(e.target.value)}
-              >
-                <option value="">{selectedVendor ? t('all_branches') : t('select_customer_first')}</option>
-                {activeBranches.map((b: any) => (
-                  <option key={b.branch_id || b.id} value={b.branch_id || b.id}>
-                    {language === 'ar' ? (b.name_ar || b.name_en || b.name) : (b.name_en || b.name)}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {(selectedVendor || selectedBranch) && (
+            {(selectedVendor || selectedBranch || selectedBrand) && (
               <button 
                 className="pnl-clear-btn" 
                 onClick={() => {
                   setSelectedVendor('');
-                  setSelectedBranch('');
+                  setSelectedBranch(admin?.branch_id ? String(admin.branch_id) : '');
+                  setSelectedBrand(admin?.brand_id ? String(admin.brand_id) : '');
                 }}
               >
                 {t('clear_all')}
@@ -1212,7 +1278,7 @@ const PNLReportPage = () => {
           <div className="print-header">
             <div className="print-header-top">
               <div className="print-logo">
-                <span className="logo-main" style={{ fontFamily: "'Oleo Script', cursive" }}>Fresh & Fast Restaurant Company</span>
+                <span className="logo-main" style={{ fontFamily: "'Oleo Script', cursive" }}>KMS Restaurant Company</span>
                 <span className="logo-sub">FOOD DISTRIBUTION CENTER</span>
               </div>
               <div className="print-title-meta">

@@ -17,12 +17,15 @@
   transition: var(--transition);
   z-index: 1000;
   box-shadow: 4px 0 10px rgba(0,0,0,0.1);
+  border-right: 1px solid var(--primary-dark);
 }
 
 [dir="rtl"] .sidebar {
   right: 0;
   left: auto;
   box-shadow: -4px 0 10px rgba(0,0,0,0.1);
+  border-right: none;
+  border-left: 1px solid var(--primary-dark);
 }
 
 .sidebar-collapsed .sidebar {
@@ -30,14 +33,25 @@
 }
 
 .sidebar-header {
-  padding: 1.5rem;
+  padding: 0;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 1rem;
+  justify-content: center;
   border-bottom: 1px solid rgba(255,255,255,0.05);
   overflow: hidden;
-  height: 90px;
-  background: rgba(0,0,0,0.05);
+  height: auto;
+  background: var(--white);
+}
+
+.logo-link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  width: 100%;
+  height: 100%;
 }
 
 .brand-logo-small {
@@ -57,6 +71,15 @@
   height: 100%;
   object-fit: contain;
 }
+
+.layout-logo {
+  height: 64px;
+  padding: 16px 0;
+  object-fit: contain;
+  display: block;
+}
+
+
 
 .brand-info {
   display: flex;

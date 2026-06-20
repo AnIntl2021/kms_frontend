@@ -101,5 +101,5 @@
   width: auto;
   margin: 0;
   cursor: pointer;
-  accent-color: var(--primary);
+  accent-color: var(--gray-800);
 }

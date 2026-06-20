@@ -27,8 +27,8 @@ const AIAssistant = () => {
         { 
           role: 'bot', 
           text: lang === 'en' 
-            ? 'Hello! I am your Fresh \'n\' Fast Personal Assistant. How can I help you manage your ERP today?' 
-            : 'ياهلا! أنا مساعدك الشخصي في فريش اند فاست. اشلون اقدر اساعدك اليوم؟' 
+            ? 'Hello! I am your KMS Personal Assistant. How can I help you manage your ERP today?' 
+            : 'ياهلا! أنا مساعدك الشخصي في KMS. اشلون اقدر اساعدك اليوم؟' 
         }
       ]);
     }

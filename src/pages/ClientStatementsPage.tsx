@@ -151,7 +151,7 @@ const ClientStatementsPage: React.FC = () => {
           size: A4 portrait;
           margin: 8mm 8mm 8mm 8mm;
           @bottom-left {
-            content: "Fresh & Fast Statement";
+            content: "KMS Statement";
             font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
             font-size: 10px;
             color: #64748b;
@@ -866,7 +866,7 @@ const ClientStatementsPage: React.FC = () => {
                         </td>
                         <td>
                           <div className="item-info">
-                            <strong>FNFI-{100000 + order.sale_id}</strong>
+                            <strong>{order.order_number || order.sale_id}</strong>
                             <span>{order.batch_number ? `Batch: ${order.batch_number}` : 'No Batch'}</span>
                           </div>
                         </td>
@@ -1025,9 +1025,9 @@ const ClientStatementsPage: React.FC = () => {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '3px double #01562c', paddingBottom: isSummaryPrint ? '0.75rem' : '1.5rem', marginBottom: isSummaryPrint ? '1rem' : '2rem' }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <img src="/logo_new.jpeg" alt="Fresh & Fast Logo" style={{ height: '40px', objectFit: 'contain' }} />
+                <img src="/logo_new.jpeg" alt="KMS Logo" style={{ height: '40px', objectFit: 'contain' }} />
                 <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                  <h1 style={{ fontFamily: '"Oleo Script", cursive', fontSize: '32px', color: '#01562c', margin: 0, fontWeight: 700, letterSpacing: '0px', lineHeight: '1' }}>Fresh & Fast</h1>
+                  <h1 style={{ fontFamily: '"Oleo Script", cursive', fontSize: '32px', color: '#01562c', margin: 0, fontWeight: 700, letterSpacing: '0px', lineHeight: '1' }}>KMS</h1>
                   <span style={{ fontSize: '13px', color: '#01562c', fontWeight: 600, letterSpacing: '0.5px', marginTop: '2px' }}>Restuarant Company</span>
                 </div>
               </div>
@@ -1135,7 +1135,7 @@ const ClientStatementsPage: React.FC = () => {
               filteredOrders.map((order, idx) => (
                 <tbody key={order.sale_id} style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
                   <tr style={{ borderBottom: '1px solid #e2e8f0', background: idx % 2 === 0 ? 'white' : '#fcfcfc', transition: 'background 0.2s', pageBreakInside: 'avoid', breakInside: 'avoid', fontSize: '11px' }}>
-                    <td style={{ padding: '10px 6px', fontWeight: 700, color: '#0f172a' }}>FNFI-{100000 + order.sale_id}</td>
+                    <td style={{ padding: '10px 6px', fontWeight: 700, color: '#0f172a' }}>{order.order_number || order.sale_id}</td>
                     <td style={{ padding: '10px 6px', fontWeight: 600, color: '#334155' }}>{language === 'ar' ? (order.branch_name_ar || order.branch_name || 'الرئيسي') : (order.branch_name || 'Main Hub')}</td>
                     <td style={{ padding: '10px 6px', color: '#64748b' }}>{order.report_date}</td>
                     <td style={{ padding: '10px 6px', textAlign: 'center', fontWeight: 700, color: 'var(--primary)' }}>{order.items?.reduce((s, i) => s + Number(i.quantity || 0), 0) || 0}</td>
@@ -1274,7 +1274,7 @@ const ClientStatementsPage: React.FC = () => {
             <div style={{ textAlign: 'center', width: '220px' }}>
               <div style={{ borderBottom: '1.5px dashed #cbd5e1', height: '120px', marginBottom: '10px' }} />
               <p style={{ margin: 0, fontWeight: 700 }}>{language === 'ar' ? 'توقيع العميل المستلم' : 'Recipient Customer Sign'}</p>
-              <p style={{ margin: '2px 0 0 0', fontSize: '10px', color: '#94a3b8' }}>Fresh & Fast<br />Restaurant company</p>
+              <p style={{ margin: '2px 0 0 0', fontSize: '10px', color: '#94a3b8' }}>KMS<br />Restaurant company</p>
             </div>
             <div style={{ textAlign: 'center', width: '280px', position: 'relative' }}>
               <div style={{ borderBottom: '2px dashed #cbd5e1', height: '120px', marginBottom: '10px', position: 'relative' }}>
