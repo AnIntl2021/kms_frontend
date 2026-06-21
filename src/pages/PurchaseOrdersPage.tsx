@@ -220,7 +220,7 @@ const PurchaseOrdersPage = () => {
           border: '1px solid #f1f5f9'
         }}>
           <div>
-            <h2 className="text-3xl font-extrabold text-[#01562c]" style={{ margin: 0 }}>{t('purchase_orders')}</h2>
+            <h2 className="text-3xl font-extrabold text-[#1b4645]" style={{ margin: 0 }}>{t('purchase_orders')}</h2>
             <p className="text-slate-500 font-medium" style={{ margin: 0 }}>{t('track_procurement_msg')}</p>
           </div>
           <button 
@@ -228,7 +228,7 @@ const PurchaseOrdersPage = () => {
             style={{ 
               borderRadius: '10px', 
               padding: '0.6rem 1.4rem', 
-              background: '#01562c', 
+              background: 'var(--primary, #1b4645)', 
               color: 'white', 
               fontWeight: '700', 
               cursor: 'pointer', 

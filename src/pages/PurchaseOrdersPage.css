@@ -1,6 +1,6 @@
 :root {
-  --fnf-green: #01562c;
-  --fnf-green-light: #028a4a;
+  --fnf-green: var(--primary, #1b4645);
+  --fnf-green-light: var(--primary-light, #286362);
   --fnf-bg: #f4f7f6;
   --text-dark: #1a1a1b;
   --text-gray: #6b7280;
@@ -245,8 +245,8 @@
   gap: 5px;
   padding: 5px 12px;
   background: transparent;
-  color: #7c3aed;
-  border: 1.5px dashed #a78bfa;
+  color: var(--primary-light, #286362);
+  border: 1.5px dashed var(--primary-light, #286362);
   border-radius: 6px;
   font-size: 0.75rem;
   font-weight: 700;
@@ -257,11 +257,11 @@
 }
 
 .btn-add-stock-item:hover {
-  background: #f5f3ff;
-  border-color: #7c3aed;
-  color: #5b21b6;
+  background: rgba(40, 99, 98, 0.08);
+  border-color: var(--primary, #1b4645);
+  color: var(--primary-dark, #12302f);
   transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.15);
+  box-shadow: 0 2px 8px rgba(27, 70, 69, 0.15);
 }
 
 .btn-add-stock-item:active {
