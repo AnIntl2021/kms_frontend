@@ -25,16 +25,30 @@ const POSCountersPage = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [cntsRes, brnchRes, subRes] = await Promise.all([
-        api.get('/subscription/counters'),
-        api.get('/branches'),
-        api.get('/subscription/status')
-      ]);
-      setCounters(cntsRes.data.data || []);
-      setBranches(brnchRes.data.data || []);
-      setSubStatus(subRes.data.data || null);
+      
+      try {
+        const subRes = await api.get('/subscription/status');
+        setSubStatus(subRes.data.data || null);
+      } catch (e) {
+        console.error('Failed to load subscription status', e);
+      }
+
+      try {
+        const brnchRes = await api.get('/branches');
+        setBranches(brnchRes.data.data || []);
+      } catch (e) {
+        console.error('Failed to load branches', e);
+      }
+
+      try {
+        const cntsRes = await api.get('/subscription/counters');
+        setCounters(cntsRes.data.data || []);
+      } catch (e) {
+        console.error('Failed to load POS counter data', e);
+        toast.error('Failed to load POS counter data.');
+      }
     } catch (e: any) {
-      toast.error('Failed to load POS counter data.');
+      console.error('Failed to fetch data', e);
     } finally {
       setLoading(false);
     }
