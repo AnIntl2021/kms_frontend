@@ -173,7 +173,7 @@ const POSPage: React.FC = () => {
       const url = selectedBranchId ? `/menu?branch_id=${selectedBranchId}&pos=true` : '/menu?pos=true';
       const response = await api.get(url);
       if (response.data.success) {
-        const baseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5001/api').replace('/api', '');
+        const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
         const mapped: Product[] = response.data.data
           .map((item: any) => {
             const cleanPath = item.image_url ? (item.image_url.startsWith('/') ? item.image_url.slice(1) : item.image_url) : '';
