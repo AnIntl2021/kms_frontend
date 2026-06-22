@@ -131,6 +131,7 @@
 
 .pos-product-info {
   padding: 1rem;
+  flex-shrink: 0;
 }
 
 .pos-product-title {
