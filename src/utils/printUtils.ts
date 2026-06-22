@@ -11,7 +11,10 @@ export const printReceipt = async (
   total: number,
   orderType: string,
   paymentMethod: string,
-  orderNumber: string
+  orderNumber: string,
+  discountAmount: number = 0,
+  discountPercentage: number = 0,
+  tableNumber: string = ''
 ) => {
   let companyName = '';
   let companyAddress = '';
@@ -100,6 +103,7 @@ export const printReceipt = async (
           <div>Date: ${dateStr}</div>
           <div>Order #: ${orderNumber}</div>
           <div>Type: ${orderType.toUpperCase().replace('_', ' ')}</div>
+          ${tableNumber ? `<div>Table: ${tableNumber}</div>` : ''}
           <div>Payment: ${paymentMethod.toUpperCase()}</div>
           <div class="divider"></div>
           <table>
@@ -121,6 +125,17 @@ export const printReceipt = async (
             </tbody>
           </table>
           <div class="divider"></div>
+          ${discountAmount > 0 ? `
+            <div style="display: flex; justify-content: space-between;">
+              <span>Subtotal:</span>
+              <span>${(total + discountAmount).toFixed(3)} KWD</span>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <span>Discount (${discountPercentage}%):</span>
+              <span>-${discountAmount.toFixed(3)} KWD</span>
+            </div>
+            <div class="divider"></div>
+          ` : ''}
           <div style="display: flex; justify-content: space-between;" class="bold">
             <span>TOTAL:</span>
             <span>${total.toFixed(3)} KWD</span>
@@ -173,6 +188,7 @@ export const printReceipt = async (
             <div class="info-box">
               <div><strong>Order Number:</strong> ${orderNumber}</div>
               <div><strong>Date:</strong> ${dateStr}</div>
+              ${tableNumber ? `<div><strong>Table:</strong> ${tableNumber}</div>` : ''}
             </div>
             <div class="info-box">
               <div><strong>Order Type:</strong> ${orderType.toUpperCase().replace('_', ' ')}</div>
@@ -200,6 +216,16 @@ export const printReceipt = async (
               `).join('')}
             </tbody>
             <tfoot>
+              ${discountAmount > 0 ? `
+                <tr>
+                  <td colspan="3" class="right">Subtotal (KWD)</td>
+                  <td class="right">${(total + discountAmount).toFixed(3)}</td>
+                </tr>
+                <tr>
+                  <td colspan="3" class="right">Discount (${discountPercentage}%)</td>
+                  <td class="right">-${discountAmount.toFixed(3)}</td>
+                </tr>
+              ` : ''}
               <tr>
                 <td colspan="3" class="right total-row">Grand Total (KWD)</td>
                 <td class="right total-row">${total.toFixed(3)}</td>

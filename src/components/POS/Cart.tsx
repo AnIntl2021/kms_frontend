@@ -30,8 +30,13 @@ const Cart: React.FC<CartProps> = ({
   orderType, setOrderType, paymentMethod, setPaymentMethod, branchId, counterId 
 }) => {
   const [loading, setLoading] = useState(false);
+  const [discount, setDiscount] = useState<number>(0);
+  const [tableNumber, setTableNumber] = useState<string>('');
+  
   const subtotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const total = subtotal;
+  const discountAmount = Number(discount) || 0;
+  const discountPercentage = subtotal > 0 ? (discountAmount / subtotal) * 100 : 0;
+  const total = Math.max(0, subtotal - discountAmount);
 
   const handleCheckout = async () => {
     if (items.length === 0) return;
@@ -41,7 +46,11 @@ const Cart: React.FC<CartProps> = ({
         branch_id: branchId || 1,
         order_type: orderType,
         payment_method: paymentMethod,
-        total_amount: total,
+        total_amount: subtotal,
+        discount_amount: discountAmount,
+        discount_percentage: parseFloat(discountPercentage.toFixed(2)),
+        final_amount: total,
+        table_number: orderType === 'walk_in' ? (tableNumber || null) : null,
         counter_id: counterId || null,
         items: items.map(i => ({
           menu_item_id: i.menu_item_id || i.id,
@@ -60,8 +69,10 @@ const Cart: React.FC<CartProps> = ({
           name: (i.name && i.name_ar) ? `${i.name} / ${i.name_ar}` : (i.name || i.name_ar || 'Unknown Item')
         }));
         
-        printReceipt(itemsToPrint, total, orderType, paymentMethod, orderNumber);
+        printReceipt(itemsToPrint, total, orderType, paymentMethod, orderNumber, discountAmount, parseFloat(discountPercentage.toFixed(2)), orderType === 'walk_in' ? tableNumber : '');
 
+        setDiscount(0);
+        setTableNumber('');
         clearCart();
       } else {
         toast.error('Failed to place order');
@@ -137,6 +148,24 @@ const Cart: React.FC<CartProps> = ({
           </button>
         </div>
 
+        {/* Table Selection (Dine In only) */}
+        {orderType === 'walk_in' && (
+          <div className="pos-table-selection" style={{ marginBottom: '15px' }}>
+            <label style={{ display: 'block', fontSize: '11px', fontWeight: 800, color: '#475569', marginBottom: '6px' }}>SELECT TABLE</label>
+            <select
+              value={tableNumber}
+              onChange={(e) => setTableNumber(e.target.value)}
+              style={{ width: '100%', padding: '10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', outline: 'none', fontWeight: 600, color: '#1e293b' }}
+              disabled={loading}
+            >
+              <option value="">Select a Table</option>
+              {Array.from({ length: 20 }, (_, i) => `Table-${i + 1}`).map(t => (
+                <option key={t} value={t}>{t.replace('-', ' ')}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
         {/* Payment Method Selector */}
         <div className="pos-payment-method">
           <button 
@@ -161,6 +190,36 @@ const Cart: React.FC<CartProps> = ({
           <span>Subtotal</span>
           <span>{subtotal.toFixed(3)}</span>
         </div>
+        
+        {items.length > 0 && (
+          <div className="pos-summary-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '4px 0' }}>
+            <span>Discount (KWD)</span>
+            <input 
+              type="number" 
+              step="0.05"
+              min="0" 
+              max={subtotal}
+              value={discount || ''} 
+              onChange={(e) => {
+                const val = Math.min(subtotal, Math.max(0, parseFloat(e.target.value) || 0));
+                setDiscount(val);
+              }}
+              style={{
+                width: '100px',
+                padding: '4px 8px',
+                borderRadius: '6px',
+                border: '1px solid #cbd5e1',
+                textAlign: 'right',
+                fontSize: '14px',
+                fontFamily: 'inherit',
+                fontWeight: 600
+              }}
+              placeholder="0.000"
+              disabled={loading}
+            />
+          </div>
+        )}
+
         <div className="pos-summary-row total">
           <span>Total (KWD)</span>
           <span>{total.toFixed(3)}</span>

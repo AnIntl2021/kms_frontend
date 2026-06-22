@@ -521,7 +521,31 @@ const SalesPage = () => {
                     <td>
                       <div className="item-info">
                         <strong>{getOrderNumber(sale.sale_id || 0)}</strong>
-                        <span>{sale.items_count || 0} {t("items_included")}</span>
+                        <div style={{ display: 'flex', gap: '4px', alignItems: 'center', marginTop: '2px', flexWrap: 'wrap' }}>
+                          <span style={{ 
+                            fontSize: '10px', 
+                            padding: '2px 6px', 
+                            borderRadius: '4px', 
+                            fontWeight: 'bold', 
+                            background: sale.order_type === 'walk_in' ? 'rgba(5, 76, 45, 0.1)' : sale.order_type === 'takeaway' ? '#fef3c7' : '#dbeafe', 
+                            color: sale.order_type === 'walk_in' ? 'var(--primary)' : sale.order_type === 'takeaway' ? '#d97706' : '#2563eb' 
+                          }}>
+                            {sale.order_type === 'walk_in' ? 'Dine In' : sale.order_type === 'takeaway' ? 'Takeaway' : sale.order_type === 'delivery' ? 'Delivery' : (sale.order_type || 'Walk In').toUpperCase()}
+                          </span>
+                          {sale.table_number && (
+                            <span style={{ 
+                              fontSize: '10px', 
+                              padding: '2px 6px', 
+                              borderRadius: '4px', 
+                              fontWeight: 'bold', 
+                              background: '#e0f2fe', 
+                              color: '#0369a1' 
+                            }}>
+                              {sale.table_number}
+                            </span>
+                          )}
+                        </div>
+                        <span style={{ fontSize: '11px', color: '#64748b', marginTop: '4px', display: 'block' }}>{sale.items_count || 0} {t("items_included")}</span>
                       </div>
                     </td>
                     <td>
@@ -676,6 +700,8 @@ const SalesPage = () => {
                     {detailOrder.reference_order_number && <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#64748b' }}>Order Number: <b style={{ color: 'var(--primary)' }}>{detailOrder.reference_order_number}</b></p>}
                     {detailOrder.notes && <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#64748b' }}>Notes: <b>{detailOrder.notes}</b></p>}
                     <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#64748b' }}>{t("batch_code")}: <b style={{ color: 'var(--primary)' }}>{detailOrder.batch_number || 'N/A'}</b></p>
+                    <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#64748b' }}>Type: <b style={{ textTransform: 'capitalize' }}>{detailOrder.order_type === 'walk_in' ? 'Dine In' : detailOrder.order_type || 'Walk In'}</b></p>
+                    {detailOrder.table_number && <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#64748b' }}>Table Number: <b style={{ color: '#0369a1' }}>{detailOrder.table_number}</b></p>}
                     <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#64748b' }}>{t("date")}: {detailOrder.order_date}</p>
                  </div>
                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>

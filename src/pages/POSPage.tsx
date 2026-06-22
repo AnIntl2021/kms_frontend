@@ -332,7 +332,7 @@ const POSPage: React.FC = () => {
                   <Store size={24} style={{ color: '#94a3b8', marginBottom: '8px' }} />
                   <p style={{ margin: 0, fontSize: '13px', color: '#475569', fontWeight: 600 }}>No active registers configured</p>
                   <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#64748b' }}>
-                    Please add a counter under <Link to="/settings/counters" style={{ color: 'var(--primary, #1b4645)', textDecoration: 'underline', fontWeight: 600 }}>POS Counters</Link> first.
+                    Please add a counter under <Link to="/pos-counters" style={{ color: 'var(--primary, #1b4645)', textDecoration: 'underline', fontWeight: 600 }}>POS Counters</Link> first.
                   </p>
                 </div>
               ) : (
