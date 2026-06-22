@@ -89,6 +89,7 @@
 
 .pos-product-image-wrap {
   height: 140px;
+  flex-shrink: 0;
   background: linear-gradient(135deg, #f6f8fb 0%, #e9edf3 100%);
   display: flex;
   align-items: center;
