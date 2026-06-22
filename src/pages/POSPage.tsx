@@ -236,24 +236,24 @@ const POSPage: React.FC = () => {
         {/* Left Side: Products */}
         <div className="pos-menu-section">
           
-          <div style={{ padding: '0.75rem 1.5rem', background: '#e0f2fe', color: '#0369a1', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #bae6fd' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <MapPin size={18} /> Current Location: 
+          <div className="pos-menu-header-strip">
+            <div className="pos-location-selector">
+              <MapPin size={18} style={{ color: 'var(--primary)' }} /> Current Location: 
               {!admin?.branch_id && branches.length > 0 ? (
                 <select 
                   value={selectedBranchId || ''} 
                   onChange={(e) => setSelectedBranchId(Number(e.target.value))}
-                  style={{ marginLeft: '10px', padding: '4px 8px', borderRadius: '4px', border: '1px solid #7dd3fc', background: '#fff', color: '#0369a1', fontWeight: 600, outline: 'none', cursor: 'pointer' }}
+                  className="pos-location-select"
                 >
                   {branches.map(b => (
                     <option key={b.branch_id} value={b.branch_id}>{b.name_en}</option>
                   ))}
                 </select>
               ) : (
-                branchName
+                <span style={{ color: 'var(--primary)', fontWeight: 800 }}>{branchName}</span>
               )}
               {activeSession && (
-                <span style={{ marginLeft: '15px', background: 'var(--primary, #1b4645)', color: 'white', padding: '4px 10px', borderRadius: '12px', fontSize: '11px', fontWeight: 700 }}>
+                <span className="pos-session-badge">
                   REGISTER: {activeSession.counter_name} (OPEN)
                 </span>
               )}
@@ -261,11 +261,7 @@ const POSPage: React.FC = () => {
             {activeSession && (
               <button 
                 onClick={handleRequestCloseSession}
-                style={{
-                  background: '#ef4444', color: 'white', border: 'none', borderRadius: '6px',
-                  padding: '5px 12px', fontSize: '12px', fontWeight: 700, cursor: 'pointer',
-                  boxShadow: '0 2px 4px rgba(239,68,68,0.2)', transition: 'background 0.2s'
-                }}
+                className="pos-close-counter-btn"
               >
                 Close Counter
               </button>
