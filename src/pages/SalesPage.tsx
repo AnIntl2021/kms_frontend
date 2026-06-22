@@ -53,6 +53,8 @@ interface SaleOrder {
   discount_percentage?: number;
   final_amount?: number;
   returns_amount?: number;
+  order_type?: string;
+  table_number?: string;
 }
 
 const SalesPage = () => {
