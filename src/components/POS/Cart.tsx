@@ -58,28 +58,6 @@ const Cart: React.FC<CartProps> = ({
   const tax = subtotal * 0.1; // 10% VAT example — adjust as needed
   const total = Math.max(0, subtotal - discountAmount);
 
-  const fetchCustomerSuggestions = async (inputValue: string) => {
-    if (!inputValue || inputValue.length < 2) {
-      setCustomerSuggestions([]);
-      return;
-    }
-    setLoadingSuggestions(true);
-    try {
-      const res = await api.get(`/sales/customers/search?q=${inputValue}`);
-      if (res.data.success && res.data.data) {
-        const formatted = res.data.data.map((c: any) => ({
-          label: `${c.customer_name} (${c.client_phone || 'No Phone'})`,
-          value: c
-        }));
-        setCustomerSuggestions(formatted);
-      }
-    } catch (e) {
-      console.error('Failed to search customers', e);
-    } finally {
-      setLoadingSuggestions(false);
-    }
-  };
-
   const handleCheckout = async (finalReceived: number = total, finalReturned: number = 0) => {
     if (items.length === 0) return;
     setLoading(true);

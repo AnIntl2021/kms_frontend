@@ -55,6 +55,7 @@ interface SaleOrder {
   returns_amount?: number;
   order_type?: string;
   table_number?: string;
+  payment_method?: string;
 }
 
 const SalesPage = () => {
