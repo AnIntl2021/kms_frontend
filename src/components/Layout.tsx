@@ -156,7 +156,7 @@ const Layout: React.FC<LayoutProps> = ({ children, title }) => {
     { name: 'Billing & Plans', path: '/billing', icon: <Wallet size={20} />, section: 'Admin' },
     { name: 'Stock Transfer', path: '/stock-transfer', icon: <Truck size={20} />, section: 'Operations', permission: 'inventory' },
     { name: t('settings'), path: '/settings', icon: <Settings size={20} />, section: 'Admin' },
-    { name: 'Assets Mgt', path: '/assets-management', icon: <Briefcase size={20} />, section: 'Admin', permission: 'assets' },
+    { name: 'Assets Management', path: '/assets-management', icon: <Briefcase size={20} />, section: 'Admin', permission: 'assets' },
     { name: 'Balance Sheet', path: '/balance-sheet', icon: <Scale size={20} />, section: 'Operations', permission: 'balance-sheet' },
     { name: 'SaaS Dashboard', path: '/superadmin/dashboard', icon: <Server size={20} />, section: 'SaaS Admin' },
     { name: 'Tenant Management', path: '/superadmin/tenants', icon: <Users size={20} />, section: 'SaaS Admin' },

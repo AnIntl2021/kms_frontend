@@ -11,6 +11,7 @@ import {
 import api from '../api/axios';
 import './LoginPage.css';
 import logo from '../assets/ANSOFTT_LOGO.png';
+import centralKitchen from '../assets/kms_central_kitchen.png';
 
 const LoginPage = () => {
   const [username, setUsername] = useState('');
@@ -98,50 +99,32 @@ const LoginPage = () => {
     <div className="login-container">
       <div className="login-card">
         {/* Left side: Branding & Visualization */}
-        <div className="panel-branding">
-          <div className="visual-container">
-            <div className="glass-card-main">
-              <div className="chart-header">
-                <h4>Analytics Overview</h4>
-                <TrendingUp size={20} />
-              </div>
-              <div className="chart-placeholder">
-                <div className="chart-bars">
-                  <div className="bar" style={{height: '40%'}}></div>
-                  <div className="bar bar-alt" style={{height: '60%'}}></div>
-                  <div className="bar" style={{height: '45%'}}></div>
-                  <div className="bar bar-accent" style={{height: '75%'}}></div>
-                  <div className="bar" style={{height: '55%'}}></div>
-                  <div className="bar bar-alt" style={{height: '90%'}}></div>
-                  <div className="bar" style={{height: '65%'}}></div>
-                </div>
-                <div className="chart-line"></div>
-              </div>
-              <div style={{display: 'flex', justifyContent: 'space-between', marginTop: '1rem', color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem'}}>
-                <span>MON</span>
-                <span>TUE</span>
-                <span>WED</span>
-                <span>THU</span>
-                <span>FRI</span>
-                <span>SAT</span>
-              </div>
-            </div>
+        <div className="panel-branding" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', height: '100%', padding: '3rem', position: 'relative' }}>
+          <img 
+            src={centralKitchen} 
+            alt="Central Kitchen Operations" 
+            style={{ 
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              zIndex: 1
+            }} 
+          />
+          {/* Dark readable gradient overlay */}
+          <div style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'linear-gradient(to bottom, rgba(27, 70, 69, 0.4) 0%, rgba(18, 48, 47, 0.85) 100%)',
+            zIndex: 2
+          }}></div>
 
-            <div className="glass-card-floating">
-              <div className="circle-progress">
-                <div className="circle-val">
-                  <h5>42%</h5>
-                  <p>Growth</p>
-                </div>
-              </div>
-              <div style={{textAlign: 'center'}}>
-                <h5 style={{color: '#1a1a1a', fontWeight: 800}}>System Efficiency</h5>
-                <p style={{fontSize: '0.75rem', color: 'var(--gray-500)', marginTop: '0.25rem'}}>Operations are optimally synced</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="promo-text">
+          <div className="promo-text" style={{ position: 'relative', zIndex: 3, textAlign: 'center', width: '100%' }}>
             <h3>Smarter way to manage</h3>
             <p>Welcome to <span style={{ fontFamily: "'Oleo Script', cursive" }}>KMS</span>. Efficiently track stock, manage sales, and optimize your entire ecosystem with ease.</p>
           </div>

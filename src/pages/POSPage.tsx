@@ -7,8 +7,14 @@ import { useAuthStore } from '../store/useAuthStore';
 import api from '../api/axios';
 import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { MapPin, Key, Wallet, X, Store } from 'lucide-react';
+import { MapPin, Key, X, Store, Search } from 'lucide-react';
+import Select from 'react-select';
 import './POSPage.css';
+
+const tableOptions = Array.from({ length: 20 }, (_, i) => ({
+  value: `Table-${i + 1}`,
+  label: `Table ${i + 1}`
+}));
 
 interface Product {
   id: number;
@@ -28,15 +34,66 @@ const POSPage: React.FC = () => {
   const { t, language } = useLanguage();
   const { admin } = useAuthStore();
   const [products, setProducts] = useState<Product[]>([]);
-  const [cart, setCart] = useState<CartItem[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [tableCarts, setTableCarts] = useState<Record<string, CartItem[]>>({});
+  const [tableNumber, setTableNumber] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState<string>('');
   
   const [orderType, setOrderType] = useState<'walk_in' | 'takeaway' | 'delivery'>('walk_in');
-  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card'>('cash');
+  const cartKey = orderType === 'walk_in' && tableNumber ? tableNumber : 'default';
+  const cart = tableCarts[cartKey] || [];
+  const [selectedCategory, setSelectedCategory] = useState<string>('All');
+  const [paymentMethod, setPaymentMethod] = useState<string>('cash');
+  const [paymentMethods, setPaymentMethods] = useState<string[]>(['cash', 'card']);
 
   const [branchName, setBranchName] = useState<string>('');
   const [branches, setBranches] = useState<any[]>([]);
   const [selectedBranchId, setSelectedBranchId] = useState<number | null>(null);
+
+  // Customer states
+  const [customerName, setCustomerName] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
+  const [customerSuggestions, setCustomerSuggestions] = useState<any[]>([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+
+  const fetchCustomerSuggestions = async (inputValue: string) => {
+    if (!inputValue || inputValue.length < 2) {
+      setCustomerSuggestions([]);
+      return;
+    }
+    setLoadingSuggestions(true);
+    try {
+      const res = await api.get(`/sales/customers/search?q=${inputValue}`);
+      if (res.data.success && res.data.data) {
+        const formatted = res.data.data.map((c: any) => ({
+          label: `${c.customer_name} (${c.client_phone || 'No Phone'})`,
+          value: c
+        }));
+        setCustomerSuggestions(formatted);
+      }
+    } catch (e) {
+      console.error('Failed to search customers', e);
+    } finally {
+      setLoadingSuggestions(false);
+    }
+  };
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await api.get('/settings');
+        if (res.data && res.data.data && res.data.data.pos_payment_methods) {
+          const methods = res.data.data.pos_payment_methods.split(',').map((x: string) => x.trim()).filter(Boolean);
+          if (methods.length > 0) {
+            setPaymentMethods(methods);
+            setPaymentMethod(methods[0]);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to fetch payment settings', e);
+      }
+    };
+    fetchSettings();
+  }, []);
 
   // Counter Session States
   const [activeSession, setActiveSession] = useState<any | null>(null);
@@ -173,7 +230,7 @@ const POSPage: React.FC = () => {
       const url = selectedBranchId ? `/menu?branch_id=${selectedBranchId}&pos=true` : '/menu?pos=true';
       const response = await api.get(url);
       if (response.data.success) {
-        const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+        const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5002/api';
         const mapped: Product[] = response.data.data
           .map((item: any) => {
             const cleanPath = item.image_url ? (item.image_url.startsWith('/') ? item.image_url.slice(1) : item.image_url) : '';
@@ -200,34 +257,60 @@ const POSPage: React.FC = () => {
     if (!activeSession) {
       return toast.warn('Please open a counter shift first.');
     }
-    setCart(prev => {
-      const existing = prev.find(item => item.id === product.id);
+    if (orderType === 'walk_in' && !tableNumber) {
+      return toast.warn('Please select a table first.');
+    }
+    const cartKey = orderType === 'walk_in' && tableNumber ? tableNumber : 'default';
+    setTableCarts(prev => {
+      const currentCart = prev[cartKey] || [];
+      const existing = currentCart.find(item => item.id === product.id);
+      let updatedCart;
       if (existing) {
-        return prev.map(item => item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item);
+        updatedCart = currentCart.map(item => item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item);
+      } else {
+        updatedCart = [...currentCart, { ...product, quantity: 1 }];
       }
-      return [...prev, { ...product, quantity: 1 }];
+      return { ...prev, [cartKey]: updatedCart };
     });
   };
 
   const updateQuantity = (id: number, delta: number) => {
-    setCart(prev => prev.map(item => {
-      if (item.id === id) {
-        const newQ = item.quantity + delta;
-        return newQ > 0 ? { ...item, quantity: newQ } : item;
-      }
-      return item;
-    }).filter(item => item.quantity > 0));
+    const cartKey = orderType === 'walk_in' && tableNumber ? tableNumber : 'default';
+    setTableCarts(prev => {
+      const currentCart = prev[cartKey] || [];
+      const updatedCart = currentCart.map(item => {
+        if (item.id === id) {
+          const newQ = item.quantity + delta;
+          return newQ > 0 ? { ...item, quantity: newQ } : item;
+        }
+        return item;
+      }).filter(item => item.quantity > 0);
+      return { ...prev, [cartKey]: updatedCart };
+    });
   };
 
   const removeItem = (id: number) => {
-    setCart(prev => prev.filter(item => item.id !== id));
+    const cartKey = orderType === 'walk_in' && tableNumber ? tableNumber : 'default';
+    setTableCarts(prev => {
+      const currentCart = prev[cartKey] || [];
+      const updatedCart = currentCart.filter(item => item.id !== id);
+      return { ...prev, [cartKey]: updatedCart };
+    });
   };
 
-  const clearCart = () => setCart([]);
+  const clearCart = () => {
+    const cartKey = orderType === 'walk_in' && tableNumber ? tableNumber : 'default';
+    setTableCarts(prev => ({ ...prev, [cartKey]: [] }));
+  };
 
-  const filteredProducts = selectedCategory === 'All' 
-    ? products 
-    : products.filter(p => p.category === selectedCategory);
+  const filteredProducts = (() => {
+    let list = selectedCategory === 'All' ? products : products.filter(p => p.category === selectedCategory);
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      list = list.filter(p => p.name.toLowerCase().includes(q) || (p.category && p.category.toLowerCase().includes(q)));
+    }
+    return list;
+  })();
 
   return (
     <Layout>
@@ -236,12 +319,13 @@ const POSPage: React.FC = () => {
         {/* Left Side: Products */}
         <div className="pos-menu-section">
           
+          {/* Top Header: Branch + Session */}
           <div className="pos-menu-header-strip">
             <div className="pos-location-selector">
-              <MapPin size={18} style={{ color: 'var(--primary)' }} /> Current Location: 
+              <MapPin size={16} />
               {!admin?.branch_id && branches.length > 0 ? (
-                <select 
-                  value={selectedBranchId || ''} 
+                <select
+                  value={selectedBranchId || ''}
                   onChange={(e) => setSelectedBranchId(Number(e.target.value))}
                   className="pos-location-select"
                 >
@@ -250,25 +334,158 @@ const POSPage: React.FC = () => {
                   ))}
                 </select>
               ) : (
-                <span style={{ color: 'var(--primary)', fontWeight: 800 }}>{branchName}</span>
+                <span style={{ color: 'var(--pos-teal, #0d6b5e)', fontWeight: 800 }}>{branchName}</span>
               )}
               {activeSession && (
                 <span className="pos-session-badge">
-                  REGISTER: {activeSession.counter_name} (OPEN)
+                  {activeSession.counter_name} · OPEN
                 </span>
               )}
             </div>
             {activeSession && (
-              <button 
-                onClick={handleRequestCloseSession}
-                className="pos-close-counter-btn"
-              >
+              <button onClick={handleRequestCloseSession} className="pos-close-counter-btn">
                 Close Counter
               </button>
             )}
           </div>
 
-          {/* Categories */}
+          {/* Search Bar */}
+          <div className="pos-search-wrap">
+            <div className="pos-search-inner">
+              <Search size={16} className="pos-search-icon" />
+              <input
+                type="text"
+                placeholder="Search Items here..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* Order Configuration Bar */}
+          <div style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '12px',
+            padding: '10px 20px',
+            background: '#ffffff',
+            borderBottom: '1px solid #e2e8f0',
+            alignItems: 'center'
+          }}>
+            {/* Order Type Buttons */}
+            <div style={{ display: 'flex', background: '#f0f4f8', padding: '3px', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
+              {(['walk_in', 'takeaway', 'delivery'] as const).map((type) => {
+                const isActive = orderType === type;
+                return (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => setOrderType(type)}
+                    style={{
+                      border: 'none',
+                      background: isActive ? '#ffffff' : 'transparent',
+                      color: isActive ? '#0d6b5e' : '#64748b',
+                      padding: '6px 12px',
+                      borderRadius: '6px',
+                      fontSize: '0.8rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      boxShadow: isActive ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    {type === 'walk_in' ? 'Dine In' : type === 'takeaway' ? 'Takeaway' : 'Delivery'}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Table Selector */}
+            {orderType === 'walk_in' && (
+              <div style={{ minWidth: '150px' }}>
+                <Select
+                  options={tableOptions}
+                  value={tableOptions.find(opt => opt.value === tableNumber) || null}
+                  onChange={(val: any) => setTableNumber(val ? val.value : '')}
+                  placeholder="Select Table..."
+                  isSearchable
+                  styles={{
+                    control: (base) => ({
+                      ...base,
+                      borderRadius: '8px',
+                      borderColor: '#cbd5e1',
+                      fontSize: '0.8rem',
+                      minHeight: '32px'
+                    })
+                  }}
+                />
+              </div>
+            )}
+
+            {/* Customer Search & Details */}
+            <div style={{ display: 'flex', gap: '8px', flex: 1, minWidth: '300px', alignItems: 'center' }}>
+              <div style={{ flex: 1 }}>
+                <Select
+                  placeholder="Search customer..."
+                  onInputChange={(val) => {
+                    if (val.length >= 2) {
+                      fetchCustomerSuggestions(val);
+                    }
+                  }}
+                  onChange={(opt: any) => {
+                    if (opt && opt.value) {
+                      setCustomerName(opt.value.customer_name);
+                      setCustomerPhone(opt.value.client_phone || '');
+                    }
+                  }}
+                  options={customerSuggestions}
+                  isLoading={loadingSuggestions}
+                  isClearable
+                  styles={{
+                    control: (base) => ({
+                      ...base,
+                      borderRadius: '8px',
+                      borderColor: '#cbd5e1',
+                      fontSize: '0.8rem',
+                      minHeight: '32px'
+                    })
+                  }}
+                />
+              </div>
+              <input
+                type="text"
+                placeholder="Cust. Name"
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+                style={{
+                  width: '100px',
+                  padding: '6px 10px',
+                  borderRadius: '8px',
+                  border: '1.5px solid #cbd5e1',
+                  fontSize: '0.8rem',
+                  outline: 'none',
+                  background: '#f8fafc'
+                }}
+              />
+              <input
+                type="text"
+                placeholder="Phone"
+                value={customerPhone}
+                onChange={(e) => setCustomerPhone(e.target.value)}
+                style={{
+                  width: '100px',
+                  padding: '6px 10px',
+                  borderRadius: '8px',
+                  border: '1.5px solid #cbd5e1',
+                  fontSize: '0.8rem',
+                  outline: 'none',
+                  background: '#f8fafc'
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Category Tabs */}
           <div className="pos-categories">
             {categories.map(cat => (
               <button
@@ -280,7 +497,10 @@ const POSPage: React.FC = () => {
               </button>
             ))}
           </div>
-          
+
+          {/* Section label */}
+          <div className="pos-items-label">Choose Items</div>
+
           {/* Product Grid */}
           <div className="pos-product-grid">
             <ProductGrid products={filteredProducts} onAddToCart={handleAddToCart} />
@@ -298,168 +518,142 @@ const POSPage: React.FC = () => {
             setOrderType={setOrderType}
             paymentMethod={paymentMethod}
             setPaymentMethod={setPaymentMethod}
+            paymentMethods={paymentMethods}
             branchId={selectedBranchId || admin?.branch_id}
             counterId={activeSession?.counter_id}
+            tableNumber={tableNumber}
+            setTableNumber={setTableNumber}
+            customerName={customerName}
+            setCustomerName={setCustomerName}
+            customerPhone={customerPhone}
+            setCustomerPhone={setCustomerPhone}
           />
         </div>
 
-        {/* Open Counter Modal (Shift Opening) */}
+        {/* Open Counter Modal — Clean Light Theme */}
         {showOpenModal && (
-          <div style={{
+          <div className="pos-modal-overlay" style={{
             position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(5px)',
+            background: 'rgba(15, 30, 40, 0.55)', backdropFilter: 'blur(8px)',
             display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000
           }}>
-            <div style={{
-              background: 'white', borderRadius: '16px', width: '100%', maxWidth: '440px',
-              padding: '30px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            <div className="pos-modal-box" style={{
+              background: '#ffffff', borderRadius: '20px', width: '100%', maxWidth: '420px',
+              padding: '2rem', boxShadow: '0 20px 60px rgba(0,0,0,0.15), 0 4px 16px rgba(13,107,94,0.1)',
               border: '1px solid #e2e8f0', textAlign: 'center'
             }}>
-              <div style={{ display: 'inline-flex', background: '#e0f2fe', color: '#0284c7', padding: '16px', borderRadius: '50%', marginBottom: '20px' }}>
-                <Key size={32} />
+              <div style={{
+                display: 'inline-flex', background: '#e6f4f2', color: '#0d6b5e',
+                padding: '16px', borderRadius: '50%', marginBottom: '1rem',
+                boxShadow: '0 4px 12px rgba(13,107,94,0.15)'
+              }}>
+                <Key size={28} />
               </div>
-              <h3 style={{ margin: '0 0 8px 0', fontSize: '20px', fontWeight: 800, color: '#0f172a' }}>Open Register Counter</h3>
-              <p style={{ margin: '0 0 24px 0', fontSize: '14px', color: '#64748b', lineHeight: 1.5 }}>
-                A register shift must be opened to process orders at this branch kitchen.
+              <h3 style={{ margin: '0 0 6px 0', fontSize: '1.25rem', fontWeight: 800, color: '#1a2332' }}>Open Counter Register</h3>
+              <p style={{ margin: '0 0 1.5rem 0', fontSize: '0.875rem', color: '#6b7a8d', lineHeight: 1.6 }}>
+                Open a shift to start processing orders at this branch.
               </p>
 
               {counters.length === 0 ? (
-                <div style={{ margin: '20px 0', padding: '16px', border: '1px dashed #cbd5e1', borderRadius: '12px', background: '#f8fafc' }}>
-                  <Store size={24} style={{ color: '#94a3b8', marginBottom: '8px' }} />
-                  <p style={{ margin: 0, fontSize: '13px', color: '#475569', fontWeight: 600 }}>No active registers configured</p>
-                  <p style={{ margin: '4px 0 0 0', fontSize: '11px', color: '#64748b' }}>
-                    Please add a counter under <Link to="/pos-counters" style={{ color: 'var(--primary, #1b4645)', textDecoration: 'underline', fontWeight: 600 }}>POS Counters</Link> first.
+                <div style={{ margin: '16px 0', padding: '1rem', border: '1.5px dashed #b2dbd6', borderRadius: '12px', background: '#f0f9f7' }}>
+                  <Store size={22} style={{ color: '#0d6b5e', marginBottom: '8px' }} />
+                  <p style={{ margin: 0, fontSize: '0.875rem', color: '#0d6b5e', fontWeight: 600 }}>No active registers configured</p>
+                  <p style={{ margin: '5px 0 0 0', fontSize: '0.78rem', color: '#6b7a8d' }}>
+                    Add a counter under <Link to="/pos-counters" style={{ color: '#0d6b5e', fontWeight: 700, textDecoration: 'underline' }}>POS Counters</Link>.
                   </p>
                 </div>
               ) : (
                 <form onSubmit={handleOpenSession} style={{ textAlign: 'left' }}>
-                  <div style={{ marginBottom: '16px' }}>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>SELECT TERMINAL REGISTER</label>
+                  <div style={{ marginBottom: '1rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 800, color: '#6b7a8d', marginBottom: '5px', letterSpacing: '0.07em', textTransform: 'uppercase' }}>Select Terminal</label>
                     <select
                       value={selectedCounterId}
                       onChange={(e) => setSelectedCounterId(e.target.value)}
-                      style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', outline: 'none' }}
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #e2e8f0', fontSize: '0.9rem', fontWeight: 600, outline: 'none', fontFamily: 'Inter, sans-serif', background: '#f0f4f8', color: '#1a2332', cursor: 'pointer' }}
                       required
                     >
-                      {counters.map(c => (
-                        <option key={c.counter_id} value={c.counter_id}>{c.name}</option>
-                      ))}
+                      {counters.map(c => (<option key={c.counter_id} value={c.counter_id}>{c.name}</option>))}
                     </select>
                   </div>
-
-                  <div style={{ marginBottom: '24px' }}>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>OPENING CASH IN HAND (KWD)</label>
+                  <div style={{ marginBottom: '1.25rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 800, color: '#6b7a8d', marginBottom: '5px', letterSpacing: '0.07em', textTransform: 'uppercase' }}>Opening Cash (KWD)</label>
                     <input
-                      type="number"
-                      step="0.001"
-                      placeholder="0.000"
-                      value={openingBalance}
+                      type="number" step="0.001" placeholder="0.000" value={openingBalance}
                       onChange={(e) => setOpeningBalance(e.target.value)}
-                      style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', outline: 'none' }}
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #e2e8f0', fontSize: '0.9rem', fontWeight: 700, outline: 'none', fontFamily: 'Inter, sans-serif', background: '#f0f4f8', color: '#1a2332' }}
                       required
                     />
                   </div>
-
-                  <button
-                    type="submit"
-                    style={{
-                      width: '100%', padding: '14px', background: 'var(--primary, #1b4645)', color: 'white',
-                      border: 'none', borderRadius: '8px', fontWeight: 700, cursor: 'pointer', fontSize: '15px'
-                    }}
-                  >
+                  <button type="submit" style={{ width: '100%', padding: '12px', background: '#0d6b5e', color: 'white', border: 'none', borderRadius: '12px', fontWeight: 800, cursor: 'pointer', fontSize: '0.95rem', letterSpacing: '0.03em', boxShadow: '0 4px 14px rgba(13,107,94,0.25)', fontFamily: 'Inter, sans-serif' }}>
                     Open Counter Shift
                   </button>
                 </form>
               )}
-
-              <button
-                onClick={() => window.history.back()}
-                style={{
-                  marginTop: '15px', background: 'none', border: 'none', color: '#64748b',
-                  fontSize: '13px', fontWeight: 600, cursor: 'pointer', textDecoration: 'underline'
-                }}
-              >
-                Go Back to Dashboard
+              <button onClick={() => window.history.back()} style={{ marginTop: '0.875rem', background: 'none', border: 'none', color: '#94a3b8', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', textDecoration: 'underline', fontFamily: 'Inter, sans-serif' }}>
+                Go Back
               </button>
             </div>
           </div>
         )}
 
-        {/* Close Counter Modal (Shift Summary) */}
+        {/* Close Counter Modal — Clean Light Theme */}
         {showCloseModal && closingSummary && (
-          <div style={{
+          <div className="pos-modal-overlay" style={{
             position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(5px)',
+            background: 'rgba(15, 30, 40, 0.55)', backdropFilter: 'blur(8px)',
             display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000
           }}>
-            <div style={{
-              background: 'white', borderRadius: '16px', width: '100%', maxWidth: '480px',
-              padding: '30px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-              border: '1px solid #e2e8f0'
+            <div className="pos-modal-box" style={{
+              background: '#ffffff', borderRadius: '20px', width: '100%', maxWidth: '460px',
+              padding: '2rem', boxShadow: '0 20px 60px rgba(0,0,0,0.15)', border: '1px solid #e2e8f0'
             }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h3 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: '#0f172a' }}>Close Counter Shift</h3>
-                <button onClick={() => setShowCloseModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}><X size={20} /></button>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#1a2332' }}>Close Counter Shift</h3>
+                <button onClick={() => setShowCloseModal(false)} style={{ background: '#f0f4f8', border: '1px solid #e2e8f0', cursor: 'pointer', color: '#6b7a8d', borderRadius: '8px', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <X size={16} />
+                </button>
               </div>
 
-              <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', marginBottom: '20px', border: '1px solid #f1f5f9' }}>
-                <span style={{ fontSize: '11px', textTransform: 'uppercase', color: '#64748b', fontWeight: 700 }}>Active Terminal</span>
-                <h4 style={{ margin: '4px 0 0 0', fontSize: '18px', fontWeight: 800, color: '#1e293b' }}>{closingSummary.session.counter_name}</h4>
-                <p style={{ margin: '6px 0 0 0', fontSize: '12px', color: '#94a3b8' }}>
-                  Opened At: {new Date(closingSummary.session.opened_at).toLocaleString()}
-                </p>
+              {/* Terminal Info */}
+              <div style={{ background: '#e6f4f2', padding: '0.875rem 1rem', borderRadius: '12px', marginBottom: '1rem', border: '1px solid #b2dbd6' }}>
+                <span style={{ fontSize: '0.65rem', textTransform: 'uppercase', color: '#0d6b5e', fontWeight: 800, letterSpacing: '0.08em' }}>Active Terminal</span>
+                <h4 style={{ margin: '3px 0 0 0', fontSize: '1rem', fontWeight: 800, color: '#0d6b5e' }}>{closingSummary.session.counter_name}</h4>
+                <p style={{ margin: '4px 0 0 0', fontSize: '0.75rem', color: '#6b7a8d' }}>Opened: {new Date(closingSummary.session.opened_at).toLocaleString()}</p>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px', fontSize: '14px', color: '#475569' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #e2e8f0', paddingBottom: '8px' }}>
-                  <span>Opening Cash:</span>
-                  <span style={{ fontWeight: 700 }}>{Number(closingSummary.sales.opening_balance).toFixed(3)} KWD</span>
+              {/* Sales rows */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.55rem 0.75rem', background: '#f0f4f8', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                  <span style={{ fontSize: '0.85rem', color: '#6b7a8d', fontWeight: 600 }}>Opening Cash</span>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#1a2332' }}>{Number(closingSummary.sales.opening_balance).toFixed(3)} KWD</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #e2e8f0', paddingBottom: '8px' }}>
-                  <span>Cash Sales (Total):</span>
-                  <span style={{ fontWeight: 700 }}>+{Number(closingSummary.sales.cash_sales).toFixed(3)} KWD</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px dashed #e2e8f0', paddingBottom: '8px' }}>
-                  <span>Card Sales (Total):</span>
-                  <span style={{ fontWeight: 700 }}>{Number(closingSummary.sales.card_sales).toFixed(3)} KWD</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #cbd5e1', paddingBottom: '8px', color: '#0f172a' }}>
-                  <span style={{ fontWeight: 700 }}>Expected Drawer Cash:</span>
-                  <span style={{ fontWeight: 800, color: 'var(--primary, #1b4645)', fontSize: '16px' }}>{Number(closingSummary.sales.expected_cash).toFixed(3)} KWD</span>
+                {(closingSummary.sales.breakdown || []).map((b: any) => (
+                  <div key={b.method} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.55rem 0.75rem', background: '#f0f4f8', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                    <span style={{ fontSize: '0.85rem', color: '#6b7a8d', fontWeight: 600, textTransform: 'capitalize' }}>{b.method} Sales</span>
+                    <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#1a2332' }}>{Number(b.amount).toFixed(3)} KWD</span>
+                  </div>
+                ))}
+                <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.75rem', background: '#e6f4f2', borderRadius: '10px', border: '1.5px solid #b2dbd6', marginTop: '0.25rem' }}>
+                  <span style={{ fontSize: '0.9rem', fontWeight: 800, color: '#1a2332' }}>Expected Cash</span>
+                  <span style={{ fontSize: '1rem', fontWeight: 900, color: '#0d6b5e' }}>{Number(closingSummary.sales.expected_cash).toFixed(3)} KWD</span>
                 </div>
               </div>
 
               <form onSubmit={handleCloseSession}>
-                <div style={{ marginBottom: '24px' }}>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>ACTUAL ENDING DRAWER CASH (KWD)</label>
-                  <input
-                    type="number"
-                    step="0.001"
-                    value={actualCash}
-                    onChange={(e) => setActualCash(e.target.value)}
-                    style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '14px', outline: 'none' }}
+                <div style={{ marginBottom: '1rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 800, color: '#6b7a8d', marginBottom: '5px', letterSpacing: '0.07em', textTransform: 'uppercase' }}>Actual Ending Cash (KWD)</label>
+                  <input type="number" step="0.001" value={actualCash} onChange={(e) => setActualCash(e.target.value)}
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #e2e8f0', fontSize: '0.9rem', fontWeight: 700, outline: 'none', fontFamily: 'Inter, sans-serif', background: '#f0f4f8', color: '#1a2332' }}
                     required
                   />
                 </div>
-
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  <button
-                    type="button"
-                    onClick={() => setShowCloseModal(false)}
-                    style={{
-                      flex: 1, padding: '12px', background: '#f1f5f9', color: '#475569',
-                      border: 'none', borderRadius: '8px', fontWeight: 700, cursor: 'pointer'
-                    }}
-                  >
+                <div style={{ display: 'flex', gap: '0.6rem' }}>
+                  <button type="button" onClick={() => setShowCloseModal(false)}
+                    style={{ flex: 1, padding: '11px', background: '#f0f4f8', color: '#6b7a8d', border: '1.5px solid #e2e8f0', borderRadius: '10px', fontWeight: 700, cursor: 'pointer', fontSize: '0.875rem', fontFamily: 'Inter, sans-serif' }}>
                     Cancel
                   </button>
-                  <button
-                    type="submit"
-                    style={{
-                      flex: 1, padding: '12px', background: '#ef4444', color: 'white',
-                      border: 'none', borderRadius: '8px', fontWeight: 700, cursor: 'pointer'
-                    }}
-                  >
+                  <button type="submit"
+                    style={{ flex: 1, padding: '11px', background: '#dc2626', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 800, cursor: 'pointer', fontSize: '0.875rem', fontFamily: 'Inter, sans-serif', boxShadow: '0 4px 12px rgba(220,38,38,0.2)' }}>
                     Close Shift
                   </button>
                 </div>

@@ -116,8 +116,8 @@ const SettingsPage = () => {
                     }}
                   />
                   {(logoPreview || settings.company_logo) && (
-                    <div className="mt-2 border rounded p-2 bg-gray-50 flex justify-center">
-                      <img src={logoPreview || settings.company_logo} alt="Company Logo" className="max-h-16" />
+                    <div className="mt-2 border rounded p-2 bg-gray-50 flex justify-center" style={{ display: 'flex', justifyContent: 'center', padding: '10px', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '4px' }}>
+                      <img src={logoPreview || settings.company_logo} alt="Company Logo" style={{ maxWidth: '200px', maxHeight: '150px', objectFit: 'contain' }} />
                     </div>
                   )}
                 </div>
@@ -174,6 +174,17 @@ const SettingsPage = () => {
                 </div>
 
                 <div className="form-group">
+                  <label>POS Payment Methods (Comma Separated)</label>
+                  <input 
+                    type="text" 
+                    value={settings.pos_payment_methods || 'cash,card'} 
+                    onChange={(e) => handleChange('pos_payment_methods', e.target.value)}
+                    placeholder="e.g. cash,card,Link,Knet,Keeta"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Specify custom payment options for the POS counter separated by commas.</p>
+                </div>
+
+                <div className="form-group">
                   <label>Receipt Header Text</label>
                   <textarea 
                     value={settings.receipt_header || ''} 
@@ -214,8 +225,8 @@ const SettingsPage = () => {
                     }}
                   />
                   {(signaturePreview || settings.digital_signature) && (
-                    <div className="mt-2 border rounded p-2 bg-gray-50 flex justify-center">
-                      <img src={signaturePreview || settings.digital_signature} alt="Signature" className="max-h-16" />
+                    <div className="mt-2 border rounded p-2 bg-gray-50 flex justify-center" style={{ display: 'flex', justifyContent: 'center', padding: '10px', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: '4px' }}>
+                      <img src={signaturePreview || settings.digital_signature} alt="Signature" style={{ maxWidth: '200px', maxHeight: '150px', objectFit: 'contain' }} />
                     </div>
                   )}
                 </div>

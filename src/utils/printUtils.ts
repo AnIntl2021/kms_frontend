@@ -14,7 +14,9 @@ export const printReceipt = async (
   orderNumber: string,
   discountAmount: number = 0,
   discountPercentage: number = 0,
-  tableNumber: string = ''
+  tableNumber: string = '',
+  receivedAmount: number = 0,
+  returnedAmount: number = 0
 ) => {
   let companyName = '';
   let companyAddress = '';
@@ -125,21 +127,29 @@ export const printReceipt = async (
             </tbody>
           </table>
           <div class="divider"></div>
-          ${discountAmount > 0 ? `
-            <div style="display: flex; justify-content: space-between;">
-              <span>Subtotal:</span>
-              <span>${(total + discountAmount).toFixed(3)} KWD</span>
-            </div>
-            <div style="display: flex; justify-content: space-between;">
-              <span>Discount (${discountPercentage}%):</span>
-              <span>-${discountAmount.toFixed(3)} KWD</span>
-            </div>
-            <div class="divider"></div>
-          ` : ''}
+          <div style="display: flex; justify-content: space-between;">
+            <span>Subtotal / المجموع:</span>
+            <span>${(total + discountAmount).toFixed(3)} KWD</span>
+          </div>
+          <div style="display: flex; justify-content: space-between;">
+            <span>Discount / الخصم (${discountPercentage}%):</span>
+            <span>-${discountAmount.toFixed(3)} KWD</span>
+          </div>
+          <div class="divider"></div>
           <div style="display: flex; justify-content: space-between;" class="bold">
             <span>TOTAL:</span>
             <span>${total.toFixed(3)} KWD</span>
           </div>
+          ${receivedAmount > 0 ? `
+            <div style="display: flex; justify-content: space-between; font-size: 11px; margin-top: 4px;">
+              <span>Received / المدفوع:</span>
+              <span>${receivedAmount.toFixed(3)} KWD</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 11px;">
+              <span>Returned / المتبقي:</span>
+              <span>${returnedAmount.toFixed(3)} KWD</span>
+            </div>
+          ` : ''}
           <div class="divider"></div>
           <div class="footer">${formattedFooter}</div>
         </body>
@@ -216,20 +226,28 @@ export const printReceipt = async (
               `).join('')}
             </tbody>
             <tfoot>
-              ${discountAmount > 0 ? `
-                <tr>
-                  <td colspan="3" class="right">Subtotal (KWD)</td>
-                  <td class="right">${(total + discountAmount).toFixed(3)}</td>
-                </tr>
-                <tr>
-                  <td colspan="3" class="right">Discount (${discountPercentage}%)</td>
-                  <td class="right">-${discountAmount.toFixed(3)}</td>
-                </tr>
-              ` : ''}
+              <tr>
+                <td colspan="3" class="right">Subtotal / المجموع (KWD)</td>
+                <td class="right">${(total + discountAmount).toFixed(3)}</td>
+              </tr>
+              <tr>
+                <td colspan="3" class="right">Discount / الخصم (${discountPercentage}%)</td>
+                <td class="right">-${discountAmount.toFixed(3)}</td>
+              </tr>
               <tr>
                 <td colspan="3" class="right total-row">Grand Total (KWD)</td>
                 <td class="right total-row">${total.toFixed(3)}</td>
               </tr>
+              ${receivedAmount > 0 ? `
+                <tr>
+                  <td colspan="3" class="right" style="font-weight: bold; border-top: none;">Amount Received / المدفوع (KWD)</td>
+                  <td class="right" style="font-weight: bold; border-top: none;">${receivedAmount.toFixed(3)}</td>
+                </tr>
+                <tr>
+                  <td colspan="3" class="right" style="font-weight: bold; border-top: none;">Amount Returned / المتبقي (KWD)</td>
+                  <td class="right" style="font-weight: bold; border-top: none;">${returnedAmount.toFixed(3)}</td>
+                </tr>
+              ` : ''}
             </tfoot>
           </table>
 

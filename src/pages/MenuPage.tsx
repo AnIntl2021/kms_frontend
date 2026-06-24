@@ -229,7 +229,7 @@ const MenuPage = () => {
           }))
         });
         if (details.image_url) {
-           const baseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5001/api').replace('/api', '');
+           const baseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5002/api').replace('/api', '');
            const cleanPath = details.image_url.startsWith('/') ? details.image_url.slice(1) : details.image_url;
            setImagePreview(`${baseUrl}/${cleanPath}`);
         }

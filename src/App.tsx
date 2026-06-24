@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import LoginPage from './pages/LoginPage';
+import LandingPage from './pages/LandingPage';
 import DashboardPage from './pages/DashboardPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import { useAuthStore } from './store/useAuthStore';
@@ -112,7 +113,7 @@ function AppContent() {
         <Route path="/superadmin/dashboard" element={<ProtectedRoute><SuperAdminDashboard /></ProtectedRoute>} />
         <Route path="/superadmin/tenants" element={<ProtectedRoute><TenantManagement /></ProtectedRoute>} />
 
-        <Route path="/" element={<Navigate to="/dashboard" />} />
+        <Route path="/" element={<LandingPage />} />
       </Routes>
       </Router>
     </>
