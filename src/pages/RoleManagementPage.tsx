@@ -14,7 +14,10 @@ const ALL_PERMISSIONS = [
   { id: 'balance-sheet', label: 'Balance Sheet' },
   { id: 'accounts', label: 'Accounts & Reports' },
   { id: 'roles', label: 'Role Management' },
-  { id: 'users', label: 'System Users' }
+  { id: 'users', label: 'System Users' },
+  { id: 'settings', label: 'Settings & Configuration' },
+  { id: 'analytics', label: 'Analytics & Forecasts' },
+  { id: 'reports', label: 'Reports & BI' }
 ];
 
 const RoleManagementPage: React.FC = () => {

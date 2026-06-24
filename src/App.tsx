@@ -71,7 +71,7 @@ function AppContent() {
           } 
         />
 
-        <Route path="/pos" element={<ProtectedRoute><POSPage /></ProtectedRoute>} />
+        <Route path="/pos" element={<ProtectedRoute requiredPermission="sales"><POSPage /></ProtectedRoute>} />
 
         <Route path="/inventory" element={<ProtectedRoute requiredPermission="inventory"><InventoryPage /></ProtectedRoute>} />
         <Route path="/categories" element={<ProtectedRoute requiredPermission="inventory"><CategoriesPage /></ProtectedRoute>} />
@@ -82,8 +82,8 @@ function AppContent() {
         
         <Route path="/sales" element={<ProtectedRoute requiredPermission="sales"><SalesPage /></ProtectedRoute>} />
         <Route path="/salesmen" element={<ProtectedRoute requiredPermission="sales"><SalesmenPage /></ProtectedRoute>} />
-        <Route path="/pos-counters" element={<ProtectedRoute><POSCountersPage /></ProtectedRoute>} />
-        <Route path="/billing" element={<ProtectedRoute><BillingPage /></ProtectedRoute>} />
+        <Route path="/pos-counters" element={<ProtectedRoute requiredPermission="settings"><POSCountersPage /></ProtectedRoute>} />
+        <Route path="/billing" element={<ProtectedRoute requiredPermission="settings"><BillingPage /></ProtectedRoute>} />
         
         <Route path="/accounts" element={<ProtectedRoute requiredPermission="accounts"><AccountsPage /></ProtectedRoute>} />
         <Route path="/assets-management" element={<ProtectedRoute requiredPermission="assets"><AssetsManagementPage /></ProtectedRoute>} />
@@ -96,18 +96,18 @@ function AppContent() {
 
         <Route path="/administration" element={<ProtectedRoute requiredPermission="users"><AdministrationPage /></ProtectedRoute>} />
         <Route path="/roles-management" element={<ProtectedRoute requiredPermission="roles"><RoleManagementPage /></ProtectedRoute>} />
-        <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+        <Route path="/settings" element={<ProtectedRoute requiredPermission="settings"><SettingsPage /></ProtectedRoute>} />
         
-        <Route path="/factory-dispatch" element={<ProtectedRoute><FactoryDispatchPage /></ProtectedRoute>} />
-        <Route path="/dispatch-dashboard" element={<ProtectedRoute><DispatchDashboardPage /></ProtectedRoute>} />
+        <Route path="/factory-dispatch" element={<ProtectedRoute requiredPermission="inventory"><FactoryDispatchPage /></ProtectedRoute>} />
+        <Route path="/dispatch-dashboard" element={<ProtectedRoute requiredPermission="inventory"><DispatchDashboardPage /></ProtectedRoute>} />
         
-        <Route path="/analytics" element={<ProtectedRoute><AnalyticsPage /></ProtectedRoute>} />
-        <Route path="/reports" element={<ProtectedRoute><ReportsPage /></ProtectedRoute>} />
-        <Route path="/food-cost" element={<ProtectedRoute><FoodCostPage /></ProtectedRoute>} />
-        <Route path="/branch-management" element={<ProtectedRoute><BranchManagement /></ProtectedRoute>} />
-        <Route path="/brand-management" element={<ProtectedRoute><BrandManagement /></ProtectedRoute>} />
-        <Route path="/stock-transfer" element={<ProtectedRoute><StockTransfer /></ProtectedRoute>} />
-        <Route path="/print-settings" element={<ProtectedRoute><PrintSettingsPage /></ProtectedRoute>} />
+        <Route path="/analytics" element={<ProtectedRoute requiredPermission="analytics"><AnalyticsPage /></ProtectedRoute>} />
+        <Route path="/reports" element={<ProtectedRoute requiredPermission="reports"><ReportsPage /></ProtectedRoute>} />
+        <Route path="/food-cost" element={<ProtectedRoute requiredPermission="inventory"><FoodCostPage /></ProtectedRoute>} />
+        <Route path="/branch-management" element={<ProtectedRoute requiredPermission="settings"><BranchManagement /></ProtectedRoute>} />
+        <Route path="/brand-management" element={<ProtectedRoute requiredPermission="settings"><BrandManagement /></ProtectedRoute>} />
+        <Route path="/stock-transfer" element={<ProtectedRoute requiredPermission="inventory"><StockTransfer /></ProtectedRoute>} />
+        <Route path="/print-settings" element={<ProtectedRoute requiredPermission="settings"><PrintSettingsPage /></ProtectedRoute>} />
 
         {/* Super Admin Routes */}
         <Route path="/superadmin/dashboard" element={<ProtectedRoute><SuperAdminDashboard /></ProtectedRoute>} />
