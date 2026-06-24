@@ -1,4 +1,5 @@
 import React from 'react';
+import { useSettings } from '../../hooks/useSettings';
 
 interface Product {
   id: number;
@@ -15,6 +16,7 @@ interface ProductGridProps {
 }
 
 const ProductGrid: React.FC<ProductGridProps> = ({ products, onAddToCart }) => {
+  const { currencySymbol } = useSettings();
   return (
     <>
       {products.map(product => (
@@ -42,7 +44,7 @@ const ProductGrid: React.FC<ProductGridProps> = ({ products, onAddToCart }) => {
             </p>
             <div className="pos-product-footer">
               <span className="pos-product-price">
-                {Number(product.price || 0).toFixed(3)} KWD
+                {Number(product.price || 0).toFixed(3)} {currencySymbol}
               </span>
               <button
                 className="pos-product-add-btn"

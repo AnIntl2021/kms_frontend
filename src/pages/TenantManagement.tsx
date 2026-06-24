@@ -13,7 +13,12 @@ const TenantManagement: React.FC = () => {
   const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [formData, setFormData] = useState({ name: '', email: '', phone: '', plan: 'Basic', password: '', status: 'Active' });
+  const [formData, setFormData] = useState({ 
+    name: '', email: '', phone: '', plan: 'Basic', password: '', status: 'Active',
+    plan_end_date: '',
+    base_branches: 1, base_counters: 1, base_users: 3,
+    extra_branches: 0, extra_counters: 0, extra_users: 0
+  });
 
   useEffect(() => {
     fetchTenants();
@@ -41,7 +46,12 @@ const TenantManagement: React.FC = () => {
       if (res.data.success) {
         toast.success(res.data.message);
         setIsModalOpen(false);
-        setFormData({ name: '', email: '', phone: '', plan: 'Basic', password: '', status: 'Active' });
+        setFormData({ 
+          name: '', email: '', phone: '', plan: 'Basic', password: '', status: 'Active',
+          plan_end_date: '',
+          base_branches: 1, base_counters: 1, base_users: 3,
+          extra_branches: 0, extra_counters: 0, extra_users: 0
+        });
         fetchTenants();
       }
     } catch (err: any) {
@@ -58,7 +68,14 @@ const TenantManagement: React.FC = () => {
       phone: tenant.phone || '',
       plan: tenant.plan,
       status: tenant.status,
-      password: '' // Don't populate password on edit
+      password: '',
+      plan_end_date: tenant.plan_end_date ? tenant.plan_end_date.split('T')[0] : '',
+      base_branches: tenant.base_branches || 1,
+      base_counters: tenant.base_counters || 1,
+      base_users: tenant.base_users || 3,
+      extra_branches: tenant.extra_branches || 0,
+      extra_counters: tenant.extra_counters || 0,
+      extra_users: tenant.extra_users || 0
     });
     setEditingId(tenant.id);
     setIsEditModalOpen(true);
@@ -71,7 +88,14 @@ const TenantManagement: React.FC = () => {
       phone: tenant.phone || '',
       plan: tenant.plan,
       status: tenant.status,
-      password: ''
+      password: '',
+      plan_end_date: tenant.plan_end_date ? tenant.plan_end_date.split('T')[0] : '',
+      base_branches: tenant.base_branches || 1,
+      base_counters: tenant.base_counters || 1,
+      base_users: tenant.base_users || 3,
+      extra_branches: tenant.extra_branches || 0,
+      extra_counters: tenant.extra_counters || 0,
+      extra_users: tenant.extra_users || 0
     });
     setEditingId(tenant.id);
     setIsSubscriptionModalOpen(true);
@@ -161,6 +185,11 @@ const TenantManagement: React.FC = () => {
                         <span className="status-badge" style={{background: '#e0e7ff', color: '#4338ca'}}>
                           {tenant.plan}
                         </span>
+                        {tenant.plan_end_date && (
+                          <div className="text-xs text-red-600 font-semibold mt-1">
+                            Expires: {new Date(tenant.plan_end_date).toLocaleDateString()}
+                          </div>
+                        )}
                       </td>
                       <td>
                         <span className={`status-badge ${tenant.status === 'Active' ? 'success' : 'danger'}`}>
@@ -343,17 +372,99 @@ const TenantManagement: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="form-group mb-4">
-                  <label className="form-label block mb-2 font-medium">Status</label>
-                  <select 
-                    className="form-select w-full p-2 border rounded" 
-                    value={formData.status} 
-                    onChange={e => setFormData({...formData, status: e.target.value})}
-                  >
-                    <option value="Active">Active</option>
-                    <option value="Inactive">Inactive</option>
-                    <option value="Suspended">Suspended</option>
-                  </select>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+                  <div className="form-group mb-4">
+                    <label className="form-label block mb-2 font-medium">Status</label>
+                    <select 
+                      className="form-select w-full p-2 border rounded" 
+                      value={formData.status} 
+                      onChange={e => setFormData({...formData, status: e.target.value})}
+                    >
+                      <option value="Active">Active</option>
+                      <option value="Inactive">Inactive</option>
+                      <option value="Suspended">Suspended</option>
+                    </select>
+                  </div>
+                  
+                  <div className="form-group mb-4">
+                    <label className="form-label block mb-2 font-medium">Subscription Expiry Date</label>
+                    <input 
+                      type="date" 
+                      className="form-input w-full p-2 border rounded" 
+                      value={formData.plan_end_date} 
+                      onChange={e => setFormData({...formData, plan_end_date: e.target.value})}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '1rem', marginTop: '1rem' }}>
+                  <h4 style={{ fontSize: '13px', fontWeight: 800, color: '#334155', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Manually Set Allocated Limits</h4>
+                  
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1.25rem' }}>
+                    <div className="form-group mb-4">
+                      <label className="form-label block mb-1 font-medium text-xs">Base Branches</label>
+                      <input 
+                        type="number" 
+                        min="0"
+                        className="form-input w-full p-2 border rounded" 
+                        value={formData.base_branches} 
+                        onChange={e => setFormData({...formData, base_branches: Number(e.target.value)})}
+                      />
+                    </div>
+                    <div className="form-group mb-4">
+                      <label className="form-label block mb-1 font-medium text-xs">Base POS Counters</label>
+                      <input 
+                        type="number" 
+                        min="0"
+                        className="form-input w-full p-2 border rounded" 
+                        value={formData.base_counters} 
+                        onChange={e => setFormData({...formData, base_counters: Number(e.target.value)})}
+                      />
+                    </div>
+                    <div className="form-group mb-4">
+                      <label className="form-label block mb-1 font-medium text-xs">Base Staff Users</label>
+                      <input 
+                        type="number" 
+                        min="0"
+                        className="form-input w-full p-2 border rounded" 
+                        value={formData.base_users} 
+                        onChange={e => setFormData({...formData, base_users: Number(e.target.value)})}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1.25rem' }}>
+                    <div className="form-group mb-4">
+                      <label className="form-label block mb-1 font-medium text-xs">Extra Branches</label>
+                      <input 
+                        type="number" 
+                        min="0"
+                        className="form-input w-full p-2 border rounded" 
+                        value={formData.extra_branches} 
+                        onChange={e => setFormData({...formData, extra_branches: Number(e.target.value)})}
+                      />
+                    </div>
+                    <div className="form-group mb-4">
+                      <label className="form-label block mb-1 font-medium text-xs">Extra POS Counters</label>
+                      <input 
+                        type="number" 
+                        min="0"
+                        className="form-input w-full p-2 border rounded" 
+                        value={formData.extra_counters} 
+                        onChange={e => setFormData({...formData, extra_counters: Number(e.target.value)})}
+                      />
+                    </div>
+                    <div className="form-group mb-4">
+                      <label className="form-label block mb-1 font-medium text-xs">Extra Staff Users</label>
+                      <input 
+                        type="number" 
+                        min="0"
+                        className="form-input w-full p-2 border rounded" 
+                        value={formData.extra_users} 
+                        onChange={e => setFormData({...formData, extra_users: Number(e.target.value)})}
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
               

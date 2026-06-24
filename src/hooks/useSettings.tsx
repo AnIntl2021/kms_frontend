@@ -16,7 +16,7 @@ export const useSettings = () => {
     // Quick helpers
     companyName: settings.company_name || 'Ansoftt',
     companyArabicName: settings.company_arabic_name || 'أنسوفت',
-    currencySymbol: settings.currency_symbol || 'د.ك',
+    currencySymbol: settings.currency_symbol || 'KWD',
     currencyCode: settings.currency_code || 'KWD',
     decimals: parseInt(settings.currency_decimals || '3', 10),
     orderPrefix: settings.order_prefix || 'ORD-',

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
-import { Store, Plus, Trash2, Key, HelpCircle, Wallet } from 'lucide-react';
+import { Store, Plus, Trash2, Key, HelpCircle, Wallet, Edit2 } from 'lucide-react';
 import api from '../api/axios';
 import { toast } from 'react-toastify';
 import { useLanguage } from '../hooks/useLanguage';
@@ -54,6 +54,13 @@ const POSCountersPage = () => {
     }
   };
 
+  // Edit Form State
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingCounterId, setEditingCounterId] = useState<number | null>(null);
+  const [editName, setEditName] = useState('');
+  const [selectedEditBranch, setSelectedEditBranch] = useState('');
+  const [editStatus, setEditStatus] = useState('active');
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || !selectedBranch) {
@@ -84,6 +91,35 @@ const POSCountersPage = () => {
       fetchData();
     } catch (e) {
       toast.error('Failed to delete counter register.');
+    }
+  };
+
+  const handleEditClick = (counter: any) => {
+    setEditingCounterId(counter.counter_id);
+    setEditName(counter.name);
+    setSelectedEditBranch(String(counter.branch_id));
+    setEditStatus(counter.status || 'active');
+    setShowEditModal(true);
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editName || !selectedEditBranch) {
+      return toast.warn('Please fill in all fields.');
+    }
+
+    try {
+      await api.put(`/subscription/counters/${editingCounterId}`, {
+        name: editName,
+        branch_id: Number(selectedEditBranch),
+        status: editStatus
+      });
+      toast.success('POS Counter updated successfully.');
+      setShowEditModal(false);
+      fetchData();
+    } catch (err: any) {
+      const msg = err.response?.data?.message || 'Failed to update counter.';
+      toast.error(msg);
     }
   };
 
@@ -333,13 +369,36 @@ const POSCountersPage = () => {
                     <Key size={14} />
                     Terminal ID: #{c.counter_id}
                   </div>
-                  <button 
-                    onClick={() => handleDelete(c.counter_id)}
-                    className="counter-delete-btn"
-                    title="Remove Terminal"
-                  >
-                    <Trash2 size={18} />
-                  </button>
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    <button 
+                      onClick={() => handleEditClick(c)}
+                      className="counter-edit-btn"
+                      title="Edit Terminal"
+                      style={{
+                        color: '#94a3b8',
+                        background: 'none',
+                        border: 'none',
+                        padding: '8px',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--primary, #1b4645)'; e.currentTarget.style.background = '#f1f5f9'; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.color = '#94a3b8'; e.currentTarget.style.background = 'none'; }}
+                    >
+                      <Edit2 size={16} />
+                    </button>
+                    <button 
+                      onClick={() => handleDelete(c.counter_id)}
+                      className="counter-delete-btn"
+                      title="Remove Terminal"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -416,6 +475,99 @@ const POSCountersPage = () => {
                     }}
                   >
                     Create Terminal
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Edit Counter Modal */}
+        {showEditModal && (
+          <div style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(5px)',
+            display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000
+          }} onClick={() => setShowEditModal(false)}>
+            <div style={{
+              background: 'white', borderRadius: '16px', width: '100%', maxWidth: '460px',
+              padding: '30px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              border: '1px solid #e2e8f0', animation: 'scaleIn 0.25s cubic-bezier(0.34, 1.56, 0.64, 1)'
+            }} onClick={(e) => e.stopPropagation()}>
+              <h3 style={{ margin: '0 0 6px 0', fontSize: '20px', fontWeight: 800, color: '#0f172a' }}>Edit POS Terminal Register</h3>
+              <p style={{ margin: '0 0 24px 0', fontSize: '14px', color: '#64748b', lineHeight: 1.5 }}>Update the cashier terminal register settings and status.</p>
+              
+              <form onSubmit={handleUpdate}>
+                <div style={{ marginBottom: '18px' }}>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px', textTransform: 'uppercase' }}>Terminal Name</label>
+                  <input 
+                    type="text" 
+                    placeholder="e.g. Front Cashier, Counter Station A"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    style={{
+                      width: '100%', padding: '12px 14px', borderRadius: '8px',
+                      border: '1px solid #cbd5e1', fontSize: '14px', outline: 'none', fontWeight: 500
+                    }}
+                    required
+                  />
+                </div>
+
+                <div style={{ marginBottom: '18px' }}>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px', textTransform: 'uppercase' }}>Linked Kitchen Branch</label>
+                  <select 
+                    value={selectedEditBranch}
+                    onChange={(e) => setSelectedEditBranch(e.target.value)}
+                    style={{
+                      width: '100%', padding: '12px 14px', borderRadius: '8px',
+                      border: '1px solid #cbd5e1', fontSize: '14px', outline: 'none', fontWeight: 500, background: 'white'
+                    }}
+                    required
+                  >
+                    <option value="">Select a Branch</option>
+                    {branches.map(b => (
+                      <option key={b.branch_id} value={b.branch_id}>
+                        {language === 'ar' ? (b.name_ar || b.name_en) : b.name_en}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div style={{ marginBottom: '28px' }}>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '6px', textTransform: 'uppercase' }}>Terminal Status</label>
+                  <select 
+                    value={editStatus}
+                    onChange={(e) => setEditStatus(e.target.value)}
+                    style={{
+                      width: '100%', padding: '12px 14px', borderRadius: '8px',
+                      border: '1px solid #cbd5e1', fontSize: '14px', outline: 'none', fontWeight: 500, background: 'white'
+                    }}
+                    required
+                  >
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
+                </div>
+
+                <div style={{ display: 'flex', gap: '12px' }}>
+                  <button 
+                    type="button"
+                    onClick={() => setShowEditModal(false)}
+                    style={{
+                      flex: 1, padding: '12px', background: '#f1f5f9', color: '#475569',
+                      border: 'none', borderRadius: '8px', fontWeight: 700, cursor: 'pointer', fontSize: '14px'
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    type="submit"
+                    style={{
+                      flex: 1, padding: '12px', background: 'var(--primary, #1b4645)', color: 'white',
+                      border: 'none', borderRadius: '8px', fontWeight: 700, cursor: 'pointer', fontSize: '14px'
+                    }}
+                  >
+                    Save Changes
                   </button>
                 </div>
               </form>

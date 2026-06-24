@@ -28,6 +28,8 @@ interface Product {
 
 interface CartItem extends Product {
   quantity: number;
+  notes?: string;
+  addons?: { name: string; price: number }[];
 }
 
 const POSPage: React.FC = () => {
@@ -54,6 +56,8 @@ const POSPage: React.FC = () => {
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerSuggestions, setCustomerSuggestions] = useState<any[]>([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [branchUsers, setBranchUsers] = useState<any[]>([]);
+  const [selectedCashierId, setSelectedCashierId] = useState('');
 
   const fetchCustomerSuggestions = async (inputValue: string) => {
     if (!inputValue || inputValue.length < 2) {
@@ -105,10 +109,32 @@ const POSPage: React.FC = () => {
   const [closingSummary, setClosingSummary] = useState<any | null>(null);
   const [actualCash, setActualCash] = useState('0');
 
+  const fetchBranchUsers = async (branchId: number) => {
+    try {
+      const res = await api.get(`/subscription/counters/branch-users?branch_id=${branchId}`);
+      if (res.data.success) {
+        setBranchUsers(res.data.data || []);
+        if (admin?.admin_id) {
+          const hasMe = (res.data.data || []).some((u: any) => u.admin_id === admin.admin_id);
+          if (hasMe) {
+            setSelectedCashierId(String(admin.admin_id));
+          } else if (res.data.data?.length > 0) {
+            setSelectedCashierId(String(res.data.data[0].admin_id));
+          } else {
+            setSelectedCashierId('');
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Failed to fetch branch users', e);
+    }
+  };
+
   useEffect(() => {
     fetchProducts();
     if (selectedBranchId) {
       checkActiveSession(selectedBranchId);
+      fetchBranchUsers(selectedBranchId);
     }
   }, [selectedBranchId]);
 
@@ -139,7 +165,12 @@ const POSPage: React.FC = () => {
         const filtered = (res.data.data || []).filter((c: any) => c.branch_id === branchId && c.status === 'active');
         setCounters(filtered);
         if (filtered.length > 0) {
-          setSelectedCounterId(String(filtered[0].counter_id));
+          const myCounter = filtered.find((c: any) => c.admin_id === admin?.admin_id);
+          if (myCounter) {
+            setSelectedCounterId(String(myCounter.counter_id));
+          } else {
+            setSelectedCounterId(String(filtered[0].counter_id));
+          }
         } else {
           setSelectedCounterId('');
         }
@@ -158,7 +189,8 @@ const POSPage: React.FC = () => {
       const res = await api.post('/subscription/counters/sessions/open', {
         counter_id: Number(selectedCounterId),
         branch_id: selectedBranchId,
-        opening_balance: Number(openingBalance || 0)
+        opening_balance: Number(openingBalance || 0),
+        opened_by: selectedCashierId ? Number(selectedCashierId) : null
       });
       if (res.data.success) {
         toast.success('POS Counter register opened successfully!');
@@ -301,6 +333,25 @@ const POSPage: React.FC = () => {
   const clearCart = () => {
     const cartKey = orderType === 'walk_in' && tableNumber ? tableNumber : 'default';
     setTableCarts(prev => ({ ...prev, [cartKey]: [] }));
+  };
+
+  const updateItemDetails = (id: number, notes: string, addons: { name: string; price: number }[], newPrice: number) => {
+    const cartKey = orderType === 'walk_in' && tableNumber ? tableNumber : 'default';
+    setTableCarts(prev => {
+      const currentCart = prev[cartKey] || [];
+      const updatedCart = currentCart.map(item => {
+        if (item.id === id) {
+          return {
+            ...item,
+            notes,
+            addons,
+            price: newPrice
+          };
+        }
+        return item;
+      });
+      return { ...prev, [cartKey]: updatedCart };
+    });
   };
 
   const filteredProducts = (() => {
@@ -514,6 +565,7 @@ const POSPage: React.FC = () => {
             updateQuantity={updateQuantity} 
             removeItem={removeItem} 
             clearCart={clearCart}
+            onUpdateItem={updateItemDetails}
             orderType={orderType}
             setOrderType={setOrderType}
             paymentMethod={paymentMethod}
@@ -573,6 +625,22 @@ const POSPage: React.FC = () => {
                       required
                     >
                       {counters.map(c => (<option key={c.counter_id} value={c.counter_id}>{c.name}</option>))}
+                    </select>
+                  </div>
+                  <div style={{ marginBottom: '1rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 800, color: '#6b7a8d', marginBottom: '5px', letterSpacing: '0.07em', textTransform: 'uppercase' }}>Select Cashier User</label>
+                    <select
+                      value={selectedCashierId}
+                      onChange={(e) => setSelectedCashierId(e.target.value)}
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #e2e8f0', fontSize: '0.9rem', fontWeight: 600, outline: 'none', fontFamily: 'Inter, sans-serif', background: '#f0f4f8', color: '#1a2332', cursor: 'pointer' }}
+                      required
+                    >
+                      <option value="">Choose Cashier...</option>
+                      {branchUsers.map(u => (
+                        <option key={u.admin_id} value={u.admin_id}>
+                          {`${u.first_name || ''} ${u.last_name || ''}`.trim() || u.username} ({u.username})
+                        </option>
+                      ))}
                     </select>
                   </div>
                   <div style={{ marginBottom: '1.25rem' }}>

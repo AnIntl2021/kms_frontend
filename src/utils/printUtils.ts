@@ -2,6 +2,8 @@ export interface PrintCartItem {
   name: string;
   price: number;
   quantity: number;
+  notes?: string;
+  addons?: { name: string; price: number }[];
 }
 
 import api from '../api/axios';
@@ -119,7 +121,11 @@ export const printReceipt = async (
             <tbody>
               ${items.map(item => `
                 <tr>
-                  <td>${item.name}</td>
+                  <td>
+                    ${item.name}
+                    ${item.notes ? `<div style="font-size: 10px; color: #555; font-style: italic; margin-left: 4px;">Note: ${item.notes}</div>` : ''}
+                    ${item.addons && item.addons.length > 0 ? item.addons.map(a => `<div style="font-size: 10px; color: #444; margin-left: 4px;">+ ${a.name} (${Number(a.price).toFixed(3)})</div>`).join('') : ''}
+                  </td>
                   <td class="right">${item.quantity}</td>
                   <td class="right">${(item.price * item.quantity).toFixed(3)}</td>
                 </tr>
@@ -218,7 +224,11 @@ export const printReceipt = async (
             <tbody>
               ${items.map(item => `
                 <tr>
-                  <td>${item.name}</td>
+                  <td>
+                    ${item.name}
+                    ${item.notes ? `<div style="font-size: 11px; color: #555; font-style: italic; margin-top: 4px;">Note: ${item.notes}</div>` : ''}
+                    ${item.addons && item.addons.length > 0 ? `<div style="font-size: 11px; color: #0d6b5e; margin-top: 4px;">${item.addons.map(a => `+ ${a.name} (+${Number(a.price).toFixed(3)})`).join(', ')}</div>` : ''}
+                  </td>
                   <td class="right">${item.price.toFixed(3)}</td>
                   <td class="right">${item.quantity}</td>
                   <td class="right">${(item.price * item.quantity).toFixed(3)}</td>
