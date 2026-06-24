@@ -190,6 +190,11 @@ const TenantManagement: React.FC = () => {
                             Expires: {new Date(tenant.plan_end_date).toLocaleDateString()}
                           </div>
                         )}
+                        <div style={{ fontSize: '0.75rem', marginTop: '6px', color: '#475569', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                          <div>Branches: <strong>{(tenant.base_branches || 0) + (tenant.extra_branches || 0)}</strong> ({tenant.base_branches || 0} + {tenant.extra_branches || 0})</div>
+                          <div>Counters: <strong>{(tenant.base_counters || 0) + (tenant.extra_counters || 0)}</strong> ({tenant.base_counters || 0} + {tenant.extra_counters || 0})</div>
+                          <div>Users: <strong>{(tenant.base_users || 0) + (tenant.extra_users || 0)}</strong> ({tenant.base_users || 0} + {tenant.extra_users || 0})</div>
+                        </div>
                       </td>
                       <td>
                         <span className={`status-badge ${tenant.status === 'Active' ? 'success' : 'danger'}`}>
